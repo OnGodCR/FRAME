@@ -30,7 +30,12 @@ const TYPES = [
 ];
 
 const MARKERS = [
-  { tint: color.accent, shape: 'dot' as const, label: 'YOU', note: 'Your position. The ring pulses.' },
+  {
+    tint: color.accent,
+    shape: 'cone' as const,
+    label: 'YOU',
+    note: 'Your position. The cone points the way your phone is facing, so you can tell which way you are about to walk.',
+  },
   {
     tint: color.accent,
     shape: 'pin' as const,
@@ -59,7 +64,7 @@ export function MapTutorial() {
         }}
       >
         <FadeIn>
-          <Label>Reading the map</Label>
+          <Label>Step 6 of 6 · Reading the map</Label>
           <Text style={styles.h1}>The diamonds are worth walking to</Text>
           <Body style={{ color: color.dim, marginTop: space(2) }}>
             Real places near you, filtered down to public ground. Three kinds, and the
@@ -106,7 +111,12 @@ export function MapTutorial() {
           {MARKERS.map((m) => (
             <View key={m.label} style={styles.markerRow}>
               <View style={styles.glyphCol}>
-                {m.shape === 'dot' && <View style={[styles.dot, { backgroundColor: m.tint }]} />}
+                {m.shape === 'cone' && (
+                  <View style={{ alignItems: 'center' }}>
+                    <View style={[styles.cone, { borderBottomColor: m.tint }]} />
+                    <View style={[styles.dot, { backgroundColor: m.tint, marginTop: -3 }]} />
+                  </View>
+                )}
                 {m.shape === 'pin' && <View style={[styles.pin, { backgroundColor: m.tint }]} />}
                 {m.shape === 'x' && (
                   <Text style={{ color: m.tint, fontFamily: font.monoSemi, fontSize: 14 }}>×</Text>
@@ -196,6 +206,16 @@ const styles = StyleSheet.create({
     borderColor: color.bg,
   },
   pin: { width: 9, height: 9, transform: [{ rotate: '45deg' }] },
+  cone: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderBottomWidth: 12,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    opacity: 0.45,
+  },
   zoneRing: {
     width: 16,
     height: 16,

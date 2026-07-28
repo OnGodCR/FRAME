@@ -70,7 +70,7 @@ export function DobGate() {
       setRefused(true);
       return;
     }
-    go('handle');
+    go('legal');
   };
 
   if (refused) {
@@ -92,7 +92,7 @@ export function DobGate() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
-        <Label>Step 1 of 4</Label>
+        <Label>Step 1 of 6</Label>
         <Text style={styles.h1}>Date of birth</Text>
         <Body style={{ color: color.dim, marginTop: space(2) }}>
           Required once. Not shown to other players.
@@ -177,7 +177,7 @@ export function HandlePick() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
-        <Label>Step 2 of 4</Label>
+        <Label>Step 4 of 6</Label>
         <Text style={styles.h1}>Pick a handle</Text>
         <Body style={{ color: color.dim, marginTop: space(2) }}>
           This is what your party sees on the map and in the feed.
@@ -232,7 +232,7 @@ export function Permissions() {
   return (
     <View style={styles.screen}>
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
-        <Label>Step 3 of 4</Label>
+        <Label>Step 5 of 6</Label>
         <Text style={styles.h1}>What FRAME will ask for</Text>
         <Body style={{ color: color.dim, marginTop: space(2), marginBottom: space(4) }}>
           Each permission is requested in context, the first time it's needed.

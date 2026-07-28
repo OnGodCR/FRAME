@@ -14,6 +14,7 @@ import { Btn, Label, Mono } from '../components/ui';
 import { ZoneMap, MapMarker, Poi } from '../components/ZoneMap';
 import { PinchArea, ScaleBadge, ZoomControls, useMapCamera } from '../components/MapCamera';
 import { useWorld } from '../engine/WorldContext';
+import { useHeading } from '../engine/useHeading';
 import { PoiSheet } from '../components/PoiSheet';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { fmtClock, roundClock, useGame } from '../engine/GameContext';
@@ -34,6 +35,7 @@ export function HiderRound() {
   const [claimed, setClaimed] = useState<string[]>([]);
   const { world } = useWorld();
   const { zoom, step, pinch } = useMapCamera(2);
+  const { heading } = useHeading();
 
   const checkinOpen = !!round?.checkin && !round.checkin.submitted;
 
@@ -68,7 +70,7 @@ export function HiderRound() {
   const alive = round.bots.filter((b) => b.state === 'alive').length + 1;
 
   const markers: MapMarker[] = [
-    { key: 'me', x: SELF.x, y: SELF.y, kind: 'self', label: 'YOU' },
+    { key: 'me', x: SELF.x, y: SELF.y, kind: 'self', label: 'YOU', heading },
   ];
 
   return (

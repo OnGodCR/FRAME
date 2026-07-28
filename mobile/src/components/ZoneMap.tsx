@@ -44,6 +44,8 @@ export interface MapMarker {
   kind: 'self' | 'reveal' | 'seeker' | 'dead';
   label?: string;
   fade?: number;
+  /** Compass degrees, 0 = north. Draws the view cone on the player marker. */
+  heading?: number;
 }
 
 export function ZoneMap({
@@ -291,6 +293,31 @@ function Marker({ marker, left, top }: { marker: MapMarker; left: number; top: n
     const tint = marker.kind === 'self' ? color.accent : color.danger;
     return (
       <View pointerEvents="none" style={[styles.markerWrap, { left, top }]}>
+        {marker.heading != null && (
+          <View
+            style={[
+              styles.coneWrap,
+              { transform: [{ rotate: `${marker.heading}deg` }] },
+            ]}
+          >
+            <Svg width={64} height={64} viewBox="0 0 64 64">
+              {/* Wedge from the dot, 60 degrees wide, opening north before
+                  rotation. Same idea as the blue cone on a phone map. */}
+              <Path
+                d="M32 32 L18 8.8 A27 27 0 0 1 46 8.8 Z"
+                fill={tint}
+                opacity={0.22}
+              />
+              <Path
+                d="M32 32 L18 8.8 A27 27 0 0 1 46 8.8 Z"
+                fill="none"
+                stroke={tint}
+                strokeWidth={1}
+                opacity={0.5}
+              />
+            </Svg>
+          </View>
+        )}
         <Animated.View
           style={[
             styles.pulseRing,
@@ -362,6 +389,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 2,
     borderColor: color.bg,
+  },
+  coneWrap: {
+    position: 'absolute',
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pulseRing: {
     position: 'absolute',

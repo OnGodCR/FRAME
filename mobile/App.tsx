@@ -18,6 +18,8 @@ import { EASE_OUT } from './src/components/motion';
 import { GameProvider, Route, useGame } from './src/engine/GameContext';
 import { WorldProvider } from './src/engine/WorldContext';
 import { Splash, DobGate, HandlePick, Permissions } from './src/screens/Onboarding';
+import { LegalGate } from './src/screens/LegalGate';
+import { AuthGate } from './src/screens/AuthGate';
 import { Home } from './src/screens/Home';
 import { MapTutorial } from './src/screens/MapTutorial';
 import { Shop } from './src/screens/Shop';
@@ -35,20 +37,22 @@ import { Blackout, Results } from './src/screens/Endings';
 const DEPTH: Record<Route, number> = {
   splash: 0,
   dob: 1,
-  handle: 2,
-  permissions: 3,
-  mapTutorial: 4,
-  home: 5,
-  shop: 6,
-  pass: 6,
-  loadout: 6,
-  join: 6,
-  lobby: 7,
-  roleReveal: 8,
-  round: 9,
-  checkin: 10,
-  blackout: 11,
-  results: 11,
+  legal: 2,
+  auth: 3,
+  handle: 4,
+  permissions: 5,
+  mapTutorial: 6,
+  home: 7,
+  shop: 8,
+  pass: 8,
+  loadout: 8,
+  join: 8,
+  lobby: 9,
+  roleReveal: 10,
+  round: 11,
+  checkin: 12,
+  blackout: 13,
+  results: 13,
 };
 
 function Router() {
@@ -77,6 +81,12 @@ function Router() {
       break;
     case 'dob':
       screen = <DobGate />;
+      break;
+    case 'legal':
+      screen = <LegalGate />;
+      break;
+    case 'auth':
+      screen = <AuthGate />;
       break;
     case 'handle':
       screen = <HandlePick />;

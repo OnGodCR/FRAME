@@ -18,6 +18,8 @@ import React, {
 export type Route =
   | 'splash'
   | 'dob'
+  | 'legal'
+  | 'auth'
   | 'handle'
   | 'permissions'
   | 'mapTutorial'
@@ -98,6 +100,11 @@ export interface Equipped {
   frame: string;
   blackout: string;
   tag: string;
+}
+
+export interface Auth {
+  kind: 'google' | 'apple' | 'guest';
+  email: string | null;
 }
 
 export interface Profile {
@@ -331,6 +338,8 @@ interface Game {
   go: (r: Route) => void;
   profile: Profile;
   setHandle: (h: string) => void;
+  auth: Auth | null;
+  setAuth: (a: Auth) => void;
   partyCode: string;
   round: RoundState | null;
   nextRole: Role;
@@ -375,6 +384,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   });
   const [round, setRound] = useState<RoundState | null>(null);
   const [nextRole, setNextRole] = useState<Role>('hider');
+  const [auth, setAuth] = useState<Auth | null>(null);
   const routeRef = useRef(route);
   routeRef.current = route;
 
@@ -505,6 +515,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         go,
         profile,
         setHandle,
+        auth,
+        setAuth,
         partyCode: '7KFMQ2',
         round,
         nextRole,

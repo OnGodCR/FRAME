@@ -15,6 +15,7 @@ import { Btn, Label, Mono } from '../components/ui';
 import { ZoneMap, MapMarker } from '../components/ZoneMap';
 import { PinchArea, ScaleBadge, ZoomControls, useMapCamera } from '../components/MapCamera';
 import { useWorld } from '../engine/WorldContext';
+import { useHeading } from '../engine/useHeading';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { FeedPhoto, fmtClock, roundClock, useGame } from '../engine/GameContext';
@@ -26,6 +27,7 @@ export function SeekerRound() {
   const [openPhoto, setOpenPhoto] = useState<FeedPhoto | null>(null);
   const { world } = useWorld();
   const { zoom, step, pinch } = useMapCamera(2);
+  const { heading } = useHeading();
 
   if (!round) return null;
   const t = round.elapsed;
@@ -33,7 +35,7 @@ export function SeekerRound() {
   const nextRevealAt = t < 32 ? 32 : t < 128 ? 128 : null;
 
   const markers: MapMarker[] = [
-    { key: 'me', x: 0.5, y: 0.5, kind: 'seeker', label: 'YOU' },
+    { key: 'me', x: 0.5, y: 0.5, kind: 'seeker', label: 'YOU', heading },
     ...round.reveals.map((p) => ({
       key: p.id,
       x: p.pos.x,

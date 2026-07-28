@@ -11,6 +11,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Body, Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { FadeIn } from '../components/motion';
@@ -90,14 +91,69 @@ const JOIN_SCHEDULE: { t: number; name: string }[] = [
   { t: 7, name: 'ARI' },
 ];
 
-const SETTINGS: { k: string; v: string }[] = [
-  { k: 'ZONE', v: '1.0 KM RADIUS' },
-  { k: 'ROUND', v: '45 MIN' },
-  { k: 'CHECK-IN', v: 'EVERY 5 MIN' },
-  { k: 'REVEAL', v: 'EVERY 10 MIN · 30 S' },
-  { k: 'SEEKERS', v: '1' },
-  { k: 'SHRINKING ZONE', v: 'ON' },
+/**
+ * Host settings, with the option sets from the PRD 4.2 table. Tapping a row
+ * steps to the next option and wraps, which is faster one-handed than opening
+ * a picker for six settings that all have short option lists.
+ */
+interface SettingDef {
+  key: string;
+  label: string;
+  options: string[];
+  /** Locked behind a level, per PRD 5.1. */
+  lockedAbove?: number;
+}
+
+const SETTING_DEFS: SettingDef[] = [
+  {
+    key: 'zone',
+    label: 'ZONE',
+    options: ['300 M', '500 M', '1.0 KM', '2.0 KM', '5.0 KM', '10 KM'],
+    lockedAbove: 4,
+  },
+  {
+    key: 'round',
+    label: 'ROUND',
+    options: ['20 MIN', '30 MIN', '45 MIN', '60 MIN', '90 MIN', '120 MIN'],
+    lockedAbove: 4,
+  },
+  { key: 'checkin', label: 'CHECK-IN', options: ['EVERY 3 MIN', 'EVERY 5 MIN', 'EVERY 10 MIN'] },
+  {
+    key: 'reveal',
+    label: 'REVEAL',
+    options: ['EVERY 5 MIN', 'EVERY 10 MIN', 'EVERY 15 MIN'],
+  },
+  { key: 'visible', label: 'REVEAL LASTS', options: ['15 S', '30 S', '60 S', 'PERMANENT'] },
+  { key: 'seekers', label: 'SEEKERS', options: ['1', '2', '3'] },
+  { key: 'cooldown', label: 'SEEKER COOLDOWN', options: ['2 MIN', '5 MIN', '10 MIN'] },
+  { key: 'shrink', label: 'SHRINKING ZONE', options: ['ON', 'OFF'] },
+  { key: 'buffs', label: 'BUFFS', options: ['ON', 'OFF'] },
+  { key: 'spectate', label: 'SPECTATE AFTER OUT', options: ['ON', 'OFF'] },
 ];
+
+const DEFAULT_SETTINGS: Record<string, number> = {
+  zone: 2,
+  round: 2,
+  checkin: 1,
+  reveal: 1,
+  visible: 1,
+  seekers: 0,
+  cooldown: 1,
+  shrink: 0,
+  buffs: 0,
+  spectate: 0,
+};
+
+/** PRD 4.2: rural play is a settings problem, so it gets a one-tap preset. */
+const RURAL_PRESET: Record<string, number> = {
+  ...DEFAULT_SETTINGS,
+  zone: 4,
+  round: 4,
+  reveal: 0,
+  visible: 3,
+};
+
+const HOST_LEVEL_GATE = 20;
 
 export function Lobby() {
   const { go, profile, partyCode, startRound } = useGame();
@@ -105,12 +161,27 @@ export function Lobby() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [elapsed, setElapsed] = useState(0);
+  const [settings, setSettings] = useState<Record<string, number>>(DEFAULT_SETTINGS);
 
   // The zone centres on the host's position (PRD 4.2), so this is the moment
   // location is genuinely needed and therefore the right moment to ask.
   useEffect(() => {
     if (status.state === 'idle') request(1000);
   }, []);
+
+  const cycle = (def: SettingDef) => {
+    Haptics.selectionAsync();
+    setSettings((s) => {
+      const next = ((s[def.key] ?? 0) + 1) % def.options.length;
+      return { ...s, [def.key]: next };
+    });
+  };
+
+  const gatedNotice =
+    profile.level < HOST_LEVEL_GATE &&
+    SETTING_DEFS.some(
+      (d) => d.lockedAbove !== undefined && (settings[d.key] ?? 0) >= d.lockedAbove,
+    );
   const [acked, setAcked] = useState(false);
   const [safetyOpen, setSafetyOpen] = useState(false);
 
@@ -215,12 +286,51 @@ export function Lobby() {
             <Label tone="text">Round settings</Label>
             <Mono style={{ fontSize: 10, color: color.faint }}>HOST ONLY</Mono>
           </View>
-          {SETTINGS.map((s) => (
-            <View key={s.k} style={styles.settingRow}>
-              <Label tone="faint">{s.k}</Label>
-              <Mono style={{ fontSize: 11, color: color.text }}>{s.v}</Mono>
+          {SETTING_DEFS.map((def) => {
+            const idx = settings[def.key] ?? 0;
+            const locked =
+              def.lockedAbove !== undefined &&
+              profile.level < HOST_LEVEL_GATE &&
+              idx >= def.lockedAbove;
+            return (
+              <Pressable
+                key={def.key}
+                onPress={() => cycle(def)}
+                style={({ pressed }) => [
+                  styles.settingRow,
+                  pressed && { backgroundColor: color.surface2 },
+                ]}
+              >
+                <Label tone="faint">{def.label}</Label>
+                <View style={styles.settingValue}>
+                  <Mono style={{ fontSize: 11, color: locked ? color.warn : color.text }}>
+                    {def.options[idx]}
+                  </Mono>
+                  <Mono style={styles.settingChevron}>›</Mono>
+                </View>
+              </Pressable>
+            );
+          })}
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setSettings(RURAL_PRESET);
+            }}
+            style={({ pressed }) => [styles.presetRow, pressed && { opacity: 0.7 }]}
+          >
+            <Mono style={styles.presetText}>APPLY RURAL PRESET</Mono>
+            <Mono style={{ fontSize: 9, color: color.faint }}>
+              5 KM · 90 MIN · REVEALS STAY UP
+            </Mono>
+          </Pressable>
+          {gatedNotice && (
+            <View style={styles.gateNotice}>
+              <Mono style={{ fontSize: 10, color: color.warn, lineHeight: 15 }}>
+                Zones above 2 km and rounds over 60 minutes unlock at level{' '}
+                {HOST_LEVEL_GATE}. Keeps a first game from becoming unmanageable.
+              </Mono>
             </View>
-          ))}
+          )}
         </Card>
 
         {/* safety gate */}
@@ -447,7 +557,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: space(4),
-    paddingVertical: space(2.5),
+    paddingVertical: space(3),
+    borderTopWidth: 1,
+    borderTopColor: color.line,
+  },
+  settingValue: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
+  settingChevron: { fontSize: 14, color: color.faint, marginTop: -2 },
+  presetRow: {
+    paddingHorizontal: space(4),
+    paddingVertical: space(3),
+    borderTopWidth: 1,
+    borderTopColor: color.line,
+    alignItems: 'center',
+    gap: 3,
+  },
+  presetText: { fontSize: 10, letterSpacing: 1.4, color: color.accent },
+  gateNotice: {
+    paddingHorizontal: space(4),
+    paddingVertical: space(3),
     borderTopWidth: 1,
     borderTopColor: color.line,
   },
