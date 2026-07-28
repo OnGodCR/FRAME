@@ -13,8 +13,6 @@ import { color, font, radius, space, REDUCED_MOTION } from '../theme';
 import { Body, Brackets, Btn, Label, Mono } from '../components/ui';
 import { useGame } from '../engine/GameContext';
 
-const CURRENT_YEAR = 2026;
-
 export function Splash() {
   const { go } = useGame();
   const blink = useRef(new Animated.Value(1)).current;
@@ -53,35 +51,114 @@ export function Splash() {
   );
 }
 
+const MAX_AGE = 120;
+/**
+ * A typo should be correctable, but unlimited retries turn the age gate into a
+ * guessing game, which is exactly what a good-faith gate is meant to avoid.
+ * A few corrections, then it sticks.
+ */
+const MAX_CORRECTIONS = 3;
+
+/** Days in a month, leap-year aware, so 02/30 and 04/31 are rejected. */
+function daysInMonth(month: number, year: number) {
+  if (month === 2) {
+    const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    return leap ? 29 : 28;
+  }
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
+/** Returns an error string, or null when the date is real and plausible. */
+function validateDob(mm: string, dd: string, yyyy: string): string | null {
+  const m = parseInt(mm, 10);
+  const d = parseInt(dd, 10);
+  const y = parseInt(yyyy, 10);
+  if (!m || m < 1 || m > 12) return 'That month does not exist.';
+  if (!y) return 'Check the year.';
+
+  const now = new Date();
+  if (y > now.getFullYear()) return 'That year is in the future.';
+  if (y < now.getFullYear() - MAX_AGE) return `Nobody is over ${MAX_AGE}. Check the year.`;
+  if (!d || d < 1 || d > daysInMonth(m, y)) return 'That day does not exist in that month.';
+
+  const dob = new Date(y, m - 1, d);
+  if (dob.getTime() > now.getTime()) return 'That date has not happened yet.';
+  return null;
+}
+
+/** Whole years elapsed, counting whether this year's birthday has passed. */
+function ageFrom(mm: string, dd: string, yyyy: string) {
+  const now = new Date();
+  const dob = new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, parseInt(dd, 10));
+  let age = now.getFullYear() - dob.getFullYear();
+  const beforeBirthday =
+    now.getMonth() < dob.getMonth() ||
+    (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate());
+  if (beforeBirthday) age--;
+  return age;
+}
+
 export function DobGate() {
   const { go } = useGame();
   const [mm, setMm] = useState('');
   const [dd, setDd] = useState('');
   const [yyyy, setYyyy] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [refused, setRefused] = useState(false);
+  const [corrections, setCorrections] = useState(0);
   const ddRef = useRef<TextInput>(null);
   const yyRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
 
   const complete = mm.length === 2 && dd.length === 2 && yyyy.length === 4;
+
   const submit = () => {
-    const age = CURRENT_YEAR - parseInt(yyyy, 10);
-    if (age < 13) {
+    const invalid = validateDob(mm, dd, yyyy);
+    if (invalid) {
+      setError(invalid);
+      return;
+    }
+    setError(null);
+    if (ageFrom(mm, dd, yyyy) < 13) {
       setRefused(true);
       return;
     }
     go('legal');
   };
 
+  const reenter = () => {
+    setCorrections((c) => c + 1);
+    setRefused(false);
+    setMm('');
+    setDd('');
+    setYyyy('');
+    setError(null);
+  };
+
   if (refused) {
+    const attemptsLeft = MAX_CORRECTIONS - corrections;
     return (
       <View style={[styles.screen, { padding: space(6), justifyContent: 'center' }]}>
         <Label tone="danger">Not yet</Label>
         <Text style={styles.h1}>FRAME is for players 13 and up.</Text>
         <Body style={{ color: color.dim, marginTop: space(3) }}>
-          This decision is remembered on this device. Changing the date won't change the
-          answer.
+          {attemptsLeft > 0
+            ? 'If you mistyped your date of birth, you can correct it.'
+            : 'You have used all your corrections on this device.'}
         </Body>
+        {attemptsLeft > 0 && (
+          <>
+            <Btn
+              title="Re-enter my date of birth"
+              variant="outline"
+              style={{ marginTop: space(6) }}
+              onPress={reenter}
+            />
+            <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(3) }}>
+              {attemptsLeft} {attemptsLeft === 1 ? 'CORRECTION' : 'CORRECTIONS'} LEFT
+            </Mono>
+          </>
+        )}
       </View>
     );
   }
@@ -104,6 +181,7 @@ export function DobGate() {
             maxLength={2}
             onChange={(v) => {
               setMm(v);
+              setError(null);
               if (v.length === 2) ddRef.current?.focus();
             }}
             autoFocus
@@ -115,6 +193,7 @@ export function DobGate() {
             maxLength={2}
             onChange={(v) => {
               setDd(v);
+              setError(null);
               if (v.length === 2) yyRef.current?.focus();
             }}
           />
@@ -124,9 +203,18 @@ export function DobGate() {
             placeholder="YYYY"
             maxLength={4}
             wide
-            onChange={setYyyy}
+            onChange={(v) => {
+              setYyyy(v);
+              setError(null);
+            }}
           />
         </View>
+
+        {error && (
+          <Mono style={styles.dobError} accessibilityLiveRegion="polite">
+            {error}
+          </Mono>
+        )}
       </View>
       <View style={{ padding: space(6), paddingBottom: insets.bottom + space(6) }}>
         <Btn title="Continue" disabled={!complete} onPress={submit} />
@@ -275,6 +363,12 @@ const styles = StyleSheet.create({
     color: color.text,
     marginTop: space(2),
     letterSpacing: -0.5,
+  },
+  dobError: {
+    fontSize: 12,
+    color: color.warn,
+    marginTop: space(4),
+    letterSpacing: 0.5,
   },
   dateCell: {
     flex: 1,
