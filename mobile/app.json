@@ -3,6 +3,7 @@
     "name": "FRAME",
     "slug": "frame",
     "version": "1.0.0",
+    "scheme": "frame",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
