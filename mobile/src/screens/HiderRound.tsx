@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Label, Mono } from '../components/ui';
 import { ZoneMap, MapMarker, Poi } from '../components/ZoneMap';
+import { PinchArea, ScaleBadge, ZoomControls, useMapCamera } from '../components/MapCamera';
 import { useWorld } from '../engine/WorldContext';
 import { PoiSheet } from '../components/PoiSheet';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
@@ -25,13 +26,14 @@ const metersTo = (p: { x: number; y: number }) =>
   Math.hypot(p.x - SELF.x, p.y - SELF.y) * ZONE_DIAMETER_M;
 
 export function HiderRound() {
-  const { round, go, leaveRound, profile } = useGame();
+  const { round, go, leaveRound } = useGame();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const pulse = useRef(new Animated.Value(0)).current;
   const [openPoi, setOpenPoi] = useState<Poi | null>(null);
   const [claimed, setClaimed] = useState<string[]>([]);
   const { world } = useWorld();
+  const { zoom, step, pinch } = useMapCamera(2);
 
   const checkinOpen = !!round?.checkin && !round.checkin.submitted;
 
@@ -69,11 +71,30 @@ export function HiderRound() {
     { key: 'me', x: SELF.x, y: SELF.y, kind: 'self', label: 'YOU' },
   ];
 
-  const mapH = height - 260 - insets.top;
-
   return (
     <View style={styles.screen}>
-      {/* top bar */}
+      {/* The map is the screen. Everything else floats on top of it. */}
+      <View style={StyleSheet.absoluteFill}>
+        <PinchArea gesture={pinch}>
+          <View>
+            <ZoneMap
+              width={width}
+              height={height}
+              zoneScale={round.zoneScale}
+              shrinkPreview={round.shrinkWarnUntil != null}
+              markers={markers}
+              pois={world.pois}
+              streets={world.streets}
+              claimedPoiIds={claimed}
+              onPoiPress={setOpenPoi}
+              center={SELF}
+              zoom={zoom}
+            />
+          </View>
+        </PinchArea>
+      </View>
+
+      {/* top HUD */}
       <View style={[styles.topBar, { paddingTop: insets.top + space(2) }]}>
         <View>
           <Label tone="faint" style={{ fontSize: 8 }}>
@@ -90,86 +111,78 @@ export function HiderRound() {
         <ExplainerButton />
       </View>
 
-      {/* map */}
-      <View style={{ flex: 1 }}>
-        <ZoneMap
-          width={width}
-          height={mapH}
-          zoneScale={round.zoneScale}
-          shrinkPreview={round.shrinkWarnUntil != null}
-          markers={markers}
-          pois={world.pois}
-          streets={world.streets}
-          claimedPoiIds={claimed}
-          onPoiPress={setOpenPoi}
-        />
-        <View style={[styles.tickerWrap]} pointerEvents="none">
-          <Ticker events={round.ticker} />
-          {round.shrinkWarnUntil != null && (
-            <View style={styles.shrinkWarn}>
-              <Mono style={{ fontSize: 10, letterSpacing: 1.2, color: color.warn }}>
-                ZONE CONTRACTS IN {fmtClock(round.shrinkWarnUntil - t)}
-              </Mono>
-            </View>
-          )}
-        </View>
-        {pinged && (
-          <View pointerEvents="none" style={styles.pingFlash}>
-            <Text style={styles.pingText}>YOU'VE BEEN PINGED</Text>
-            <Mono style={{ fontSize: 10, color: '#FFD9D6', letterSpacing: 1.5 }}>
-              THE SEEKER HAS YOUR LAST POSITION
+      <View style={[styles.tickerWrap, { top: insets.top + space(14) }]} pointerEvents="none">
+        <Ticker events={round.ticker} />
+        {round.shrinkWarnUntil != null && (
+          <View style={styles.shrinkWarn}>
+            <Mono style={{ fontSize: 10, letterSpacing: 1.2, color: color.warn }}>
+              ZONE CONTRACTS IN {fmtClock(round.shrinkWarnUntil - t)}
             </Mono>
           </View>
         )}
-        <View style={[styles.sosWrap, { bottom: space(4) }]}>
-          <SosButton onLeave={leaveRound} />
-        </View>
-        <View style={[styles.invWrap, { bottom: space(4) }]}>
-          <InventoryDrawer role="hider" />
-        </View>
       </View>
 
-      {/* bottom panel */}
-      <View style={[styles.bottom, { paddingBottom: insets.bottom + space(4) }]}>
-        {checkinOpen ? (
-          <Animated.View
-            style={[
-              styles.checkinAlert,
-              {
-                borderColor: pulse.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [color.accent, '#5E7A0E'],
-                }),
-              },
-            ]}
-          >
-            <View style={{ flex: 1 }}>
-              <Label tone="accent">Check-in 0{round.checkin!.index} open</Label>
-              <Text style={styles.checkinTimer}>
-                {fmtClock(round.checkin!.deadline - t)}
-              </Text>
-              <Mono style={{ fontSize: 10, color: color.dim }}>
-                MISS IT AND YOU'RE BLACKED OUT
-              </Mono>
+      {/* right rail sits below the ticker so the two never overlap */}
+      <View style={[styles.rightRail, { top: insets.top + space(24) }]}>
+        <ZoomControls zoom={zoom} onStep={step} />
+        <ScaleBadge zoom={zoom} style={{ marginTop: space(2) }} />
+      </View>
+
+      {pinged && (
+        <View pointerEvents="none" style={styles.pingFlash}>
+          <Text style={styles.pingText}>YOU'VE BEEN PINGED</Text>
+          <Mono style={{ fontSize: 10, color: '#FFD9D6', letterSpacing: 1.5 }}>
+            THE SEEKER HAS YOUR LAST POSITION
+          </Mono>
+        </View>
+      )}
+
+      {/* bottom HUD */}
+      <View style={[styles.bottomStack, { paddingBottom: insets.bottom + space(3) }]}>
+        <View style={styles.controlRow}>
+          <SosButton onLeave={leaveRound} />
+          <InventoryDrawer role="hider" />
+        </View>
+
+        <View style={styles.bottom}>
+          {checkinOpen ? (
+            <Animated.View
+              style={[
+                styles.checkinAlert,
+                {
+                  borderColor: pulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [color.accent, '#5E7A0E'],
+                  }),
+                },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Label tone="accent">Check-in 0{round.checkin!.index} open</Label>
+                <Text style={styles.checkinTimer}>{fmtClock(round.checkin!.deadline - t)}</Text>
+                <Mono style={{ fontSize: 10, color: color.dim }}>
+                  MISS IT AND YOU'RE BLACKED OUT
+                </Mono>
+              </View>
+              <Btn title="Open camera" onPress={() => go('checkin')} style={{ minWidth: 130 }} />
+            </Animated.View>
+          ) : (
+            <View style={styles.nextRow}>
+              <View>
+                <Label tone="faint">Next check-in</Label>
+                <Text style={styles.nextTimer}>
+                  {nextTickAt != null ? fmtClock(nextTickAt - t) : '--:--'}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Label tone="faint">Check-ins passed</Label>
+                <Text style={[styles.nextTimer, { color: color.accent }]}>
+                  {String(round.checkinsPassed + 3).padStart(2, '0')}
+                </Text>
+              </View>
             </View>
-            <Btn title="Open camera" onPress={() => go('checkin')} style={{ minWidth: 130 }} />
-          </Animated.View>
-        ) : (
-          <View style={styles.nextRow}>
-            <View>
-              <Label tone="faint">Next check-in</Label>
-              <Text style={styles.nextTimer}>
-                {nextTickAt != null ? fmtClock(nextTickAt - t) : '--:--'}
-              </Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Label tone="faint">Check-ins passed</Label>
-              <Text style={[styles.nextTimer, { color: color.accent }]}>
-                {String(round.checkinsPassed + 3).padStart(2, '0')}
-              </Text>
-            </View>
-          </View>
-        )}
+          )}
+        </View>
       </View>
 
       <PoiSheet
@@ -186,11 +199,16 @@ export function HiderRound() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },
   topBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
     paddingHorizontal: space(4),
     paddingBottom: space(2.5),
+    backgroundColor: 'rgba(10,10,12,0.82)',
     borderBottomWidth: 1,
     borderBottomColor: color.line,
   },
@@ -202,10 +220,14 @@ const styles = StyleSheet.create({
   },
   tickerWrap: {
     position: 'absolute',
-    top: space(3),
     left: space(3),
     right: space(3),
     gap: space(2),
+  },
+  rightRail: {
+    position: 'absolute',
+    right: space(3),
+    alignItems: 'center',
   },
   shrinkWarn: {
     alignSelf: 'flex-start',
@@ -226,8 +248,7 @@ const styles = StyleSheet.create({
     borderColor: color.danger,
     backgroundColor: 'rgba(255,68,56,0.08)',
     alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingBottom: space(20),
+    justifyContent: 'center',
   },
   pingText: {
     fontFamily: font.display,
@@ -236,13 +257,28 @@ const styles = StyleSheet.create({
     color: color.danger,
     marginBottom: 4,
   },
-  sosWrap: { position: 'absolute', left: space(4) },
-  invWrap: { position: 'absolute', right: space(4) },
+  bottomStack: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  controlRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingHorizontal: space(4),
+    marginBottom: space(3),
+  },
   bottom: {
-    borderTopWidth: 1,
-    borderTopColor: color.line,
+    marginHorizontal: space(3),
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.lg,
     padding: space(4),
-    backgroundColor: color.surface,
+    // Fully opaque: this panel holds the countdown that decides whether the
+    // player survives, and map labels bleeding through it read as a glitch.
+    backgroundColor: color.bg,
   },
   nextRow: {
     flexDirection: 'row',

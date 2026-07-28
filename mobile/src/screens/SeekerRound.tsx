@@ -13,6 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Label, Mono } from '../components/ui';
 import { ZoneMap, MapMarker } from '../components/ZoneMap';
+import { PinchArea, ScaleBadge, ZoomControls, useMapCamera } from '../components/MapCamera';
 import { useWorld } from '../engine/WorldContext';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
@@ -24,6 +25,7 @@ export function SeekerRound() {
   const { width, height } = useWindowDimensions();
   const [openPhoto, setOpenPhoto] = useState<FeedPhoto | null>(null);
   const { world } = useWorld();
+  const { zoom, step, pinch } = useMapCamera(2);
 
   if (!round) return null;
   const t = round.elapsed;
@@ -47,7 +49,7 @@ export function SeekerRound() {
 
   const canTag = round.proximity >= 0.8;
   const signalBars = Math.round(round.proximity * 5);
-  const mapH = height - 332 - insets.top;
+  const mapH = height - 300 - insets.top;
 
   return (
     <View style={styles.screen}>
@@ -69,18 +71,27 @@ export function SeekerRound() {
         <ExplainerButton />
       </View>
 
-      {/* map */}
-      <View style={{ flex: 1 }}>
-        <ZoneMap
-          width={width}
-          height={Math.max(mapH, 180)}
-          zoneScale={round.zoneScale}
-          markers={markers}
-          pois={world.pois}
-          streets={world.streets}
-        />
+      <View style={styles.mapLayer}>
+        <PinchArea gesture={pinch}>
+          <View>
+            <ZoneMap
+              width={width}
+              height={Math.max(mapH, 240)}
+              zoneScale={round.zoneScale}
+              markers={markers}
+              pois={world.pois}
+              streets={world.streets}
+              center={{ x: 0.5, y: 0.5 }}
+              zoom={zoom}
+            />
+          </View>
+        </PinchArea>
         <View style={styles.tickerWrap} pointerEvents="none">
           <Ticker events={round.ticker} />
+        </View>
+        <View style={styles.rightRail}>
+          <ZoomControls zoom={zoom} onStep={step} />
+          <ScaleBadge zoom={zoom} style={{ marginTop: space(2) }} />
         </View>
         <View style={[styles.sosWrap, { bottom: space(3) }]}>
           <SosButton onLeave={leaveRound} />
@@ -209,11 +220,18 @@ const styles = StyleSheet.create({
     color: color.text,
     fontVariant: ['tabular-nums'],
   },
+  mapLayer: { flex: 1 },
   tickerWrap: {
     position: 'absolute',
     top: space(3),
     left: space(3),
     right: space(3),
+  },
+  rightRail: {
+    position: 'absolute',
+    right: space(3),
+    top: space(16),
+    alignItems: 'center',
   },
   sosWrap: { position: 'absolute', left: space(4) },
   invWrap: { position: 'absolute', right: space(4) },

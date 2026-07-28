@@ -175,6 +175,11 @@ export function Lobby() {
             <Mono style={{ fontSize: 9, letterSpacing: 1.2, color: color.dim }}>
               {`PLAY ZONE · 1.0 KM · ${world.label.toUpperCase()} · ${world.pois.length} POIs`}
             </Mono>
+            {/* ODbL requires visible attribution wherever the data is shown.
+                This is the quietest place in the app that still qualifies. */}
+            <Mono style={{ fontSize: 8, letterSpacing: 1, color: color.faint, marginTop: 3 }}>
+              MAP DATA © OPENSTREETMAP CONTRIBUTORS
+            </Mono>
           </View>
         </FadeIn>
 

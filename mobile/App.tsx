@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import {
   SpaceGrotesk_500Medium,
@@ -18,6 +19,7 @@ import { GameProvider, Route, useGame } from './src/engine/GameContext';
 import { WorldProvider } from './src/engine/WorldContext';
 import { Splash, DobGate, HandlePick, Permissions } from './src/screens/Onboarding';
 import { Home } from './src/screens/Home';
+import { MapTutorial } from './src/screens/MapTutorial';
 import { Shop } from './src/screens/Shop';
 import { SeasonPass } from './src/screens/SeasonPass';
 import { Loadout } from './src/screens/Loadout';
@@ -35,17 +37,18 @@ const DEPTH: Record<Route, number> = {
   dob: 1,
   handle: 2,
   permissions: 3,
-  home: 4,
-  shop: 5,
-  pass: 5,
-  loadout: 5,
-  join: 5,
-  lobby: 6,
-  roleReveal: 7,
-  round: 8,
-  checkin: 9,
-  blackout: 10,
-  results: 10,
+  mapTutorial: 4,
+  home: 5,
+  shop: 6,
+  pass: 6,
+  loadout: 6,
+  join: 6,
+  lobby: 7,
+  roleReveal: 8,
+  round: 9,
+  checkin: 10,
+  blackout: 11,
+  results: 11,
 };
 
 function Router() {
@@ -80,6 +83,9 @@ function Router() {
       break;
     case 'permissions':
       screen = <Permissions />;
+      break;
+    case 'mapTutorial':
+      screen = <MapTutorial />;
       break;
     case 'home':
       screen = <Home />;
@@ -146,16 +152,18 @@ export default function App() {
   });
   if (!loaded) return <View style={styles.boot} />;
   return (
-    <SafeAreaProvider>
-      <WorldProvider>
-        <GameProvider>
-          <View style={styles.boot}>
-            <StatusBar style="light" />
-            <Router />
-          </View>
-        </GameProvider>
-      </WorldProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={styles.boot}>
+      <SafeAreaProvider>
+        <WorldProvider>
+          <GameProvider>
+            <View style={styles.boot}>
+              <StatusBar style="light" />
+              <Router />
+            </View>
+          </GameProvider>
+        </WorldProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

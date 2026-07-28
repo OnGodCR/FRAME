@@ -1,15 +1,20 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
-import Svg, { Rect, Circle, Line, Defs, Mask, G, Path, Polygon } from 'react-native-svg';
+import Svg, { Rect, Circle, Line, Defs, Mask, G, Path } from 'react-native-svg';
 import { color, font } from '../theme';
 import { Poi, Street } from '../data/poiRules';
 
-// The basemap is real: street geometry and landmarks come from OpenStreetMap,
-// filtered against the PRD 6.1 placement restrictions in poiRules.ts, either
-// live around the player or from the pre-baked sample. Coordinates arrive
-// already projected into 0..1 map space where 0.5 of offset is the zone radius.
+// Full-bleed map with a camera that follows the player, rather than a window
+// showing the whole zone at once. The zone circle is drawn at its true
+// projected size, so at close zoom it runs off screen the way a real boundary
+// would. Street geometry and landmarks come from OpenStreetMap, filtered
+// against the PRD 6.1 placement rules in poiRules.ts. Coordinates arrive
+// already projected into 0..1 space where 1.0 spans the zone diameter.
 
 export type { Poi } from '../data/poiRules';
+
+export const MIN_ZOOM = 1;
+export const MAX_ZOOM = 6;
 
 export const POI_TYPE_META: Record<
   Poi['type'],
@@ -51,6 +56,9 @@ export function ZoneMap({
   streets = [],
   claimedPoiIds = [],
   onPoiPress,
+  center = { x: 0.5, y: 0.5 },
+  zoom = 1,
+  showLabels = true,
 }: {
   width: number;
   height: number;
@@ -61,54 +69,75 @@ export function ZoneMap({
   streets?: Street[];
   claimedPoiIds?: string[];
   onPoiPress?: (poi: Poi) => void;
+  /** Camera centre in normalized map space. Usually the player. */
+  center?: { x: number; y: number };
+  zoom?: number;
+  showLabels?: boolean;
 }) {
-  const cx = width / 2;
-  const cy = height / 2;
-  const baseR = Math.min(width, height) * 0.44;
-  const r = baseR * zoneScale;
+  // One normalized unit is the zone diameter. At zoom 1 the whole zone fits.
+  const scale = Math.min(width, height) * 0.88 * zoom;
+  const px = (x: number) => width / 2 + (x - center.x) * scale;
+  const py = (y: number) => height / 2 + (y - center.y) * scale;
 
-  // The ingest projects the zone radius onto an offset of 0.5 from centre, so
-  // that offset has to land exactly on the zone ring: a landmark 1 km out
-  // belongs on the boundary, not past it.
-  const px = (x: number) => cx + (x - 0.5) * 2 * baseR;
-  const py = (y: number) => cy + (y - 0.5) * 2 * baseR;
+  const zx = px(0.5);
+  const zy = py(0.5);
+  const zr = 0.5 * scale * zoneScale;
 
-  // Marker weight scales with the map so the lobby thumbnail is not covered
-  // in diamonds.
   const compact = Math.min(width, height) < 260;
+  // Only the 8 beacons are named by default. Everything else earns a caption
+  // once you have zoomed in far enough that 32 of them are not a wall of text.
+  const detail = zoom >= 3.2;
 
   const paths = useMemo(() => {
     const major: string[] = [];
     const minor: string[] = [];
+    const pad = 120;
     for (const seg of streets) {
       let d = '';
+      let drawn = false;
       for (let i = 0; i < seg.p.length; i++) {
         const X = px(seg.p[i][0]);
         const Y = py(seg.p[i][1]);
-        if (X < -80 || X > width + 80 || Y < -80 || Y > height + 80) {
+        if (X < -pad || X > width + pad || Y < -pad || Y > height + pad) {
           d += `M${X.toFixed(1)} ${Y.toFixed(1)}`;
           continue;
         }
+        drawn = true;
         d += `${i === 0 ? 'M' : 'L'}${X.toFixed(1)} ${Y.toFixed(1)}`;
       }
-      (seg.c === 1 ? major : minor).push(d);
+      if (drawn) (seg.c === 1 ? major : minor).push(d);
     }
     return { major: major.join(' '), minor: minor.join(' ') };
-  }, [width, height, streets]);
+  }, [width, height, streets, center.x, center.y, zoom]);
+
+  // Roads thicken with zoom so the network stays readable close in.
+  const roadW = Math.max(1.6, 2.2 * Math.sqrt(zoom));
 
   return (
-    <View style={{ width, height, overflow: 'hidden', backgroundColor: color.bg }}>
+    <View style={{ width, height, overflow: 'hidden', backgroundColor: '#0B0B0E' }}>
       <Svg width={width} height={height}>
         <Defs>
           <Mask id="zone">
             <Rect x={0} y={0} width={width} height={height} fill="#fff" />
-            <Circle cx={cx} cy={cy} r={r} fill="#000" />
+            <Circle cx={zx} cy={zy} r={zr} fill="#000" />
           </Mask>
         </Defs>
 
         <Rect x={0} y={0} width={width} height={height} fill="#0B0B0E" />
-        <Path d={paths.minor} stroke="#1E1E25" strokeWidth={2.2} fill="none" strokeLinecap="round" />
-        <Path d={paths.major} stroke="#2B2B34" strokeWidth={3.6} fill="none" strokeLinecap="round" />
+        <Path
+          d={paths.minor}
+          stroke="#1E1E25"
+          strokeWidth={roadW}
+          fill="none"
+          strokeLinecap="round"
+        />
+        <Path
+          d={paths.major}
+          stroke="#2B2B34"
+          strokeWidth={roadW * 1.6}
+          fill="none"
+          strokeLinecap="round"
+        />
 
         <Rect
           x={0}
@@ -119,9 +148,9 @@ export function ZoneMap({
           mask="url(#zone)"
         />
         <Circle
-          cx={cx}
-          cy={cy}
-          r={r}
+          cx={zx}
+          cy={zy}
+          r={zr}
           fill="rgba(200,255,46,0.025)"
           stroke={color.accent}
           strokeWidth={1.5}
@@ -129,9 +158,9 @@ export function ZoneMap({
         />
         {shrinkPreview && (
           <Circle
-            cx={cx}
-            cy={cy}
-            r={r * 0.75}
+            cx={zx}
+            cy={zy}
+            r={zr * 0.75}
             fill="none"
             stroke={color.warn}
             strokeWidth={1}
@@ -139,48 +168,59 @@ export function ZoneMap({
           />
         )}
         <G>
-          <Line x1={cx - 5} y1={cy} x2={cx + 5} y2={cy} stroke={color.faint} strokeWidth={1} />
-          <Line x1={cx} y1={cy - 5} x2={cx} y2={cy + 5} stroke={color.faint} strokeWidth={1} />
+          <Line x1={zx - 5} y1={zy} x2={zx + 5} y2={zy} stroke={color.faint} strokeWidth={1} />
+          <Line x1={zx} y1={zy - 5} x2={zx} y2={zy + 5} stroke={color.faint} strokeWidth={1} />
         </G>
       </Svg>
 
       {/* Labels are their own layer: a sized child inside a zero-size marker
-          box does not lay out, and they must not steal taps from the diamond.
-          Only beacons are named, otherwise 32 captions fight each other. */}
-      {!compact &&
+          box does not lay out, and captions must not steal taps from the
+          diamond. Beacons are always named; everything else earns a caption
+          once you zoom in far enough for it not to be clutter. */}
+      {showLabels &&
+        !compact &&
         pois
-          .filter((p) => p.type === 'beacon')
-          .map((p) => (
-            <Text
-              key={`lbl-${p.id}`}
-              pointerEvents="none"
-              numberOfLines={1}
-              style={[
-                styles.poiLabel,
-                {
-                  // clamped so a landmark near the edge does not get its
-                  // caption sliced off by the map bounds
-                  left: Math.max(2, Math.min(px(p.x) - 55, width - 112)),
-                  top: py(p.y) + 8,
-                  color: POI_TYPE_META[p.type].tint,
-                },
-              ]}
-            >
-              {p.name.toUpperCase()}
-            </Text>
-          ))}
+          .filter((p) => p.type === 'beacon' || detail)
+          .map((p) => {
+            const left = px(p.x);
+            const top = py(p.y);
+            if (left < -60 || left > width + 60 || top < -40 || top > height + 40) return null;
+            return (
+              <Text
+                key={`lbl-${p.id}`}
+                pointerEvents="none"
+                numberOfLines={1}
+                style={[
+                  styles.poiLabel,
+                  {
+                    left: Math.max(2, Math.min(left - 55, width - 112)),
+                    top: top + 9,
+                    color: POI_TYPE_META[p.type].tint,
+                  },
+                ]}
+              >
+                {p.name.toUpperCase()}
+              </Text>
+            );
+          })}
 
-      {pois.map((p) => (
-        <PoiMarker
-          key={p.id}
-          poi={p}
-          left={px(p.x)}
-          top={py(p.y)}
-          claimed={claimedPoiIds.includes(p.id)}
-          compact={compact}
-          onPress={onPoiPress}
-        />
-      ))}
+      {pois.map((p) => {
+        const left = px(p.x);
+        const top = py(p.y);
+        if (left < -40 || left > width + 40 || top < -40 || top > height + 40) return null;
+        return (
+          <PoiMarker
+            key={p.id}
+            poi={p}
+            left={left}
+            top={top}
+            zoom={zoom}
+            claimed={claimedPoiIds.includes(p.id)}
+            compact={compact}
+            onPress={onPoiPress}
+          />
+        );
+      })}
 
       {markers.map((m) => (
         <Marker key={m.key} marker={m} left={px(m.x)} top={py(m.y)} />
@@ -193,6 +233,7 @@ function PoiMarker({
   poi,
   left,
   top,
+  zoom,
   claimed,
   compact,
   onPress,
@@ -200,13 +241,15 @@ function PoiMarker({
   poi: Poi;
   left: number;
   top: number;
+  zoom: number;
   claimed: boolean;
   compact: boolean;
   onPress?: (p: Poi) => void;
 }) {
   const meta = POI_TYPE_META[poi.type];
   const base = poi.type === 'cache' ? 7 : 10;
-  const size = compact ? base * 0.5 : base;
+  const grow = Math.min(1.7, 0.75 + zoom * 0.28);
+  const size = compact ? base * 0.5 : base * grow;
   return (
     <Pressable
       onPress={() => onPress?.(poi)}
@@ -255,7 +298,7 @@ function Marker({ marker, left, top }: { marker: MapMarker; left: number; top: n
               borderColor: tint,
               opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] }),
               transform: [
-                { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 2.2] }) },
+                { scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.4, 2.4] }) },
               ],
             },
           ]}
@@ -314,10 +357,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1.5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 2,
     borderColor: color.bg,
   },
   pulseRing: {
@@ -328,14 +371,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   revealPin: {
-    width: 9,
-    height: 9,
+    width: 10,
+    height: 10,
     backgroundColor: color.accent,
     transform: [{ rotate: '45deg' }],
   },
   markerLabel: {
     position: 'absolute',
-    top: 8,
+    top: 10,
     fontFamily: font.monoMed,
     fontSize: 8,
     letterSpacing: 1,

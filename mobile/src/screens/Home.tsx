@@ -197,15 +197,9 @@ export function Home() {
                 </View>
               );
             })}
-            {/* Location is requested on tap, never cold at launch (PRD 10.2). */}
-            {status.state === 'ready' ? (
-              <View style={styles.nearbyFoot}>
-                <Mono style={{ fontSize: 9, color: color.faint, lineHeight: 14 }}>
-                  Real places near you from OpenStreetMap, filtered to public ground.
-                  Visit them in a round to claim buffs.
-                </Mono>
-              </View>
-            ) : (
+            {/* Location is requested on tap, never cold at launch (PRD 10.2).
+                Once the real world is loaded the list speaks for itself. */}
+            {status.state !== 'ready' && (
               <PressScale onPress={() => request()} disabled={busy}>
                 <View style={styles.nearbyFoot}>
                   <Mono style={{ fontSize: 10, color: busy ? color.faint : color.accent, letterSpacing: 1.2 }}>

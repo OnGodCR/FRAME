@@ -20,6 +20,7 @@ export type Route =
   | 'dob'
   | 'handle'
   | 'permissions'
+  | 'mapTutorial'
   | 'home'
   | 'shop'
   | 'pass'
