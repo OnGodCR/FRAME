@@ -12,7 +12,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Label, Mono } from '../components/ui';
-import { ZoneMap, MapMarker, POIS } from '../components/ZoneMap';
+import { ZoneMap, MapMarker } from '../components/ZoneMap';
+import { useWorld } from '../engine/WorldContext';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { FeedPhoto, fmtClock, roundClock, useGame } from '../engine/GameContext';
@@ -22,6 +23,7 @@ export function SeekerRound() {
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const [openPhoto, setOpenPhoto] = useState<FeedPhoto | null>(null);
+  const { world } = useWorld();
 
   if (!round) return null;
   const t = round.elapsed;
@@ -74,7 +76,8 @@ export function SeekerRound() {
           height={Math.max(mapH, 180)}
           zoneScale={round.zoneScale}
           markers={markers}
-          pois={POIS}
+          pois={world.pois}
+          streets={world.streets}
         />
         <View style={styles.tickerWrap} pointerEvents="none">
           <Ticker events={round.ticker} />

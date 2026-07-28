@@ -11,7 +11,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Label, Mono } from '../components/ui';
-import { ZoneMap, MapMarker, POIS, Poi } from '../components/ZoneMap';
+import { ZoneMap, MapMarker, Poi } from '../components/ZoneMap';
+import { useWorld } from '../engine/WorldContext';
 import { PoiSheet } from '../components/PoiSheet';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { fmtClock, roundClock, useGame } from '../engine/GameContext';
@@ -30,6 +31,7 @@ export function HiderRound() {
   const pulse = useRef(new Animated.Value(0)).current;
   const [openPoi, setOpenPoi] = useState<Poi | null>(null);
   const [claimed, setClaimed] = useState<string[]>([]);
+  const { world } = useWorld();
 
   const checkinOpen = !!round?.checkin && !round.checkin.submitted;
 
@@ -96,7 +98,8 @@ export function HiderRound() {
           zoneScale={round.zoneScale}
           shrinkPreview={round.shrinkWarnUntil != null}
           markers={markers}
-          pois={POIS}
+          pois={world.pois}
+          streets={world.streets}
           claimedPoiIds={claimed}
           onPoiPress={setOpenPoi}
         />

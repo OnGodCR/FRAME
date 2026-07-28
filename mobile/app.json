@@ -1,21 +1,27 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "FRAME",
+    "slug": "frame",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A0C",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "FRAME uses your location to set the play zone, load the landmarks around you, and check you have not left the boundary. Between reveals your position is never shared with the seeker.",
+        "NSCameraUsageDescription": "FRAME needs the camera for check-ins. Every few minutes you photograph where you are hiding to prove you are still in play. Photos are deleted 24 hours after the round ends."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0A0A0C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION", "CAMERA"],
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -23,7 +29,13 @@
     },
     "plugins": [
       "expo-font",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "FRAME uses your location to set the play zone and load the landmarks around you."
+        }
+      ]
     ]
   }
 }

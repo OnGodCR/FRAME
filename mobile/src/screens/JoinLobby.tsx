@@ -14,7 +14,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, font, radius, space } from '../theme';
 import { Body, Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { FadeIn } from '../components/motion';
-import { ZoneMap, POIS, WORLD_LABEL } from '../components/ZoneMap';
+import { ZoneMap } from '../components/ZoneMap';
+import { useWorld } from '../engine/WorldContext';
 import { useGame, SEEKER_BOT } from '../engine/GameContext';
 
 // ---------- join ----------
@@ -100,9 +101,16 @@ const SETTINGS: { k: string; v: string }[] = [
 
 export function Lobby() {
   const { go, profile, partyCode, startRound } = useGame();
+  const { world, status, request } = useWorld();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [elapsed, setElapsed] = useState(0);
+
+  // The zone centres on the host's position (PRD 4.2), so this is the moment
+  // location is genuinely needed and therefore the right moment to ask.
+  useEffect(() => {
+    if (status.state === 'idle') request(1000);
+  }, []);
   const [acked, setAcked] = useState(false);
   const [safetyOpen, setSafetyOpen] = useState(false);
 
@@ -159,12 +167,13 @@ export function Lobby() {
           <ZoneMap
             width={width - space(10) - 2}
             height={170}
-            pois={POIS}
-            markers={[{ key: 'me', x: 0.5, y: 0.52, kind: 'self' }]}
+            pois={world.pois}
+            streets={world.streets}
+            markers={[{ key: 'me', x: 0.5, y: 0.5, kind: 'self' }]}
           />
           <View style={styles.mapCaption}>
             <Mono style={{ fontSize: 9, letterSpacing: 1.2, color: color.dim }}>
-              {`PLAY ZONE · 1.0 KM · ${WORLD_LABEL.toUpperCase()} · ${POIS.length} POIs`}
+              {`PLAY ZONE · 1.0 KM · ${world.label.toUpperCase()} · ${world.pois.length} POIs`}
             </Mono>
           </View>
         </FadeIn>

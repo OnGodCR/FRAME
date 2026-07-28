@@ -2,28 +2,14 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Rect, Circle, Line, Defs, Mask, G, Path, Polygon } from 'react-native-svg';
 import { color, font } from '../theme';
-import world from '../data/world.json';
+import { Poi, Street } from '../data/poiRules';
 
-// The basemap is real: street geometry and landmarks come from OpenStreetMap
-// via scripts/ingest-pois.mjs, already filtered against the PRD 6.1 placement
-// restrictions. Coordinates arrive pre-projected into 0..1 map space.
+// The basemap is real: street geometry and landmarks come from OpenStreetMap,
+// filtered against the PRD 6.1 placement restrictions in poiRules.ts, either
+// live around the player or from the pre-baked sample. Coordinates arrive
+// already projected into 0..1 map space where 0.5 of offset is the zone radius.
 
-export interface Poi {
-  id: string;
-  name: string;
-  type: 'cache' | 'beacon' | 'waystation';
-  category: string;
-  lat: number;
-  lon: number;
-  x: number;
-  y: number;
-  distM: number;
-  hours: string | null;
-}
-
-export const POIS = world.pois as Poi[];
-export const WORLD_LABEL = world.label;
-const STREETS = world.streets as { c: number; p: number[][] }[];
+export type { Poi } from '../data/poiRules';
 
 export const POI_TYPE_META: Record<
   Poi['type'],
@@ -62,6 +48,7 @@ export function ZoneMap({
   shrinkPreview = false,
   markers = [],
   pois = [],
+  streets = [],
   claimedPoiIds = [],
   onPoiPress,
 }: {
@@ -71,6 +58,7 @@ export function ZoneMap({
   shrinkPreview?: boolean;
   markers?: MapMarker[];
   pois?: Poi[];
+  streets?: Street[];
   claimedPoiIds?: string[];
   onPoiPress?: (poi: Poi) => void;
 }) {
@@ -92,7 +80,7 @@ export function ZoneMap({
   const paths = useMemo(() => {
     const major: string[] = [];
     const minor: string[] = [];
-    for (const seg of STREETS) {
+    for (const seg of streets) {
       let d = '';
       for (let i = 0; i < seg.p.length; i++) {
         const X = px(seg.p[i][0]);
@@ -106,7 +94,7 @@ export function ZoneMap({
       (seg.c === 1 ? major : minor).push(d);
     }
     return { major: major.join(' '), minor: minor.join(' ') };
-  }, [width, height]);
+  }, [width, height, streets]);
 
   return (
     <View style={{ width, height, overflow: 'hidden', backgroundColor: color.bg }}>

@@ -15,6 +15,7 @@ import {
 import { color } from './src/theme';
 import { EASE_OUT } from './src/components/motion';
 import { GameProvider, Route, useGame } from './src/engine/GameContext';
+import { WorldProvider } from './src/engine/WorldContext';
 import { Splash, DobGate, HandlePick, Permissions } from './src/screens/Onboarding';
 import { Home } from './src/screens/Home';
 import { Shop } from './src/screens/Shop';
@@ -146,12 +147,14 @@ export default function App() {
   if (!loaded) return <View style={styles.boot} />;
   return (
     <SafeAreaProvider>
-      <GameProvider>
-        <View style={styles.boot}>
-          <StatusBar style="light" />
-          <Router />
-        </View>
-      </GameProvider>
+      <WorldProvider>
+        <GameProvider>
+          <View style={styles.boot}>
+            <StatusBar style="light" />
+            <Router />
+          </View>
+        </GameProvider>
+      </WorldProvider>
     </SafeAreaProvider>
   );
 }

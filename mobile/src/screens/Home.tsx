@@ -6,18 +6,23 @@ import { Bar, Btn, Card, Label, Mono } from '../components/ui';
 import { AvatarMark, CosmeticPreview } from '../components/Cosmetics';
 import { CountUp, FadeIn, PressScale } from '../components/motion';
 import { SEASON, byId, categoryKind } from '../data/catalog';
-import { POIS, POI_TYPE_META, WORLD_LABEL } from '../components/ZoneMap';
+import { POI_TYPE_META } from '../components/ZoneMap';
 import { isOpenNow } from '../components/PoiSheet';
 import { useGame } from '../engine/GameContext';
+import { useWorld } from '../engine/WorldContext';
+import { Poi } from '../data/poiRules';
 
-// Closest few landmarks, one of each type so the row shows the whole system.
-const NEARBY = (['beacon', 'waystation', 'cache'] as const)
-  .map((t) => POIS.filter((p) => p.type === t).sort((a, b) => a.distM - b.distM)[0])
-  .filter(Boolean);
+/** Closest of each type, so the row shows the whole system rather than 3 shops. */
+const pickNearby = (pois: Poi[]) =>
+  (['beacon', 'waystation', 'cache'] as const)
+    .map((t) => pois.filter((p) => p.type === t).sort((a, b) => a.distM - b.distM)[0])
+    .filter(Boolean);
 
 export function Home() {
   const { go, profile } = useGame();
+  const { world, status, request, busy } = useWorld();
   const insets = useSafeAreaInsets();
+  const nearby = pickNearby(world.pois);
 
   const eq = profile.equipped;
   const title = byId(eq.title)!;
@@ -170,10 +175,10 @@ export function Home() {
             <View style={styles.nearbyHead}>
               <Label tone="text">Nearby</Label>
               <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1 }}>
-                {WORLD_LABEL.toUpperCase()}
+                {busy ? 'LOCATING…' : world.label.toUpperCase()}
               </Mono>
             </View>
-            {NEARBY.map((p) => {
+            {nearby.map((p) => {
               const meta = POI_TYPE_META[p.type];
               const open = isOpenNow(p.hours);
               return (
@@ -192,12 +197,28 @@ export function Home() {
                 </View>
               );
             })}
-            <View style={styles.nearbyFoot}>
-              <Mono style={{ fontSize: 9, color: color.faint, lineHeight: 14 }}>
-                Real places from OpenStreetMap, filtered to public ground. Visit them in a
-                round to claim buffs.
-              </Mono>
-            </View>
+            {/* Location is requested on tap, never cold at launch (PRD 10.2). */}
+            {status.state === 'ready' ? (
+              <View style={styles.nearbyFoot}>
+                <Mono style={{ fontSize: 9, color: color.faint, lineHeight: 14 }}>
+                  Real places near you from OpenStreetMap, filtered to public ground.
+                  Visit them in a round to claim buffs.
+                </Mono>
+              </View>
+            ) : (
+              <PressScale onPress={() => request()} disabled={busy}>
+                <View style={styles.nearbyFoot}>
+                  <Mono style={{ fontSize: 10, color: busy ? color.faint : color.accent, letterSpacing: 1.2 }}>
+                    {busy ? 'FINDING LANDMARKS NEAR YOU…' : 'USE MY LOCATION →'}
+                  </Mono>
+                  <Mono style={{ fontSize: 9, color: color.faint, lineHeight: 14, marginTop: 4 }}>
+                    {status.state === 'fallback'
+                      ? `${status.reason}. Showing ${world.label}.`
+                      : `Showing ${world.label} as a sample until you do.`}
+                  </Mono>
+                </View>
+              </PressScale>
+            )}
           </Card>
         </FadeIn>
       </ScrollView>

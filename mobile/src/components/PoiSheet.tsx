@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Label, Mono, Rule } from './ui';
-import { Poi, POI_TYPE_META } from './ZoneMap';
+import { POI_TYPE_META } from './ZoneMap';
+import { Poi } from '../data/poiRules';
 
 const HOLD_MS = 5000; // PRD 6.2: hold still for 5 seconds
 const RANGE_M = 30; // PRD 6.2: within 30 m
