@@ -41,7 +41,15 @@
           "locationWhenInUsePermission": "FRAME uses your location to set the play zone and load the landmarks around you."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#0A0A0C",
+          "imageWidth": 200
+        }
+      ]
     ]
   }
 }
