@@ -1,3 +1,4 @@
+import { loadProfile, saveProfile, loadAuth, saveAuth } from './persist';
 import React, {
   createContext,
   useContext,
@@ -385,6 +386,31 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [round, setRound] = useState<RoundState | null>(null);
   const [nextRole, setNextRole] = useState<Role>('hider');
   const [auth, setAuth] = useState<Auth | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+
+  // Progression survives a restart. Guests have nowhere else for it to live.
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      const [savedProfile, savedAuth] = await Promise.all([loadProfile(), loadAuth()]);
+      if (!live) return;
+      if (savedProfile) setProfile((p) => ({ ...p, ...savedProfile }));
+      if (savedAuth) setAuth(savedAuth);
+      setHydrated(true);
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  // Skip the first write so hydration does not immediately overwrite itself.
+  useEffect(() => {
+    if (hydrated) saveProfile(profile);
+  }, [profile, hydrated]);
+
+  useEffect(() => {
+    if (auth) saveAuth(auth);
+  }, [auth]);
   const routeRef = useRef(route);
   routeRef.current = route;
 
