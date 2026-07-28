@@ -1,71 +1,65 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Bar, Btn, Label, Mono } from '../components/ui';
 import { CosmeticPreview } from '../components/Cosmetics';
+import { FadeIn } from '../components/motion';
+import { SEASON, TIERS, Tier, TierReward } from '../data/catalog';
 import { useGame } from '../engine/GameContext';
 
-const CURRENT_TIER = 12;
-
-interface TierReward {
-  name: string;
-  kind: 'pin' | 'frame' | 'static' | 'tag' | 'title' | 'film';
-  tint?: string;
-}
-
-interface Tier {
-  n: number;
-  free?: TierReward;
-  paid?: TierReward;
-}
-
-// A representative window of the 50-tier track.
-const TIERS: Tier[] = [
-  { n: 9, free: { name: '50 FILM', kind: 'film' }, paid: { name: 'CONTACT SHEET', kind: 'frame', tint: '#9BE8FF' } },
-  { n: 10, paid: { name: 'HALFTONE', kind: 'pin', tint: '#FF8A5C' } },
-  { n: 11, free: { name: '"PATIENT"', kind: 'title' }, paid: { name: '150 FILM', kind: 'film' } },
-  { n: 12, free: { name: '75 FILM', kind: 'film' }, paid: { name: 'LONG EXPOSURE', kind: 'tag', tint: '#D8B4FF' } },
-  { n: 13, paid: { name: 'GRAIN', kind: 'static', tint: '#C9C9D4' } },
-  { n: 14, free: { name: '50 FILM', kind: 'film' }, paid: { name: 'REDSCALE', kind: 'frame', tint: '#FF6B5C' } },
-  { n: 15, paid: { name: '"OVEREXPOSED"', kind: 'title', tint: '#FFD84D' } },
-  { n: 16, free: { name: '"UNSEEN II"', kind: 'title' }, paid: { name: '200 FILM', kind: 'film' } },
-];
+const ROW_H = 92;
 
 export function SeasonPass() {
   const { go, profile, buyPass } = useGame();
   const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+
+  // A 50-row track is useless if it opens at tier 1 — land the player on
+  // where they actually are, with a couple of claimed tiers above for context.
+  const onLayout = () => {
+    const y = Math.max(0, (SEASON.currentTier - 3) * ROW_H);
+    scrollRef.current?.scrollTo({ y, animated: false });
+  };
+
+  const claimedFree = TIERS.filter((t) => t.free && t.n <= SEASON.currentTier).length;
+  const claimedPaid = TIERS.filter((t) => t.paid && t.n <= SEASON.currentTier).length;
 
   return (
     <View style={styles.screen}>
-      <ScrollView
-        contentContainerStyle={{
-          padding: space(5),
-          paddingTop: insets.top + space(4),
-          paddingBottom: space(4),
-        }}
-      >
+      {/* fixed header so the progress stays visible across a long scroll */}
+      <View style={[styles.header, { paddingTop: insets.top + space(4) }]}>
         <Pressable onPress={() => go('home')} hitSlop={10}>
           <Label tone="faint">← Home</Label>
         </Pressable>
-
-        <Label tone="accent" style={{ marginTop: space(3) }}>
-          Season 01 · Week 4 of 10
-        </Label>
-        <Text style={styles.h1}>EXPOSURE</Text>
-
+        <View style={styles.titleRow}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Label tone="accent">
+              Season {SEASON.number} · Week {SEASON.week} of {SEASON.weeks}
+            </Label>
+            <Text style={styles.h1}>{SEASON.name}</Text>
+          </View>
+          <View style={styles.tierBadge}>
+            <Label tone="faint" style={{ fontSize: 8 }}>
+              TIER
+            </Label>
+            <Text style={styles.tierBadgeNum}>{SEASON.currentTier}</Text>
+          </View>
+        </View>
         <View style={{ marginTop: space(3) }}>
           <View style={styles.progressRow}>
-            <Mono style={{ fontSize: 11, color: color.text }}>TIER {CURRENT_TIER}</Mono>
-            <Mono style={{ fontSize: 10, color: color.faint }}>420 / 1000 XP TO TIER 13</Mono>
+            <Mono style={{ fontSize: 10, color: color.dim }}>
+              {claimedFree + (profile.paidPass ? claimedPaid : 0)} REWARDS CLAIMED
+            </Mono>
+            <Mono style={{ fontSize: 10, color: color.faint }}>
+              {SEASON.xpInTier} / {SEASON.xpPerTier} XP → TIER {SEASON.currentTier + 1}
+            </Mono>
           </View>
-          <Bar value={0.42} height={5} />
+          <Bar value={SEASON.tierProgress} height={5} />
         </View>
-
-        {/* column headers */}
         <View style={styles.trackHeader}>
-          <View style={{ width: 44 }} />
+          <View style={{ width: 46 }} />
           <Label tone="faint" style={styles.colHead}>
             Free
           </Label>
@@ -73,41 +67,20 @@ export function SeasonPass() {
             {profile.paidPass ? 'Paid · owned' : 'Paid · locked'}
           </Label>
         </View>
+      </View>
 
-        {TIERS.map((tier) => {
-          const claimed = tier.n <= CURRENT_TIER;
-          const current = tier.n === CURRENT_TIER;
-          return (
-            <View
-              key={tier.n}
-              style={[styles.tierRow, current && { borderColor: color.accent }]}
-            >
-              <View style={styles.tierNum}>
-                <Text
-                  style={[
-                    styles.tierNumText,
-                    { color: claimed ? color.accent : color.faint },
-                  ]}
-                >
-                  {String(tier.n).padStart(2, '0')}
-                </Text>
-                {claimed && <View style={styles.claimedDot} />}
-              </View>
-              <RewardCell reward={tier.free} unlocked={claimed} />
-              <RewardCell
-                reward={tier.paid}
-                unlocked={claimed && profile.paidPass}
-                paidLocked={!profile.paidPass}
-              />
-            </View>
-          );
-        })}
-
-        <Mono style={{ fontSize: 10, color: color.faint, textAlign: 'center', marginVertical: space(3) }}>
-          ··· 34 MORE TIERS ···
-        </Mono>
-
-        <Mono style={{ fontSize: 10, color: color.faint, lineHeight: 16 }}>
+      <ScrollView
+        ref={scrollRef}
+        onLayout={onLayout}
+        contentContainerStyle={{
+          paddingHorizontal: space(5),
+          paddingBottom: profile.paidPass ? insets.bottom + space(8) : space(4),
+        }}
+      >
+        {TIERS.map((tier) => (
+          <TierRow key={tier.n} tier={tier} paidPass={profile.paidPass} />
+        ))}
+        <Mono style={styles.footnote}>
           Both tracks advance on the same XP. The paid track is cosmetics and FILM only —
           it never contains buffs, slots, or anything that touches a round.
         </Mono>
@@ -120,6 +93,7 @@ export function SeasonPass() {
             paddingBottom: insets.bottom + space(4),
             borderTopWidth: 1,
             borderTopColor: color.line,
+            backgroundColor: color.bg,
           }}
         >
           <Btn
@@ -136,6 +110,41 @@ export function SeasonPass() {
   );
 }
 
+function TierRow({ tier, paidPass }: { tier: Tier; paidPass: boolean }) {
+  const reached = tier.n <= SEASON.currentTier;
+  const current = tier.n === SEASON.currentTier;
+
+  return (
+    <View
+      style={[
+        styles.tierRow,
+        tier.milestone && styles.milestoneRow,
+        current && styles.currentRow,
+      ]}
+    >
+      <View style={styles.tierNum}>
+        <Text
+          style={[
+            styles.tierNumText,
+            { color: reached ? color.accent : color.faint },
+            tier.milestone && { fontSize: 21 },
+          ]}
+        >
+          {String(tier.n).padStart(2, '0')}
+        </Text>
+        {tier.milestone && (
+          <Label tone="faint" style={{ fontSize: 7 }}>
+            MILE
+          </Label>
+        )}
+        {current && <View style={styles.currentDot} />}
+      </View>
+      <RewardCell reward={tier.free} unlocked={reached} />
+      <RewardCell reward={tier.paid} unlocked={reached && paidPass} paidLocked={!paidPass} />
+    </View>
+  );
+}
+
 function RewardCell({
   reward,
   unlocked,
@@ -147,25 +156,23 @@ function RewardCell({
 }) {
   if (!reward) {
     return (
-      <View style={[styles.rewardCell, { opacity: 0.35 }]}>
-        <Mono style={{ fontSize: 10, color: color.faint }}>—</Mono>
+      <View style={styles.rewardCell}>
+        <View style={styles.emptySlot} />
       </View>
     );
   }
   return (
-    <View style={[styles.rewardCell, !unlocked && { opacity: paidLocked ? 0.45 : 0.6 }]}>
+    <View style={[styles.rewardCell, !unlocked && { opacity: paidLocked ? 0.4 : 0.6 }]}>
       <CosmeticPreview kind={reward.kind} tint={reward.tint} size={38} />
       <Mono style={styles.rewardName} numberOfLines={1}>
         {reward.name}
       </Mono>
       {unlocked ? (
-        <Mono style={{ fontSize: 8, color: color.accent, letterSpacing: 1 }}>CLAIMED</Mono>
+        <Mono style={styles.claimed}>CLAIMED</Mono>
       ) : paidLocked ? (
-        <Mono style={{ fontSize: 8, color: color.faint, letterSpacing: 1 }}>PASS</Mono>
+        <Mono style={styles.locked}>PASS</Mono>
       ) : (
-        <Mono style={{ fontSize: 8, color: color.faint, letterSpacing: 1 }}>
-          TIER {'>'}
-        </Mono>
+        <Mono style={styles.locked}>LOCKED</Mono>
       )}
     </View>
   );
@@ -173,23 +180,53 @@ function RewardCell({
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },
+  header: {
+    paddingHorizontal: space(5),
+    paddingBottom: space(2),
+    borderBottomWidth: 1,
+    borderBottomColor: color.line,
+    backgroundColor: color.bg,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: space(3),
+    marginTop: space(2),
+  },
   h1: {
     fontFamily: font.display,
-    fontSize: 40,
-    letterSpacing: 4,
+    fontSize: 36,
+    letterSpacing: 3,
     color: color.text,
     marginTop: space(1),
+  },
+  tierBadge: {
+    width: 52,
+    height: 52,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: color.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  tierBadgeNum: {
+    fontFamily: font.display,
+    fontSize: 20,
+    color: color.accent,
+    marginTop: -2,
   },
   progressRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: space(1.5),
+    gap: space(2),
   },
   trackHeader: {
     flexDirection: 'row',
-    marginTop: space(5),
-    marginBottom: space(2),
+    marginTop: space(3),
     gap: space(2),
   },
   colHead: { flex: 1, textAlign: 'center' },
@@ -201,15 +238,16 @@ const styles = StyleSheet.create({
     borderColor: color.line,
     borderRadius: radius.md,
     backgroundColor: color.surface,
-    padding: space(2.5),
-    marginBottom: space(2),
+    paddingVertical: space(2),
+    paddingHorizontal: space(2.5),
+    marginTop: space(2),
+    height: ROW_H - space(2),
   },
-  tierNum: { width: 44, alignItems: 'center', gap: 4 },
-  tierNumText: {
-    fontFamily: font.display,
-    fontSize: 18,
-  },
-  claimedDot: {
+  milestoneRow: { borderColor: color.lineBright, backgroundColor: color.surface2 },
+  currentRow: { borderColor: color.accent, borderWidth: 1.5 },
+  tierNum: { width: 46, alignItems: 'center', gap: 2 },
+  tierNumText: { fontFamily: font.display, fontSize: 18 },
+  currentDot: {
     width: 5,
     height: 5,
     borderRadius: 3,
@@ -218,12 +256,24 @@ const styles = StyleSheet.create({
   rewardCell: {
     flex: 1,
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: space(1),
+    gap: 3,
+  },
+  emptySlot: {
+    width: 26,
+    height: 1.5,
+    backgroundColor: color.line,
   },
   rewardName: {
-    fontSize: 10,
+    fontSize: 9,
     color: color.text,
     letterSpacing: 0.5,
+  },
+  claimed: { fontSize: 8, color: color.accent, letterSpacing: 1 },
+  locked: { fontSize: 8, color: color.faint, letterSpacing: 1 },
+  footnote: {
+    fontSize: 10,
+    color: color.faint,
+    lineHeight: 16,
+    marginTop: space(4),
   },
 });

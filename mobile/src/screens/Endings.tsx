@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Bar, Btn, Card, Label, Mono, Rule } from '../components/ui';
+import { FadeIn } from '../components/motion';
 import { useGame, SEEKER_BOT } from '../engine/GameContext';
 
 // ---------- blackout (missed check-in) ----------
@@ -131,26 +132,32 @@ export function Results() {
           paddingBottom: space(4),
         }}
       >
-        <Label tone={data.win ? 'accent' : 'danger'}>
-          {wasHider ? 'Round 12 · Hider' : 'Round 13 · Seeker'}
-        </Label>
-        <Text style={[styles.resultTitle, { color: data.win ? color.accent : color.danger }]}>
-          {data.title}
-        </Text>
-        <Mono style={{ fontSize: 12, color: color.dim, marginTop: space(1), lineHeight: 18 }}>
-          {data.subtitle}
-        </Mono>
+        <FadeIn>
+          <Label tone={data.win ? 'accent' : 'danger'}>
+            {wasHider ? 'Round 12 · Hider' : 'Round 13 · Seeker'}
+          </Label>
+          <Text style={[styles.resultTitle, { color: data.win ? color.accent : color.danger }]}>
+            {data.title}
+          </Text>
+          <Mono style={{ fontSize: 12, color: color.dim, marginTop: space(1), lineHeight: 18 }}>
+            {data.subtitle}
+          </Mono>
+        </FadeIn>
 
         <Card style={{ marginTop: space(5), padding: 0 }}>
           <View style={styles.scoreHeader}>
             <Label tone="text">Score</Label>
             <Text style={styles.scoreTotal}>{data.total}</Text>
           </View>
-          {data.lines.map((l) => (
-            <View key={l.k} style={styles.scoreRow}>
-              <Mono style={{ fontSize: 11, color: color.dim, letterSpacing: 0.5 }}>{l.k}</Mono>
-              <Mono style={{ fontSize: 12, color: color.text }}>+{l.v}</Mono>
-            </View>
+          {data.lines.map((l, i) => (
+            <FadeIn key={l.k} index={i} delay={220} distance={6}>
+              <View style={styles.scoreRow}>
+                <Mono style={{ fontSize: 11, color: color.dim, letterSpacing: 0.5 }}>
+                  {l.k}
+                </Mono>
+                <Mono style={{ fontSize: 12, color: color.text }}>+{l.v}</Mono>
+              </View>
+            </FadeIn>
           ))}
         </Card>
 

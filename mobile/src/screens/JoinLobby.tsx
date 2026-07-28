@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, font, radius, space } from '../theme';
 import { Body, Btn, Card, Label, Mono, Rule } from '../components/ui';
+import { FadeIn } from '../components/motion';
 import { ZoneMap } from '../components/ZoneMap';
 import { useGame, SEEKER_BOT } from '../engine/GameContext';
 
@@ -133,7 +134,7 @@ export function Lobby() {
           <Label tone="faint">← Leave party</Label>
         </Pressable>
 
-        <View style={styles.codeHeader}>
+        <FadeIn style={styles.codeHeader}>
           <View>
             <Label tone="faint">Invite code</Label>
             <Text style={styles.bigCode}>{partyCode}</Text>
@@ -152,9 +153,9 @@ export function Lobby() {
               })()}
             </Mono>
           </View>
-        </View>
+        </FadeIn>
 
-        <View style={styles.mapFrame}>
+        <FadeIn index={1} style={styles.mapFrame}>
           <ZoneMap
             width={width - space(10) - 2}
             height={170}
@@ -166,7 +167,7 @@ export function Lobby() {
               PLAY ZONE · 1.0 KM · CENTER: YOUR LOCATION
             </Mono>
           </View>
-        </View>
+        </FadeIn>
 
         {/* roster */}
         <Card style={{ marginTop: space(4), padding: 0 }}>
@@ -174,22 +175,23 @@ export function Lobby() {
             <Label tone="text">Party</Label>
             <Mono style={{ fontSize: 10, color: color.dim }}>{roster.length}/6 · MIN 3</Mono>
           </View>
+          {/* keyed by name so each arrival animates in as it joins */}
           {roster.map((r) => (
-            <View key={r.name} style={styles.rosterRow}>
-              <View
-                style={[
-                  styles.readyDot,
-                  { backgroundColor: r.ready ? color.accent : color.faint },
-                ]}
-              />
-              <Text style={styles.rosterName}>{r.name}</Text>
-              {r.host && (
-                <Text style={styles.hostTag}>HOST</Text>
-              )}
-              <Mono style={{ fontSize: 10, color: r.ready ? color.accent : color.faint }}>
-                {r.ready ? 'READY' : 'JOINED'}
-              </Mono>
-            </View>
+            <FadeIn key={r.name} distance={8} duration={300}>
+              <View style={styles.rosterRow}>
+                <View
+                  style={[
+                    styles.readyDot,
+                    { backgroundColor: r.ready ? color.accent : color.faint },
+                  ]}
+                />
+                <Text style={styles.rosterName}>{r.name}</Text>
+                {r.host && <Text style={styles.hostTag}>HOST</Text>}
+                <Mono style={{ fontSize: 10, color: r.ready ? color.accent : color.faint }}>
+                  {r.ready ? 'READY' : 'JOINED'}
+                </Mono>
+              </View>
+            </FadeIn>
           ))}
         </Card>
 

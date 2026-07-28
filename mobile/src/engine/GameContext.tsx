@@ -23,6 +23,7 @@ export type Route =
   | 'home'
   | 'shop'
   | 'pass'
+  | 'loadout'
   | 'join'
   | 'lobby'
   | 'roleReveal'
@@ -90,6 +91,14 @@ export interface RoundState {
   outcome: null | 'survived' | 'blackout' | 'cleared' | 'timeup' | 'left';
 }
 
+export interface Equipped {
+  title: string;
+  pin: string;
+  frame: string;
+  blackout: string;
+  tag: string;
+}
+
 export interface Profile {
   handle: string;
   level: number;
@@ -97,6 +106,7 @@ export interface Profile {
   prestige: number;
   film: number; // soft currency — cosmetics only
   owned: string[];
+  equipped: Equipped;
   paidPass: boolean;
 }
 
@@ -331,6 +341,7 @@ interface Game {
   addXp: (n: number) => void;
   purchase: (id: string, costFilm: number) => boolean;
   buyPass: () => void;
+  equip: (slot: keyof Equipped, id: string) => void;
 }
 
 const Ctx = createContext<Game | null>(null);
@@ -343,7 +354,22 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     xp: 0.58,
     prestige: 0,
     film: 1250,
-    owned: ['pin-acid', 'frame-brackets'],
+    // Defaults, plus the free-track cosmetics already claimed by tier 12.
+    owned: [
+      'title-unseen',
+      'pin-acid',
+      'frame-brackets',
+      'static-default',
+      'tag-shutter',
+      'title-patient',
+    ],
+    equipped: {
+      title: 'title-unseen',
+      pin: 'pin-acid',
+      frame: 'frame-brackets',
+      blackout: 'static-default',
+      tag: 'tag-shutter',
+    },
     paidPass: false,
   });
   const [round, setRound] = useState<RoundState | null>(null);
@@ -465,6 +491,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const equip = useCallback((slot: keyof Equipped, id: string) => {
+    setProfile((p) =>
+      p.owned.includes(id) ? { ...p, equipped: { ...p.equipped, [slot]: id } } : p,
+    );
+  }, []);
+
   return (
     <Ctx.Provider
       value={{
@@ -483,6 +515,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         addXp,
         purchase,
         buyPass,
+        equip,
       }}
     >
       {children}

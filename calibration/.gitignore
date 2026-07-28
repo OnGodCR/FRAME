@@ -1,0 +1,4 @@
+# Photos are real places — never commit them.
+*
+!.gitignore
+!README.md

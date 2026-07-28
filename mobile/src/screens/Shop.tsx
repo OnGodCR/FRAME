@@ -5,25 +5,10 @@ import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { CosmeticPreview } from '../components/Cosmetics';
+import { CountUp, FadeIn, PressScale, useFlash } from '../components/motion';
+import { Cosmetic, SHOP_ITEMS, SEASON, categoryKind, CATEGORIES } from '../data/catalog';
 import { useGame } from '../engine/GameContext';
-
-interface ShopItem {
-  id: string;
-  name: string;
-  kind: 'pin' | 'frame' | 'static' | 'tag' | 'title';
-  category: string;
-  cost: number; // FILM
-  tint?: string;
-}
-
-const ITEMS: ShopItem[] = [
-  { id: 'pin-ghost', name: 'GHOST GRID', kind: 'pin', category: 'MAP PIN', cost: 600, tint: '#9BE8FF' },
-  { id: 'frame-darkroom', name: 'DARKROOM', kind: 'frame', category: 'PHOTO FRAME', cost: 400, tint: '#FF8A5C' },
-  { id: 'static-signal', name: 'SIGNAL LOST', kind: 'static', category: 'BLACKOUT STYLE', cost: 550, tint: '#C9C9D4' },
-  { id: 'tag-prism', name: 'PRISM', kind: 'tag', category: 'TAG ANIMATION', cost: 800, tint: '#D8B4FF' },
-  { id: 'title-developer', name: '"DEVELOPED"', kind: 'title', category: 'TITLE', cost: 300, tint: '#C8FF2E' },
-  { id: 'pin-negative', name: 'NEGATIVE', kind: 'pin', category: 'MAP PIN', cost: 450, tint: '#FFFFFF' },
-];
+import { Animated } from 'react-native';
 
 export function Shop() {
   const { go, profile, purchase, buyPass } = useGame();
@@ -42,139 +27,189 @@ export function Shop() {
           <Label tone="faint">← Home</Label>
         </Pressable>
 
-        <View style={styles.header}>
-          <Text style={styles.h1}>Shop</Text>
-          <View style={styles.filmChip}>
-            <CosmeticPreview kind="film" size={22} />
-            <Text style={styles.filmAmount}>{profile.film.toLocaleString()}</Text>
-            <Label tone="faint" style={{ fontSize: 8 }}>
-              FILM
-            </Label>
+        <FadeIn>
+          <View style={styles.header}>
+            <Text style={styles.h1}>Shop</Text>
+            <View style={styles.filmChip}>
+              <CosmeticPreview kind="film" size={22} />
+              <CountUp value={profile.film} style={styles.filmAmount} />
+              <Label tone="faint" style={{ fontSize: 8 }}>
+                FILM
+              </Label>
+            </View>
           </View>
-        </View>
-        <Mono style={{ fontSize: 11, color: color.faint, marginTop: 2 }}>
-          Cosmetics only. Nothing here changes how a round plays.
-        </Mono>
+          <Mono style={{ fontSize: 11, color: color.faint, marginTop: 2 }}>
+            Cosmetics only. Nothing here changes how a round plays.
+          </Mono>
+        </FadeIn>
 
         {/* season pass product */}
-        <Card style={{ marginTop: space(5), borderColor: profile.paidPass ? color.line : color.accent }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <View>
-              <Label tone="accent">Season 01 · Exposure</Label>
-              <Text style={styles.passName}>PAID TRACK</Text>
-              <Mono style={{ fontSize: 11, color: color.dim, marginTop: 2 }}>
-                50 tiers of cosmetics + FILM. 6 weeks left.
-              </Mono>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
+        <FadeIn index={1}>
+          <Card
+            style={{
+              marginTop: space(5),
+              borderColor: profile.paidPass ? color.line : color.accent,
+            }}
+          >
+            <View style={styles.passTop}>
+              <View style={styles.passTopLeft}>
+                <Label tone="accent">
+                  Season {SEASON.number} · {SEASON.name}
+                </Label>
+                <Text style={styles.passName}>PAID TRACK</Text>
+              </View>
               <Text style={styles.price}>{profile.paidPass ? 'OWNED' : '$4.99'}</Text>
             </View>
-          </View>
-          {!profile.paidPass && (
-            <Btn
-              title="Unlock paid track"
-              style={{ marginTop: space(3) }}
-              sub="one purchase kills ads on this account, forever"
-              onPress={() => {
-                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                buyPass();
-              }}
-            />
-          )}
-          <Pressable onPress={() => go('pass')} hitSlop={8} style={{ marginTop: space(3) }}>
-            <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2, textAlign: 'center' }}>
-              VIEW ALL 50 TIERS →
+            <Mono style={{ fontSize: 11, color: color.dim, marginTop: space(2) }}>
+              50 tiers of cosmetics and FILM.{'\n'}
+              {SEASON.weeks - SEASON.week} weeks left in the season.
             </Mono>
-          </Pressable>
-        </Card>
+            {!profile.paidPass && (
+              <Btn
+                title="Unlock paid track"
+                style={{ marginTop: space(3) }}
+                sub="one purchase kills ads on this account, forever"
+                onPress={() => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  buyPass();
+                }}
+              />
+            )}
+            <Pressable onPress={() => go('pass')} hitSlop={8} style={{ marginTop: space(3) }}>
+              <Mono style={styles.viewTiers}>VIEW ALL 50 TIERS →</Mono>
+            </Pressable>
+          </Card>
+        </FadeIn>
 
         {/* cosmetics grid */}
-        <Label tone="text" style={{ marginTop: space(6), marginBottom: space(3) }}>
-          Cosmetics
-        </Label>
+        <FadeIn index={2}>
+          <Label tone="text" style={{ marginTop: space(6), marginBottom: space(3) }}>
+            Cosmetics
+          </Label>
+        </FadeIn>
         <View style={styles.grid}>
-          {ITEMS.map((item) => {
-            const owned = profile.owned.includes(item.id);
-            const affordable = profile.film >= item.cost;
-            return (
-              <Pressable
-                key={item.id}
-                disabled={owned || !affordable}
-                onPress={() => {
-                  if (purchase(item.id, item.cost)) {
-                    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  }
-                }}
-                style={({ pressed }) => [styles.itemCard, pressed && { opacity: 0.75 }]}
-              >
-                <CosmeticPreview kind={item.kind} tint={item.tint} size={64} />
-                <Label tone="faint" style={{ fontSize: 8, marginTop: space(2) }}>
-                  {item.category}
-                </Label>
-                <Text style={styles.itemName}>{item.name}</Text>
-                <View style={styles.itemPriceRow}>
-                  {owned ? (
-                    <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1 }}>OWNED</Mono>
-                  ) : (
-                    <>
-                      <CosmeticPreview kind="film" size={14} tint={affordable ? color.accent : color.faint} />
-                      <Mono
-                        style={{
-                          fontSize: 12,
-                          color: affordable ? color.text : color.faint,
-                          fontFamily: font.monoSemi,
-                        }}
-                      >
-                        {item.cost}
-                      </Mono>
-                    </>
-                  )}
-                </View>
-              </Pressable>
-            );
-          })}
+          {SHOP_ITEMS.map((item, i) => (
+            <ShopTile
+              key={item.id}
+              item={item}
+              index={i}
+              owned={profile.owned.includes(item.id)}
+              affordable={profile.film >= (item.cost ?? 0)}
+              onBuy={() => purchase(item.id, item.cost ?? 0)}
+            />
+          ))}
         </View>
 
         {/* film top-ups */}
-        <Label tone="text" style={{ marginTop: space(6), marginBottom: space(3) }}>
-          Film
-        </Label>
-        <Card style={{ padding: 0 }}>
-          <Pressable
-            style={styles.filmRow}
-            onPress={() => Haptics.selectionAsync()}
-          >
-            <View style={styles.filmRowLeft}>
-              <CosmeticPreview kind="film" size={34} tint={color.dim} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>WATCH AN AD</Text>
-                <Mono style={{ fontSize: 10, color: color.faint }}>
-                  Optional. Never grants buffs or gameplay items.
-                </Mono>
+        <FadeIn index={3}>
+          <Label tone="text" style={{ marginTop: space(6), marginBottom: space(3) }}>
+            Film
+          </Label>
+          <Card style={{ padding: 0 }}>
+            <PressScale onPress={() => {}} style={styles.filmRow}>
+              <View style={styles.filmRowLeft}>
+                <CosmeticPreview kind="film" size={34} tint={color.dim} />
+                <View style={styles.filmRowText}>
+                  <Text style={styles.itemName}>WATCH AN AD</Text>
+                  <Mono style={styles.filmRowSub}>
+                    Optional. Never grants buffs or gameplay items.
+                  </Mono>
+                </View>
               </View>
-            </View>
-            <Mono style={{ fontSize: 12, color: color.accent, fontFamily: font.monoSemi }}>+50</Mono>
-          </Pressable>
-          <Rule />
-          <View style={styles.filmRow}>
-            <View style={styles.filmRowLeft}>
-              <CosmeticPreview kind="film" size={34} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName}>1,000 FILM</Text>
-                <Mono style={{ fontSize: 10, color: color.faint }}>Spendable on cosmetics only.</Mono>
+              <Mono style={styles.filmRowPrice}>+50</Mono>
+            </PressScale>
+            <Rule />
+            <View style={styles.filmRow}>
+              <View style={styles.filmRowLeft}>
+                <CosmeticPreview kind="film" size={34} />
+                <View style={styles.filmRowText}>
+                  <Text style={styles.itemName}>1,000 FILM</Text>
+                  <Mono style={styles.filmRowSub}>Spendable on cosmetics only.</Mono>
+                </View>
               </View>
+              <Mono style={[styles.filmRowPrice, { color: color.text }]}>$2.99</Mono>
             </View>
-            <Mono style={{ fontSize: 12, color: color.text, fontFamily: font.monoSemi }}>$2.99</Mono>
-          </View>
-        </Card>
+          </Card>
 
-        <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(4), lineHeight: 16 }}>
-          Any real-money purchase permanently disables all advertising on this account.
-          Not for a season — forever. Buffs and nerfs are earned in rounds and are never
-          sold.
-        </Mono>
+          <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(4), lineHeight: 16 }}>
+            Any real-money purchase permanently disables all advertising on this account.
+            Not for a season — forever. Buffs and nerfs are earned in rounds and are never
+            sold.
+          </Mono>
+        </FadeIn>
       </ScrollView>
     </View>
+  );
+}
+
+function ShopTile({
+  item,
+  index,
+  owned,
+  affordable,
+  onBuy,
+}: {
+  item: Cosmetic;
+  index: number;
+  owned: boolean;
+  affordable: boolean;
+  onBuy: () => boolean;
+}) {
+  const { flashOpacity, fire } = useFlash();
+  const categoryLabel = CATEGORIES.find((c) => c.key === item.category)!.label;
+
+  return (
+    <FadeIn index={index} delay={120} style={styles.tileWrap}>
+      <PressScale
+        disabled={owned || !affordable}
+        haptic="none"
+        onPress={() => {
+          if (onBuy()) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            fire();
+          }
+        }}
+        style={[
+          styles.itemCard,
+          owned && { borderColor: color.accentDim },
+          !owned && !affordable && { opacity: 0.5 },
+        ]}
+      >
+        <CosmeticPreview kind={categoryKind(item.category)} tint={item.tint} size={64} />
+        <Label tone="faint" style={{ fontSize: 8, marginTop: space(2) }}>
+          {categoryLabel}
+        </Label>
+        <Text style={styles.itemName} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <View style={styles.itemPriceRow}>
+          {owned ? (
+            <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1 }}>OWNED</Mono>
+          ) : (
+            <>
+              <CosmeticPreview
+                kind="film"
+                size={14}
+                tint={affordable ? color.accent : color.faint}
+              />
+              <Mono
+                style={{
+                  fontSize: 12,
+                  color: affordable ? color.text : color.faint,
+                  fontFamily: font.monoSemi,
+                }}
+              >
+                {item.cost}
+              </Mono>
+            </>
+          )}
+        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[styles.flash, { opacity: flashOpacity }]}
+        />
+      </PressScale>
+    </FadeIn>
   );
 }
 
@@ -185,6 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     marginTop: space(3),
+    gap: space(3),
   },
   h1: {
     fontFamily: font.display,
@@ -208,6 +244,15 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: color.text,
   },
+  // The price sits in its own non-shrinking column; the left column must be
+  // allowed to shrink or long copy pushes the price off-screen.
+  passTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: space(3),
+  },
+  passTopLeft: { flex: 1, minWidth: 0 },
   passName: {
     fontFamily: font.display,
     fontSize: 22,
@@ -218,20 +263,28 @@ const styles = StyleSheet.create({
     fontFamily: font.monoSemi,
     fontSize: 16,
     color: color.accent,
+    flexShrink: 0,
+  },
+  viewTiers: {
+    fontSize: 10,
+    color: color.accent,
+    letterSpacing: 1.2,
+    textAlign: 'center',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: space(3),
   },
+  tileWrap: { width: '47.5%' },
   itemCard: {
-    width: '47.7%',
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.line,
     borderRadius: radius.md,
     padding: space(3),
     alignItems: 'center',
+    overflow: 'hidden',
   },
   itemName: {
     fontFamily: font.monoSemi,
@@ -246,6 +299,14 @@ const styles = StyleSheet.create({
     gap: 5,
     marginTop: space(2),
   },
+  flash: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: color.accent,
+  },
   filmRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -258,5 +319,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space(3),
     flex: 1,
+    minWidth: 0,
+  },
+  filmRowText: { flex: 1, minWidth: 0 },
+  filmRowSub: { fontSize: 10, color: color.faint },
+  filmRowPrice: {
+    fontSize: 12,
+    color: color.accent,
+    fontFamily: font.monoSemi,
+    flexShrink: 0,
   },
 });

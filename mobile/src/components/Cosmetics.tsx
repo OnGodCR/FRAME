@@ -6,10 +6,17 @@ import { Brackets } from './ui';
 
 // Small visual language for cosmetics: geometric marks, no characters/mascots.
 
-export function AvatarMark({ size = 84 }: { size?: number }) {
-  const c = size / 2;
+export function AvatarMark({
+  size = 84,
+  tint = color.accent,
+  frameTint = color.accent,
+}: {
+  size?: number;
+  tint?: string;
+  frameTint?: string;
+}) {
   return (
-    <Brackets size={12} thickness={2} inset={0} tint={color.accent}>
+    <Brackets size={Math.max(10, size * 0.15)} thickness={2} inset={0} tint={frameTint}>
       <View
         style={{
           width: size,
@@ -24,14 +31,10 @@ export function AvatarMark({ size = 84 }: { size?: number }) {
           <Polygon
             points="30,4 56,30 30,56 4,30"
             fill="none"
-            stroke={color.accent}
+            stroke={tint}
             strokeWidth={2.5}
           />
-          <Polygon
-            points="30,17 43,30 30,43 17,30"
-            fill={color.accent}
-            opacity={0.9}
-          />
+          <Polygon points="30,17 43,30 30,43 17,30" fill={tint} opacity={0.9} />
           <Line x1={30} y1={0} x2={30} y2={9} stroke={color.dim} strokeWidth={1.5} />
           <Line x1={30} y1={51} x2={30} y2={60} stroke={color.dim} strokeWidth={1.5} />
         </Svg>

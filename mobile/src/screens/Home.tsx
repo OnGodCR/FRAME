@@ -3,19 +3,28 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, font, radius, space } from '../theme';
 import { Bar, Btn, Card, Label, Mono } from '../components/ui';
-import { AvatarMark, PinSwatch, FrameSwatch, StaticSwatch } from '../components/Cosmetics';
+import { AvatarMark, CosmeticPreview } from '../components/Cosmetics';
+import { CountUp, FadeIn, PressScale } from '../components/motion';
+import { SEASON, byId, categoryKind } from '../data/catalog';
 import { useGame } from '../engine/GameContext';
-
-const LOADOUT = [
-  { k: 'TITLE', v: 'UNSEEN', swatch: null },
-  { k: 'MAP PIN', v: 'ACID DOT', swatch: <PinSwatch /> },
-  { k: 'PHOTO FRAME', v: 'BRACKETS', swatch: <FrameSwatch /> },
-  { k: 'BLACKOUT', v: 'STATIC', swatch: <StaticSwatch /> },
-];
 
 export function Home() {
   const { go, profile } = useGame();
   const insets = useSafeAreaInsets();
+
+  const eq = profile.equipped;
+  const title = byId(eq.title)!;
+  const frame = byId(eq.frame)!;
+  const pin = byId(eq.pin)!;
+  const passPct = SEASON.currentTier / 50;
+
+  const slots = [
+    { key: 'pin' as const, label: 'PIN', item: byId(eq.pin)! },
+    { key: 'frame' as const, label: 'FRAME', item: byId(eq.frame)! },
+    { key: 'blackout' as const, label: 'BLACKOUT', item: byId(eq.blackout)! },
+    { key: 'tag' as const, label: 'TAG', item: byId(eq.tag)! },
+  ];
+
   return (
     <View style={styles.screen}>
       <ScrollView
@@ -26,89 +35,127 @@ export function Home() {
         }}
       >
         {/* identity */}
-        <View style={styles.topRow}>
-          <View>
-            <Text style={styles.handle}>{profile.handle || 'PLAYER'}</Text>
-            <Mono style={{ fontSize: 11, marginTop: 2 }}>SEASON 01 · WEEK 4</Mono>
-          </View>
-          <View style={styles.levelBadge}>
-            <Label tone="faint" style={{ fontSize: 8 }}>
-              LVL
-            </Label>
-            <Text style={styles.levelNum}>{profile.level}</Text>
-          </View>
-        </View>
-
-        {/* xp */}
-        <View style={{ marginTop: space(4) }}>
-          <View style={styles.xpRow}>
-            <Label tone="faint">XP</Label>
-            <Mono style={{ fontSize: 10, color: color.faint }}>
-              {Math.round(profile.xp * 100)}% TO LVL {profile.level + 1}
-            </Mono>
-          </View>
-          <Bar value={profile.xp} height={5} />
-        </View>
-
-        {/* season pass strip → full pass screen */}
-        <Pressable onPress={() => go('pass')}>
-          <Card style={{ marginTop: space(5), padding: space(3.5) }}>
-            <View style={styles.xpRow}>
-              <Label tone="text">Season pass · EXPOSURE</Label>
-              <Mono style={{ fontSize: 10, color: color.accent }}>TIER 12 / 50 →</Mono>
+        <FadeIn>
+          <View style={styles.topRow}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.handle} numberOfLines={1}>
+                {profile.handle || 'PLAYER'}
+              </Text>
+              <Text style={[styles.titleFlair, { color: title.tint }]}>{title.name}</Text>
             </View>
-            <View style={styles.tierRow}>
-              {Array.from({ length: 16 }).map((_, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.tierChip,
-                    i < 12 && { backgroundColor: color.accent, borderColor: color.accent },
-                  ]}
-                />
-              ))}
+            <View style={styles.levelBadge}>
+              <Label tone="faint" style={{ fontSize: 8 }}>
+                LVL
+              </Label>
+              <Text style={styles.levelNum}>{profile.level}</Text>
             </View>
-          </Card>
-        </Pressable>
+          </View>
+
+          <View style={{ marginTop: space(4) }}>
+            <View style={styles.metaRow}>
+              <Label tone="faint">XP</Label>
+              <Mono style={{ fontSize: 10, color: color.faint }}>
+                {Math.round(profile.xp * 100)}% TO LVL {profile.level + 1}
+              </Mono>
+            </View>
+            <Bar value={profile.xp} height={5} />
+          </View>
+        </FadeIn>
+
+        {/* season pass */}
+        <FadeIn index={1}>
+          <PressScale onPress={() => go('pass')} style={{ marginTop: space(5) }}>
+            <Card style={{ padding: space(3.5) }}>
+              <View style={styles.metaRow}>
+                <Label tone="text">{`Season pass · ${SEASON.name}`}</Label>
+                <Mono style={{ fontSize: 10, color: color.accent }}>
+                  TIER {SEASON.currentTier} / 50 →
+                </Mono>
+              </View>
+              <View style={styles.tierRow}>
+                {Array.from({ length: 25 }).map((_, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.tierChip,
+                      i / 25 < passPct && {
+                        backgroundColor: color.accent,
+                        borderColor: color.accent,
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+              <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(2) }}>
+                {profile.paidPass ? 'PAID TRACK UNLOCKED' : 'FREE TRACK · PAID AVAILABLE'}
+              </Mono>
+            </Card>
+          </PressScale>
+        </FadeIn>
 
         {/* loadout */}
-        <Card style={{ marginTop: space(4), padding: space(4) }}>
-          <View style={styles.xpRow}>
-            <Label tone="text">Loadout</Label>
-            <Pressable onPress={() => go('shop')} hitSlop={8}>
-              <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
-                OPEN SHOP →
-              </Mono>
-            </Pressable>
-          </View>
-          <View style={{ flexDirection: 'row', gap: space(4), marginTop: space(3) }}>
-            <AvatarMark size={84} />
-            <View style={{ flex: 1 }}>
-              {LOADOUT.map((row, i) => (
-                <View
-                  key={row.k}
-                  style={[styles.loadoutRow, i === 0 && { borderTopWidth: 0, paddingTop: 0 }]}
-                >
-                  <Label tone="faint" style={{ fontSize: 9 }}>
-                    {row.k}
-                  </Label>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    {row.swatch}
-                    <Mono style={{ fontSize: 11, color: color.text, letterSpacing: 1 }}>
-                      {row.v}
-                    </Mono>
-                  </View>
+        <FadeIn index={2}>
+          <PressScale onPress={() => go('loadout')} style={{ marginTop: space(4) }}>
+            <Card style={{ padding: space(4) }}>
+              <View style={styles.metaRow}>
+                <Label tone="text">Loadout</Label>
+                <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
+                  EDIT →
+                </Mono>
+              </View>
+              <View style={styles.loadoutBody}>
+                <AvatarMark size={78} tint={pin.tint} frameTint={frame.tint} />
+                <View style={styles.slotGrid}>
+                  {slots.map((s) => (
+                    <View key={s.key} style={styles.slot}>
+                      <CosmeticPreview
+                        kind={categoryKind(s.item.category)}
+                        tint={s.item.tint}
+                        size={26}
+                      />
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Label tone="faint" style={{ fontSize: 7 }}>
+                          {s.label}
+                        </Label>
+                        <Mono style={styles.slotName} numberOfLines={1}>
+                          {s.item.name}
+                        </Mono>
+                      </View>
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
-          </View>
-        </Card>
+              </View>
+            </Card>
+          </PressScale>
+        </FadeIn>
+
+        {/* shop entry */}
+        <FadeIn index={3}>
+          <PressScale onPress={() => go('shop')} style={{ marginTop: space(3) }}>
+            <Card style={styles.shopRow}>
+              <View style={styles.shopRowLeft}>
+                <CosmeticPreview kind="film" size={34} />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Label tone="text">Shop</Label>
+                  <Mono style={{ fontSize: 10, color: color.faint, marginTop: 2 }}>
+                    Cosmetics and season pass
+                  </Mono>
+                </View>
+              </View>
+              <View style={styles.filmPill}>
+                <CountUp value={profile.film} style={styles.filmPillText} />
+              </View>
+            </Card>
+          </PressScale>
+        </FadeIn>
 
         {/* play */}
-        <View style={{ marginTop: space(6), gap: space(3) }}>
-          <Btn title="Host a round" onPress={() => go('lobby')} />
-          <Btn title="Join with code" variant="outline" onPress={() => go('join')} />
-        </View>
+        <FadeIn index={4}>
+          <View style={{ marginTop: space(6), gap: space(3) }}>
+            <Btn title="Host a round" onPress={() => go('lobby')} />
+            <Btn title="Join with code" variant="outline" onPress={() => go('join')} />
+          </View>
+        </FadeIn>
       </ScrollView>
 
       {/* banner ad slot — home/lobby only per spec */}
@@ -132,12 +179,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: space(3),
   },
   handle: {
     fontFamily: font.display,
     fontSize: 26,
     letterSpacing: 1,
     color: color.text,
+  },
+  titleFlair: {
+    fontFamily: font.monoMed,
+    fontSize: 10,
+    letterSpacing: 1.8,
+    marginTop: 3,
   },
   levelBadge: {
     width: 56,
@@ -147,6 +201,7 @@ const styles = StyleSheet.create({
     borderColor: color.accent,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   levelNum: {
     fontFamily: font.display,
@@ -154,32 +209,73 @@ const styles = StyleSheet.create({
     color: color.accent,
     marginTop: -2,
   },
-  xpRow: {
+  metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: space(1.5),
+    gap: space(2),
   },
-  tierRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: space(1),
-  },
+  tierRow: { flexDirection: 'row', gap: 3, marginTop: space(1) },
   tierChip: {
     flex: 1,
-    height: 14,
+    height: 12,
     borderRadius: 2,
     borderWidth: 1,
     borderColor: color.lineBright,
     backgroundColor: color.surface2,
   },
-  loadoutRow: {
+  loadoutBody: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: space(4),
+    marginTop: space(3),
     alignItems: 'center',
-    paddingVertical: space(2),
-    borderTopWidth: 1,
-    borderTopColor: color.line,
+  },
+  slotGrid: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space(2),
+  },
+  slot: {
+    width: '46%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  slotName: {
+    fontSize: 9,
+    color: color.text,
+    letterSpacing: 0.5,
+  },
+  shopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space(3),
+    paddingVertical: space(3),
+  },
+  shopRowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space(3),
+    flex: 1,
+    minWidth: 0,
+  },
+  filmPill: {
+    backgroundColor: color.surface2,
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    flexShrink: 0,
+  },
+  filmPillText: {
+    fontFamily: font.monoSemi,
+    fontSize: 13,
+    color: color.accent,
   },
   adWrap: {
     borderTopWidth: 1,
