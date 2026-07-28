@@ -133,7 +133,7 @@ export function Shop() {
 
           <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(4), lineHeight: 16 }}>
             Any real-money purchase permanently disables all advertising on this account.
-            Not for a season — forever. Buffs and nerfs are earned in rounds and are never
+            Not for a season. Forever. Buffs and nerfs are earned in rounds and are never
             sold.
           </Mono>
         </FadeIn>

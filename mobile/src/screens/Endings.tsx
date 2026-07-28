@@ -188,7 +188,7 @@ export function Results() {
 
       <View style={{ padding: space(6), paddingTop: 0, paddingBottom: insets.bottom + space(5), gap: space(2) }}>
         <Btn
-          title={wasHider ? 'Next round — you seek' : 'Next round — you hide'}
+          title={wasHider ? 'Next round · you seek' : 'Next round · you hide'}
           onPress={() => startRound(wasHider ? 'seeker' : 'hider')}
         />
         <Btn

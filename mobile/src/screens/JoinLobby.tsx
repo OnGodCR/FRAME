@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, font, radius, space } from '../theme';
 import { Body, Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { FadeIn } from '../components/motion';
-import { ZoneMap } from '../components/ZoneMap';
+import { ZoneMap, POIS, WORLD_LABEL } from '../components/ZoneMap';
 import { useGame, SEEKER_BOT } from '../engine/GameContext';
 
 // ---------- join ----------
@@ -65,7 +65,7 @@ export function Join() {
           style={{ position: 'absolute', opacity: 0, height: 1 }}
         />
         <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(3) }}>
-          NO 0/O · NO 1/I/L — CODES SKIP AMBIGUOUS CHARACTERS
+          NO 0/O · NO 1/I/L · CODES SKIP AMBIGUOUS CHARACTERS
         </Mono>
       </View>
     </View>
@@ -159,12 +159,12 @@ export function Lobby() {
           <ZoneMap
             width={width - space(10) - 2}
             height={170}
-            seed={7}
+            pois={POIS}
             markers={[{ key: 'me', x: 0.5, y: 0.52, kind: 'self' }]}
           />
           <View style={styles.mapCaption}>
             <Mono style={{ fontSize: 9, letterSpacing: 1.2, color: color.dim }}>
-              PLAY ZONE · 1.0 KM · CENTER: YOUR LOCATION
+              {`PLAY ZONE · 1.0 KM · ${WORLD_LABEL.toUpperCase()} · ${POIS.length} POIs`}
             </Mono>
           </View>
         </FadeIn>
@@ -218,7 +218,7 @@ export function Lobby() {
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
             <Label tone={acked ? 'accent' : 'text'}>
-              {acked ? 'Safety card — acknowledged' : 'Safety card'}
+              {acked ? 'Safety card: acknowledged' : 'Safety card'}
             </Label>
             {!acked && <Label tone="faint">REQUIRED</Label>}
           </View>
@@ -273,13 +273,13 @@ export function Lobby() {
 }
 
 const RULES = [
-  'Public places only. Fence, gate, "no trespassing" sign — that spot is out.',
+  'Public places only. Fence, gate, "no trespassing" sign. That spot is out.',
   "Stay off roads and away from traffic. Don't hide between parked cars.",
   'Walk. The app suspends your round over 10 mph anyway.',
   'If security, staff, or a cop tells you to stop, stop. The round does not matter.',
   'The law still applies while you play.',
   'You can leave any time. SOS → Leave round. No penalty, nobody gets flagged.',
-  "Charge your phone. GPS and camera drain fast — under 40% you probably won't finish the round.",
+  "Charge your phone. GPS and camera drain fast. Under 40% you probably won't finish the round.",
 ];
 
 function SafetyOverlay({ onAck, onClose }: { onAck: () => void; onClose: () => void }) {
@@ -318,7 +318,7 @@ function SafetyOverlay({ onAck, onClose }: { onAck: () => void; onClose: () => v
         <Rule style={{ marginVertical: space(4) }} />
         <Mono style={{ fontSize: 11, lineHeight: 17, color: color.faint }}>
           Your acknowledgment is logged for this round. This is a real place with real
-          people in it — you are responsible for where you put yourself.
+          people in it. You are responsible for where you put yourself.
         </Mono>
       </ScrollView>
       <View style={{ padding: space(6), paddingBottom: insets.bottom + space(5) }}>

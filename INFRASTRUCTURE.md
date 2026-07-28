@@ -1,4 +1,4 @@
-# FRAME — free-tier infrastructure plan
+# FRAME infrastructure plan
 
 What it takes to turn the demo into a real app, on a stack that costs $0/month
 until there are real players on it.
@@ -51,7 +51,7 @@ times more often and still not notice.
 
 **1. Use a plain HTTPS POST, not a realtime socket.**
 This is the whole answer to "cheapest." Free tiers meter *concurrent
-connections*, not kilobytes — Supabase Realtime allows ~200 simultaneous
+connections*, not kilobytes. Supabase Realtime allows ~200 simultaneous
 connections. A socket held open for 45 minutes to deliver 15 tiny messages burns
 one of those 200 slots the entire time and drains battery keeping the radio
 warm. A POST every few minutes uses a connection for ~200 ms and releases it.
@@ -69,7 +69,7 @@ to 10 minutes.
 The client never asks "is there a tick yet?" Check-in alerts, reveal pings, and
 eliminations arrive as push notifications. Expo Push sits on top of APNs and
 FCM, all three are free with no volume cap, and a suspended app can still be
-woken by them — which is the only way the check-in mechanic works at all when
+woken by them, which is the only way the check-in mechanic works at all when
 someone's phone is in their pocket.
 
 ### Battery, which is the real cost
@@ -87,8 +87,8 @@ continuous updates when the app is backgrounded.
 **Cloudflare R2.** This is the one place where vendor choice makes a large
 difference, and it is not close.
 
-Free tier: 10 GB storage, 1M writes/month, 10M reads/month, and — the part that
-matters — **zero egress charges, permanently**. R2's entire pitch is that it
+Free tier: 10 GB storage, 1M writes/month, 10M reads/month, and the part that
+matters most: **zero egress charges, permanently**. R2's entire pitch is that it
 does not bill for bandwidth out. Every other object store (S3, Supabase
 Storage, GCS) charges per GB downloaded, and the seeker downloads *every photo
 every hider submits*. That is the single largest data flow in the product.
@@ -104,7 +104,7 @@ A 45-minute round, 5-minute check-ins, 5 hiders = **90 photos per round**
 | Thumbnail in feed, full on tap | 6.2 MB | ~832 |
 | Thumbnails only (~30 KB) | 2.6 MB | ~1,941 |
 
-On R2 the egress column is irrelevant — you are never billed for it. That is
+On R2 the egress column is irrelevant, you are never billed for it. That is
 why it wins. But **generate the thumbnail anyway**: the seeker's feed is a
 horizontal strip of small cards, and shipping 200 KB originals into a strip
 that displays them at 62×78 px is wasteful of the player's cellular data even
@@ -141,7 +141,7 @@ lifecycle rule:
 ## 4. The game tick worker, for free
 
 The PRD calls for a persistent Node process because sub-minute precision
-matters. Persistent compute is the hardest thing to get free — Railway and
+matters. Persistent compute is the hardest thing to get free. Railway and
 Fly.io both effectively ended their free tiers, and Render's free web services
 spin down after 15 minutes idle, which is fatal for a timer.
 
@@ -168,8 +168,8 @@ is only the *alarm*. Whether a submission counts is decided server-side against
 the server's own `window_close` timestamp, and a tampered client clock changes
 nothing.
 
-Dynamic events that shift the schedule — a Grace buff extending a window, a
-Pressure item forcing an off-cycle check-in, the speed lock pausing a round —
+Dynamic events shift the schedule: a Grace buff extending a window, a Pressure
+item forcing an off-cycle check-in, the speed lock pausing a round. These
 go out as real push notifications from an Edge Function at the moment they
 happen, so they don't wait for the next cron pass.
 
@@ -192,12 +192,12 @@ Essentials/Pro/Enterprise tiers with monthly free call allowances; mobile SDK
 *map display* has historically been unmetered, but I would not build a plan on
 that without you confirming current terms in the console.
 
-The durable free path is **MapLibre + OpenFreeMap** — a free, no-key,
-donation-funded tile server — or self-hosting a **Protomaps `.pmtiles`** file.
+The durable free path is **MapLibre + OpenFreeMap**, a free, no-key,
+donation-funded tile server, or self-hosting a **Protomaps `.pmtiles`** file.
 The pmtiles trick pairs beautifully with the R2 decision above: it is one large
 file served by range requests, and R2 charges nothing for egress. A single
 metro area is a few hundred megabytes, well inside the free 10 GB. A whole-US
-basemap would not fit, which is fine — you are launching in one city.
+basemap would not fit, which is fine, you are launching in one city.
 
 Given the PRD's stylized-map aesthetic (the demo already renders its own map
 from primitives rather than showing photorealistic tiles), MapLibre with a
@@ -214,7 +214,7 @@ custom dark style is also the better *design* answer, not just the cheaper one.
 | Supabase Postgres | 500 MB | Very far away; `positions` is the only write-heavy table, and it purges at round end |
 | R2 storage | 10 GB | ~58× your rolling need at 10 rounds/day |
 | Supabase MAU | 50,000 | Not a real constraint |
-| **Project inactivity** | **Pauses after ~1 week idle** | **The one that will actually bite you** — a Supabase free project pauses if untouched; keep a weekly ping or expect a cold start before a playtest |
+| **Project inactivity** | **Pauses after ~1 week idle** | **The one that will actually bite you**, a Supabase free project pauses if untouched; keep a weekly ping or expect a cold start before a playtest |
 
 Realistically the free stack carries you to **several hundred daily players**.
 The first upgrade you will need is Supabase Pro at $25/month, and it will be
@@ -233,8 +233,8 @@ triggered by concurrent realtime connections, not by storage or bandwidth.
 | Expo / EAS | Free tier | Account login, or an access token |
 | **Apple Developer Program** | **$99/yr** | Team ID + App Store Connect access |
 | Google Play Console | $25 once | Only if Android is in scope for v1 |
-| AdMob | Free | App ID + ad unit IDs — not needed until you want ads live |
-| RevenueCat | Free under $2.5k/mo revenue | API keys — not needed until IAP is real |
+| AdMob | Free | App ID + ad unit IDs, not needed until you want ads live |
+| RevenueCat | Free under $2.5k/mo revenue | API keys, not needed until IAP is real |
 | Sentry / PostHog | Free tiers | DSN / project key |
 
 You can defer the last three entirely. The first three are needed before any
@@ -242,7 +242,7 @@ backend work is meaningful.
 
 ### Decisions only you can make
 
-1. **iOS-only for v1?** This roughly halves the work — Apple Maps free, no
+1. **iOS-only for v1?** This roughly halves the work. Apple Maps free, no
    Google key, one store review, one background-execution model to fight. I'd
    recommend yes.
 2. **Launch city.** POI ingestion and map tiles are both scoped to a region.
@@ -253,8 +253,8 @@ backend work is meaningful.
    feels good.
 4. **The name.** The PRD says BLACKOUT; I built it as FRAME because the photo
    mechanic is the differentiator and "blackout" is already the name of the
-   *loss state* inside the game. Both names have existing games on the stores —
-   worth a trademark search before you print anything.
+   *loss state* inside the game. Both names have existing games on the stores, so
+   do a trademark search before you print anything.
 5. **Domain.** You need a public URL for the explainer page (the QR code on the
    offline Explainer Card points at it), the POI complaint form, the privacy
    policy, and the ToS. All four are App Review requirements.
@@ -265,14 +265,14 @@ backend work is meaningful.
 ### Something I need you to physically go do
 
 **Shoot the validator calibration set.** PRD §15.1 says the §4.5 thresholds
-must come from real captures, not guesses, and it is right — a false
+must come from real captures, not guesses, and it is right, a false
 elimination is the single worst bug this product can have. I need maybe 40–60
 photos from an actual phone camera:
 
 - **Should fail:** thumb over the lens, phone in a pocket, pointed at a blank
   wall, pointed at the sky, a photo of a screen, deliberate motion blur, a
   pitch-dark room.
-- **Should pass:** genuinely good hiding spots — behind a dumpster, under a
+- **Should pass:** genuinely good hiding spots, behind a dumpster, under a
   stairwell, inside a parking garage, in a bush, at dusk, at night under a
   streetlight, in bright noon sun, indoors in a shop.
 
@@ -291,16 +291,16 @@ ongoing cost.
 
 ## 8. Build order from here
 
-The demo has no backend at all — every server behavior is scripted in
+The demo has no backend at all, every server behavior is scripted in
 `mobile/src/engine/GameContext.tsx`. Turning it real, in the order that keeps
 the app runnable at each step:
 
 1. Supabase project, schema from PRD §10.3, row-level security policies. The
-   RLS work is not optional polish — §9 says a seeker must not be able to read
+   RLS work is not optional polish. §9 says a seeker must not be able to read
    a hider's position between reveal ticks *at the database layer*, and that is
    far easier to build in now than to retrofit.
 2. Auth + the age gate, with the sticky under-13 refusal stored device-side.
-3. Party creation, invite codes, lobby, host settings — replacing the scripted
+3. Party creation, invite codes, lobby, host settings, replacing the scripted
    roster.
 4. Position uplink (the plain POST above) and zone enforcement.
 5. **The check-in flow and the validator.** The heart of it. This is where the

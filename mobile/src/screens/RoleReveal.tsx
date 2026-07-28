@@ -55,8 +55,8 @@ export function RoleReveal() {
       </Text>
       <Mono style={styles.note}>
         {seeking
-          ? `Cooldown 5:00 — hold position while hiders disperse.\nEvery check-in they pass lands in your feed.`
-          : `Seeker is locked for 5:00. Go.\nFirst check-in comes fast — prove where you are or you're out.`}
+          ? `Cooldown 5:00. Hold position while hiders disperse.\nEvery check-in they pass lands in your feed.`
+          : `Seeker is locked for 5:00. Go.\nFirst check-in comes fast. Prove where you are or you're out.`}
       </Mono>
       {!seeking && (
         <Mono style={[styles.note, { color: color.faint, marginTop: space(4) }]}>

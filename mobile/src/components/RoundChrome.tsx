@@ -60,7 +60,7 @@ export function SosButton({ onLeave }: { onLeave: () => void }) {
           <Pressable style={styles.sheet} onPress={() => {}}>
             <Label tone="danger">Safety</Label>
             <Body style={{ marginTop: space(2), marginBottom: space(4) }}>
-              Leaving is always free — no XP penalty, no quitter flag. If something is
+              Leaving is always free. No XP penalty, no quitter flag. If something is
               wrong, stop playing.
             </Body>
             <Btn
@@ -186,7 +186,7 @@ export function InventoryDrawer({ role }: { role: 'hider' | 'seeker' }) {
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.sheetBackdrop} onPress={() => setOpen(false)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
-            <Label>Inventory — {role === 'hider' ? 'hider pool' : 'seeker pool'}</Label>
+            <Label>{`Inventory · ${role === 'hider' ? 'hider pool' : 'seeker pool'}`}</Label>
             {items.map((it, i) => (
               <View key={it.name}>
                 {i > 0 && <Rule style={{ marginVertical: space(3) }} />}

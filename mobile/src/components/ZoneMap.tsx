@@ -1,69 +1,58 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
-import Svg, {
-  Rect,
-  Circle,
-  Line,
-  Defs,
-  Mask,
-  G,
-  Polygon,
-} from 'react-native-svg';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import Svg, { Rect, Circle, Line, Defs, Mask, G, Path, Polygon } from 'react-native-svg';
 import { color, font } from '../theme';
+import world from '../data/world.json';
 
-// Seeded PRNG so the "city" is stable across renders.
-function mulberry32(seed: number) {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// The basemap is real: street geometry and landmarks come from OpenStreetMap
+// via scripts/ingest-pois.mjs, already filtered against the PRD 6.1 placement
+// restrictions. Coordinates arrive pre-projected into 0..1 map space.
 
-interface BlockRect {
+export interface Poi {
+  id: string;
+  name: string;
+  type: 'cache' | 'beacon' | 'waystation';
+  category: string;
+  lat: number;
+  lon: number;
   x: number;
   y: number;
-  w: number;
-  h: number;
-  fill: string;
+  distM: number;
+  hours: string | null;
 }
 
-function buildCity(seed: number, W: number, H: number): BlockRect[] {
-  const rnd = mulberry32(seed);
-  const xs: number[] = [0];
-  while (xs[xs.length - 1] < W) xs.push(xs[xs.length - 1] + 26 + rnd() * 46);
-  const ys: number[] = [0];
-  while (ys[ys.length - 1] < H) ys.push(ys[ys.length - 1] + 26 + rnd() * 46);
-  const gap = 5;
-  const blocks: BlockRect[] = [];
-  for (let i = 0; i < xs.length - 1; i++) {
-    for (let j = 0; j < ys.length - 1; j++) {
-      const r = rnd();
-      let fill = '#131318';
-      if (r > 0.86) fill = '#101a12'; // park
-      else if (r > 0.68) fill = '#17171d';
-      blocks.push({
-        x: xs[i] + gap / 2,
-        y: ys[j] + gap / 2,
-        w: xs[i + 1] - xs[i] - gap,
-        h: ys[j + 1] - ys[j] - gap,
-        fill,
-      });
-    }
-  }
-  return blocks;
-}
+export const POIS = world.pois as Poi[];
+export const WORLD_LABEL = world.label;
+const STREETS = world.streets as { c: number; p: number[][] }[];
+
+export const POI_TYPE_META: Record<
+  Poi['type'],
+  { label: string; blurb: string; tint: string }
+> = {
+  cache: {
+    label: 'CACHE',
+    blurb: 'Grants one random buff from your pool. 30 minute cooldown.',
+    tint: '#9BE8FF',
+  },
+  beacon: {
+    label: 'BEACON',
+    blurb: 'Claimable. Earns passive XP while you hold it. Anyone who visits takes it.',
+    tint: '#C8FF2E',
+  },
+  waystation: {
+    label: 'WAYSTATION',
+    blurb: 'Clears every active nerf on you and pays a small XP bonus.',
+    tint: '#D8B4FF',
+  },
+};
 
 export interface MapMarker {
   key: string;
-  x: number; // 0..1
+  x: number;
   y: number;
-  kind: 'self' | 'reveal' | 'poi' | 'seeker' | 'dead';
+  kind: 'self' | 'reveal' | 'seeker' | 'dead';
   label?: string;
-  fade?: number; // 0..1 remaining visibility for reveals
+  fade?: number;
 }
 
 export function ZoneMap({
@@ -72,30 +61,52 @@ export function ZoneMap({
   zoneScale = 1,
   shrinkPreview = false,
   markers = [],
-  seed = 7,
+  pois = [],
+  claimedPoiIds = [],
+  onPoiPress,
 }: {
   width: number;
   height: number;
   zoneScale?: number;
   shrinkPreview?: boolean;
   markers?: MapMarker[];
-  seed?: number;
+  pois?: Poi[];
+  claimedPoiIds?: string[];
+  onPoiPress?: (poi: Poi) => void;
 }) {
-  const blocks = useMemo(() => buildCity(seed, width, height), [seed, width, height]);
   const cx = width / 2;
   const cy = height / 2;
   const baseR = Math.min(width, height) * 0.44;
   const r = baseR * zoneScale;
 
-  const zoneAnim = useRef(new Animated.Value(zoneScale)).current;
-  useEffect(() => {
-    Animated.timing(zoneAnim, {
-      toValue: zoneScale,
-      duration: 1200,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [zoneScale]);
+  // The ingest projects the zone radius onto an offset of 0.5 from centre, so
+  // that offset has to land exactly on the zone ring: a landmark 1 km out
+  // belongs on the boundary, not past it.
+  const px = (x: number) => cx + (x - 0.5) * 2 * baseR;
+  const py = (y: number) => cy + (y - 0.5) * 2 * baseR;
+
+  // Marker weight scales with the map so the lobby thumbnail is not covered
+  // in diamonds.
+  const compact = Math.min(width, height) < 260;
+
+  const paths = useMemo(() => {
+    const major: string[] = [];
+    const minor: string[] = [];
+    for (const seg of STREETS) {
+      let d = '';
+      for (let i = 0; i < seg.p.length; i++) {
+        const X = px(seg.p[i][0]);
+        const Y = py(seg.p[i][1]);
+        if (X < -80 || X > width + 80 || Y < -80 || Y > height + 80) {
+          d += `M${X.toFixed(1)} ${Y.toFixed(1)}`;
+          continue;
+        }
+        d += `${i === 0 ? 'M' : 'L'}${X.toFixed(1)} ${Y.toFixed(1)}`;
+      }
+      (seg.c === 1 ? major : minor).push(d);
+    }
+    return { major: major.join(' '), minor: minor.join(' ') };
+  }, [width, height]);
 
   return (
     <View style={{ width, height, overflow: 'hidden', backgroundColor: color.bg }}>
@@ -106,33 +117,24 @@ export function ZoneMap({
             <Circle cx={cx} cy={cy} r={r} fill="#000" />
           </Mask>
         </Defs>
-        {blocks.map((b, i) => (
-          <Rect key={i} x={b.x} y={b.y} width={b.w} height={b.h} fill={b.fill} rx={1.5} />
-        ))}
-        {/* diagonal avenue */}
-        <Line
-          x1={-20}
-          y1={height * 0.85}
-          x2={width * 0.9}
-          y2={-20}
-          stroke={color.bg}
-          strokeWidth={9}
-        />
-        {/* outside-zone dimmer */}
+
+        <Rect x={0} y={0} width={width} height={height} fill="#0B0B0E" />
+        <Path d={paths.minor} stroke="#1E1E25" strokeWidth={2.2} fill="none" strokeLinecap="round" />
+        <Path d={paths.major} stroke="#2B2B34" strokeWidth={3.6} fill="none" strokeLinecap="round" />
+
         <Rect
           x={0}
           y={0}
           width={width}
           height={height}
-          fill="rgba(5,5,7,0.72)"
+          fill="rgba(5,5,7,0.74)"
           mask="url(#zone)"
         />
-        {/* zone ring */}
         <Circle
           cx={cx}
           cy={cy}
           r={r}
-          fill="rgba(200,255,46,0.03)"
+          fill="rgba(200,255,46,0.025)"
           stroke={color.accent}
           strokeWidth={1.5}
           strokeDasharray="7 5"
@@ -148,46 +150,97 @@ export function ZoneMap({
             strokeDasharray="3 5"
           />
         )}
-        {/* center tick */}
         <G>
           <Line x1={cx - 5} y1={cy} x2={cx + 5} y2={cy} stroke={color.faint} strokeWidth={1} />
           <Line x1={cx} y1={cy - 5} x2={cx} y2={cy + 5} stroke={color.faint} strokeWidth={1} />
         </G>
-        {/* POI diamonds drawn in SVG so they sit under the overlay markers */}
-        {markers
-          .filter((m) => m.kind === 'poi')
-          .map((m) => {
-            const px = m.x * width;
-            const py = m.y * height;
-            return (
-              <Polygon
-                key={m.key}
-                points={`${px},${py - 6} ${px + 6},${py} ${px},${py + 6} ${px - 6},${py}`}
-                fill="none"
-                stroke={color.dim}
-                strokeWidth={1.4}
-              />
-            );
-          })}
       </Svg>
-      {markers
-        .filter((m) => m.kind !== 'poi')
-        .map((m) => (
-          <Marker key={m.key} marker={m} width={width} height={height} />
-        ))}
+
+      {/* Labels are their own layer: a sized child inside a zero-size marker
+          box does not lay out, and they must not steal taps from the diamond.
+          Only beacons are named, otherwise 32 captions fight each other. */}
+      {!compact &&
+        pois
+          .filter((p) => p.type === 'beacon')
+          .map((p) => (
+            <Text
+              key={`lbl-${p.id}`}
+              pointerEvents="none"
+              numberOfLines={1}
+              style={[
+                styles.poiLabel,
+                {
+                  // clamped so a landmark near the edge does not get its
+                  // caption sliced off by the map bounds
+                  left: Math.max(2, Math.min(px(p.x) - 55, width - 112)),
+                  top: py(p.y) + 8,
+                  color: POI_TYPE_META[p.type].tint,
+                },
+              ]}
+            >
+              {p.name.toUpperCase()}
+            </Text>
+          ))}
+
+      {pois.map((p) => (
+        <PoiMarker
+          key={p.id}
+          poi={p}
+          left={px(p.x)}
+          top={py(p.y)}
+          claimed={claimedPoiIds.includes(p.id)}
+          compact={compact}
+          onPress={onPoiPress}
+        />
+      ))}
+
+      {markers.map((m) => (
+        <Marker key={m.key} marker={m} left={px(m.x)} top={py(m.y)} />
+      ))}
     </View>
   );
 }
 
-function Marker({
-  marker,
-  width,
-  height,
+function PoiMarker({
+  poi,
+  left,
+  top,
+  claimed,
+  compact,
+  onPress,
 }: {
-  marker: MapMarker;
-  width: number;
-  height: number;
+  poi: Poi;
+  left: number;
+  top: number;
+  claimed: boolean;
+  compact: boolean;
+  onPress?: (p: Poi) => void;
 }) {
+  const meta = POI_TYPE_META[poi.type];
+  const base = poi.type === 'cache' ? 7 : 10;
+  const size = compact ? base * 0.5 : base;
+  return (
+    <Pressable
+      onPress={() => onPress?.(poi)}
+      hitSlop={compact ? 4 : 16}
+      style={[styles.poiWrap, { left, top }]}
+    >
+      <View
+        style={{
+          width: size,
+          height: size,
+          borderWidth: compact ? 1 : 1.5,
+          borderColor: meta.tint,
+          backgroundColor: claimed ? meta.tint : 'transparent',
+          transform: [{ rotate: '45deg' }],
+          opacity: compact ? 0.85 : 1,
+        }}
+      />
+    </Pressable>
+  );
+}
+
+function Marker({ marker, left, top }: { marker: MapMarker; left: number; top: number }) {
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (marker.kind !== 'self' && marker.kind !== 'seeker') return;
@@ -202,9 +255,6 @@ function Marker({
     loop.start();
     return () => loop.stop();
   }, []);
-
-  const left = marker.x * width;
-  const top = marker.y * height;
 
   if (marker.kind === 'self' || marker.kind === 'seeker') {
     const tint = marker.kind === 'self' ? color.accent : color.danger;
@@ -242,7 +292,6 @@ function Marker({
     );
   }
 
-  // dead
   return (
     <View pointerEvents="none" style={[styles.markerWrap, { left, top, opacity: 0.5 }]}>
       <Text style={{ color: color.faint, fontSize: 11, fontFamily: font.monoSemi }}>×</Text>
@@ -254,6 +303,21 @@ function Marker({
 }
 
 const styles = StyleSheet.create({
+  poiWrap: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poiLabel: {
+    position: 'absolute',
+    width: 110,
+    textAlign: 'center',
+    fontFamily: font.monoMed,
+    fontSize: 8,
+    letterSpacing: 0.6,
+  },
   markerWrap: {
     position: 'absolute',
     width: 0,

@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Label, Mono } from '../components/ui';
-import { ZoneMap, MapMarker } from '../components/ZoneMap';
+import { ZoneMap, MapMarker, POIS } from '../components/ZoneMap';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { FeedPhoto, fmtClock, roundClock, useGame } from '../engine/GameContext';
@@ -61,7 +61,7 @@ export function SeekerRound() {
           <Label tone="danger">Seeking</Label>
           <Mono style={{ fontSize: 10, color: color.dim, marginTop: 2 }}>
             {alive.length} {alive.length === 1 ? 'HIDER' : 'HIDERS'} LEFT · NEXT REVEAL{' '}
-            {nextRevealAt != null ? fmtClock(nextRevealAt - t) : '—'}
+            {nextRevealAt != null ? fmtClock(nextRevealAt - t) : '--:--'}
           </Mono>
         </View>
         <ExplainerButton />
@@ -69,7 +69,13 @@ export function SeekerRound() {
 
       {/* map */}
       <View style={{ flex: 1 }}>
-        <ZoneMap width={width} height={Math.max(mapH, 180)} seed={7} zoneScale={round.zoneScale} markers={markers} />
+        <ZoneMap
+          width={width}
+          height={Math.max(mapH, 180)}
+          zoneScale={round.zoneScale}
+          markers={markers}
+          pois={POIS}
+        />
         <View style={styles.tickerWrap} pointerEvents="none">
           <Ticker events={round.ticker} />
         </View>

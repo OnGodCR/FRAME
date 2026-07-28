@@ -6,7 +6,14 @@ import { Bar, Btn, Card, Label, Mono } from '../components/ui';
 import { AvatarMark, CosmeticPreview } from '../components/Cosmetics';
 import { CountUp, FadeIn, PressScale } from '../components/motion';
 import { SEASON, byId, categoryKind } from '../data/catalog';
+import { POIS, POI_TYPE_META, WORLD_LABEL } from '../components/ZoneMap';
+import { isOpenNow } from '../components/PoiSheet';
 import { useGame } from '../engine/GameContext';
+
+// Closest few landmarks, one of each type so the row shows the whole system.
+const NEARBY = (['beacon', 'waystation', 'cache'] as const)
+  .map((t) => POIS.filter((p) => p.type === t).sort((a, b) => a.distM - b.distM)[0])
+  .filter(Boolean);
 
 export function Home() {
   const { go, profile } = useGame();
@@ -156,9 +163,46 @@ export function Home() {
             <Btn title="Join with code" variant="outline" onPress={() => go('join')} />
           </View>
         </FadeIn>
+
+        {/* world layer: real landmarks near the player */}
+        <FadeIn index={5}>
+          <Card style={{ marginTop: space(5), padding: 0 }}>
+            <View style={styles.nearbyHead}>
+              <Label tone="text">Nearby</Label>
+              <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1 }}>
+                {WORLD_LABEL.toUpperCase()}
+              </Mono>
+            </View>
+            {NEARBY.map((p) => {
+              const meta = POI_TYPE_META[p.type];
+              const open = isOpenNow(p.hours);
+              return (
+                <View key={p.id} style={styles.nearbyRow}>
+                  <View style={[styles.nearbyGlyph, { borderColor: meta.tint }]} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Mono style={styles.nearbyName} numberOfLines={1}>
+                      {p.name}
+                    </Mono>
+                    <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1 }}>
+                      {meta.label} · {p.category.toUpperCase()}
+                      {!open ? ' · CLOSED' : ''}
+                    </Mono>
+                  </View>
+                  <Mono style={styles.nearbyDist}>{p.distM} m</Mono>
+                </View>
+              );
+            })}
+            <View style={styles.nearbyFoot}>
+              <Mono style={{ fontSize: 9, color: color.faint, lineHeight: 14 }}>
+                Real places from OpenStreetMap, filtered to public ground. Visit them in a
+                round to claim buffs.
+              </Mono>
+            </View>
+          </Card>
+        </FadeIn>
       </ScrollView>
 
-      {/* banner ad slot — home/lobby only per spec */}
+      {/* banner ad slot, home and lobby only per spec */}
       <View style={[styles.adWrap, { paddingBottom: insets.bottom + space(2) }]}>
         <View style={styles.adBanner}>
           <Mono style={{ fontSize: 11, letterSpacing: 2, color: color.dim }}>
@@ -276,6 +320,47 @@ const styles = StyleSheet.create({
     fontFamily: font.monoSemi,
     fontSize: 13,
     color: color.accent,
+  },
+  nearbyHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: space(4),
+    paddingBottom: space(3),
+  },
+  nearbyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space(3),
+    paddingHorizontal: space(4),
+    paddingVertical: space(2.5),
+    borderTopWidth: 1,
+    borderTopColor: color.line,
+  },
+  nearbyGlyph: {
+    width: 11,
+    height: 11,
+    borderWidth: 1.6,
+    transform: [{ rotate: '45deg' }],
+    flexShrink: 0,
+  },
+  nearbyName: {
+    fontSize: 12,
+    color: color.text,
+    fontFamily: font.monoSemi,
+    letterSpacing: 0.5,
+  },
+  nearbyDist: {
+    fontSize: 11,
+    color: color.accent,
+    fontFamily: font.monoSemi,
+    flexShrink: 0,
+  },
+  nearbyFoot: {
+    paddingHorizontal: space(4),
+    paddingVertical: space(3),
+    borderTopWidth: 1,
+    borderTopColor: color.line,
   },
   adWrap: {
     borderTopWidth: 1,

@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import Svg, { Rect, Ellipse, Line } from 'react-native-svg';
 
 // Stand-in for real camera captures in the demo: seeded abstract "urban"
-// compositions. Deliberately unidentifiable — no people, no faces.
+// compositions. Deliberately unidentifiable: no people, no faces.
 
 function mulberry32(seed: number) {
   let a = seed >>> 0;

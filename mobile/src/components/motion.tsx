@@ -12,7 +12,7 @@ import * as Haptics from 'expo-haptics';
 
 // Shared motion vocabulary. Entrance animations are one-shot and settle at
 // their final value, so a throttled frame loop degrades to "slightly offset"
-// rather than "stuck invisible" — which is why these run on every platform
+// rather than "stuck invisible". That is why these run on every platform
 // while looping decorative animations stay gated behind REDUCED_MOTION.
 
 export const EASE_OUT = Easing.bezier(0.16, 1, 0.3, 1);

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -11,21 +11,25 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Label, Mono } from '../components/ui';
-import { ZoneMap, MapMarker } from '../components/ZoneMap';
+import { ZoneMap, MapMarker, POIS, Poi } from '../components/ZoneMap';
+import { PoiSheet } from '../components/PoiSheet';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { fmtClock, roundClock, useGame } from '../engine/GameContext';
 
-const POIS: MapMarker[] = [
-  { key: 'poi1', x: 0.3, y: 0.45, kind: 'poi' },
-  { key: 'poi2', x: 0.66, y: 0.38, kind: 'poi' },
-  { key: 'poi3', x: 0.55, y: 0.72, kind: 'poi' },
-];
+const SELF = { x: 0.47, y: 0.56 };
+const ZONE_DIAMETER_M = 2000;
+
+/** Ground distance between two normalized map points. */
+const metersTo = (p: { x: number; y: number }) =>
+  Math.hypot(p.x - SELF.x, p.y - SELF.y) * ZONE_DIAMETER_M;
 
 export function HiderRound() {
   const { round, go, leaveRound, profile } = useGame();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const pulse = useRef(new Animated.Value(0)).current;
+  const [openPoi, setOpenPoi] = useState<Poi | null>(null);
+  const [claimed, setClaimed] = useState<string[]>([]);
 
   const checkinOpen = !!round?.checkin && !round.checkin.submitted;
 
@@ -60,8 +64,7 @@ export function HiderRound() {
   const alive = round.bots.filter((b) => b.state === 'alive').length + 1;
 
   const markers: MapMarker[] = [
-    ...POIS,
-    { key: 'me', x: 0.47, y: 0.56, kind: 'self', label: 'YOU' },
+    { key: 'me', x: SELF.x, y: SELF.y, kind: 'self', label: 'YOU' },
   ];
 
   const mapH = height - 260 - insets.top;
@@ -90,10 +93,12 @@ export function HiderRound() {
         <ZoneMap
           width={width}
           height={mapH}
-          seed={7}
           zoneScale={round.zoneScale}
           shrinkPreview={round.shrinkWarnUntil != null}
           markers={markers}
+          pois={POIS}
+          claimedPoiIds={claimed}
+          onPoiPress={setOpenPoi}
         />
         <View style={[styles.tickerWrap]} pointerEvents="none">
           <Ticker events={round.ticker} />
@@ -151,7 +156,7 @@ export function HiderRound() {
             <View>
               <Label tone="faint">Next check-in</Label>
               <Text style={styles.nextTimer}>
-                {nextTickAt != null ? fmtClock(nextTickAt - t) : '—'}
+                {nextTickAt != null ? fmtClock(nextTickAt - t) : '--:--'}
               </Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
@@ -163,6 +168,14 @@ export function HiderRound() {
           </View>
         )}
       </View>
+
+      <PoiSheet
+        poi={openPoi}
+        distanceM={openPoi ? metersTo(openPoi) : Infinity}
+        claimed={openPoi ? claimed.includes(openPoi.id) : false}
+        onClaim={(p) => setClaimed((c) => [...c, p.id])}
+        onClose={() => setOpenPoi(null)}
+      />
     </View>
   );
 }

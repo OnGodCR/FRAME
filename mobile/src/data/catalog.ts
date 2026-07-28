@@ -94,7 +94,7 @@ export const categoryKind = (cat: Category): PreviewKind =>
 export const SHOP_ITEMS = COSMETICS.filter((c) => c.source === 'shop');
 
 // ---------------------------------------------------------------------------
-// Season pass — 50 tiers, two tracks.
+// Season pass: 50 tiers, two tracks.
 // Cosmetic tiers are derived from the catalog above; the gaps are filled with
 // FILM so neither track has dead stretches.
 // ---------------------------------------------------------------------------
@@ -126,7 +126,7 @@ const film = (amount: number): TierReward => ({
   tint: color.accent,
 });
 
-// The free track is deliberately sparse — that gap is what the paid track
+// The free track is deliberately sparse. That gap is what the paid track
 // sells. Milestones are included so every tenth tier pays out on both.
 const FREE_FILM = [2, 5, 8, 10, 12, 17, 20, 21, 27, 30, 34, 37, 40, 42, 46, 49, 50];
 

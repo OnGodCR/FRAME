@@ -210,7 +210,7 @@ export function HandlePick() {
 const PERMS = [
   {
     name: 'LOCATION',
-    note: "Asked when you join your first round — never at launch. Between reveals, your position never leaves the server.",
+    note: "Asked when you join your first round, never at launch. Between reveals, your position never leaves the server.",
   },
   {
     name: 'CAMERA',

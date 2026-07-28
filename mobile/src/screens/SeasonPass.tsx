@@ -16,7 +16,7 @@ export function SeasonPass() {
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
 
-  // A 50-row track is useless if it opens at tier 1 — land the player on
+  // A 50-row track is useless if it opens at tier 1, so land the player on
   // where they actually are, with a couple of claimed tiers above for context.
   const onLayout = () => {
     const y = Math.max(0, (SEASON.currentTier - 3) * ROW_H);
@@ -81,7 +81,7 @@ export function SeasonPass() {
           <TierRow key={tier.n} tier={tier} paidPass={profile.paidPass} />
         ))}
         <Mono style={styles.footnote}>
-          Both tracks advance on the same XP. The paid track is cosmetics and FILM only —
+          Both tracks advance on the same XP. The paid track is cosmetics and FILM only.
           it never contains buffs, slots, or anything that touches a round.
         </Mono>
       </ScrollView>
@@ -97,7 +97,7 @@ export function SeasonPass() {
           }}
         >
           <Btn
-            title="Unlock paid track — $4.99"
+            title="Unlock paid track · $4.99"
             sub="kills ads on this account permanently"
             onPress={() => {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

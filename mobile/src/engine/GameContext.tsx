@@ -104,7 +104,7 @@ export interface Profile {
   level: number;
   xp: number; // 0..1 through current level
   prestige: number;
-  film: number; // soft currency — cosmetics only
+  film: number; // soft currency, cosmetics only
   owned: string[];
   equipped: Equipped;
   paidPass: boolean;
@@ -163,7 +163,7 @@ const hiderScript: Script = {
   },
   72: (r) => {
     r.pingFlashUntil = 80;
-    r.ticker.unshift(ev("Reveal tick — you've been pinged", 'warn'));
+    r.ticker.unshift(ev("Reveal tick · you've been pinged", 'warn'));
   },
   92: (r) => {
     const dev = r.bots.find((b) => b.id === 'dev')!;
@@ -177,7 +177,7 @@ const hiderScript: Script = {
   138: (r) => {
     r.zoneScale = 0.75;
     r.shrinkWarnUntil = null;
-    r.ticker.unshift(ev('Zone contracted — 750 m radius', 'warn'));
+    r.ticker.unshift(ev('Zone contracted · 750 m radius', 'warn'));
   },
   150: (r) => {
     r.checkin = { index: 5, openedAt: 150, deadline: 150 + CHECKIN_WINDOW, submitted: false };
@@ -185,7 +185,7 @@ const hiderScript: Script = {
   204: (r) => {
     const ari = r.bots.find((b) => b.id === 'ari')!;
     ari.state = 'blackout';
-    r.ticker.unshift(ev('ARI was BLACKED OUT — missed check-in', 'danger'));
+    r.ticker.unshift(ev('ARI was BLACKED OUT · missed check-in', 'danger'));
   },
   222: (r) => r.ticker.unshift(ev('JULES used GHOST PING', 'accent')),
 };
@@ -226,12 +226,12 @@ const seekerScript: Script = {
   20: (r) => feed(r, 'dev', 1),
   32: (r) => {
     revealAll(r);
-    r.ticker.unshift(ev('Reveal tick — 4 positions on map', 'accent'));
+    r.ticker.unshift(ev('Reveal tick · 4 positions on map', 'accent'));
   },
   56: (r) => {
     const ari = r.bots.find((b) => b.id === 'ari')!;
     ari.state = 'blackout';
-    r.ticker.unshift(ev('ARI was BLACKED OUT — missed check-in', 'danger'));
+    r.ticker.unshift(ev('ARI was BLACKED OUT · missed check-in', 'danger'));
   },
   70: (r) => feed(r, 'maya', 2),
   74: (r) => feed(r, 'jules', 2),
@@ -250,7 +250,7 @@ const seekerScript: Script = {
     const dev = r.bots.find((b) => b.id === 'dev')!;
     if (dev.state === 'alive') {
       dev.state = 'blackout';
-      r.ticker.unshift(ev('DEV was BLACKED OUT — lens covered', 'danger'));
+      r.ticker.unshift(ev('DEV was BLACKED OUT · lens covered', 'danger'));
     }
   },
   182: (r) => {
@@ -411,7 +411,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [nextRole, go],
   );
 
-  // Fires the moment validation passes — the window can expire while the
+  // Fires the moment validation passes. The window can expire while the
   // player is still looking at the confirmation screen, and that must not
   // count against them.
   const submitCheckin = useCallback(() => {
@@ -422,7 +422,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         checkin: null,
         checkinsPassed: r.checkinsPassed + 1,
         ticker: [
-          ev(`Check-in 0${r.checkin.index} submitted — visible to seeker`, 'accent'),
+          ev(`Check-in 0${r.checkin.index} submitted · visible to seeker`, 'accent'),
           ...r.ticker,
         ],
       };
@@ -443,7 +443,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         tags: [...r.tags, r.proximityTarget],
         proximity: 0,
         proximityTarget: null,
-        ticker: [ev(`TAG CONFIRMED — ${name} eliminated`, 'accent'), ...r.ticker],
+        ticker: [ev(`TAG CONFIRMED · ${name} eliminated`, 'accent'), ...r.ticker],
         outcome: remaining === 0 ? 'cleared' : r.outcome,
       };
     });
