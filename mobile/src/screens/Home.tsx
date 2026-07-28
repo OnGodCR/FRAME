@@ -1,15 +1,16 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, font, radius, space } from '../theme';
 import { Bar, Btn, Card, Label, Mono } from '../components/ui';
+import { AvatarMark, PinSwatch, FrameSwatch, StaticSwatch } from '../components/Cosmetics';
 import { useGame } from '../engine/GameContext';
 
-const STATS = [
-  { k: 'ROUNDS', v: '23' },
-  { k: 'SURVIVAL', v: '61%' },
-  { k: 'CHECK-INS', v: '94%' },
-  { k: 'TAGS', v: '9' },
+const LOADOUT = [
+  { k: 'TITLE', v: 'UNSEEN', swatch: null },
+  { k: 'MAP PIN', v: 'ACID DOT', swatch: <PinSwatch /> },
+  { k: 'PHOTO FRAME', v: 'BRACKETS', swatch: <FrameSwatch /> },
+  { k: 'BLACKOUT', v: 'STATIC', swatch: <StaticSwatch /> },
 ];
 
 export function Home() {
@@ -49,39 +50,59 @@ export function Home() {
           <Bar value={profile.xp} height={5} />
         </View>
 
-        {/* season pass strip */}
-        <Card style={{ marginTop: space(5), padding: space(3.5) }}>
-          <View style={styles.xpRow}>
-            <Label tone="text">Season pass</Label>
-            <Mono style={{ fontSize: 10, color: color.accent }}>TIER 12 / 50</Mono>
-          </View>
-          <View style={styles.tierRow}>
-            {Array.from({ length: 16 }).map((_, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.tierChip,
-                  i < 12 && { backgroundColor: color.accent, borderColor: color.accent },
-                ]}
-              />
-            ))}
-          </View>
-          <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(2) }}>
-            Cosmetics and currency only. Nothing in the pass affects a round.
-          </Mono>
-        </Card>
-
-        {/* stats */}
-        <View style={styles.statGrid}>
-          {STATS.map((s) => (
-            <View key={s.k} style={styles.statCell}>
-              <Text style={styles.statVal}>{s.v}</Text>
-              <Label tone="faint" style={{ marginTop: 2 }}>
-                {s.k}
-              </Label>
+        {/* season pass strip → full pass screen */}
+        <Pressable onPress={() => go('pass')}>
+          <Card style={{ marginTop: space(5), padding: space(3.5) }}>
+            <View style={styles.xpRow}>
+              <Label tone="text">Season pass · EXPOSURE</Label>
+              <Mono style={{ fontSize: 10, color: color.accent }}>TIER 12 / 50 →</Mono>
             </View>
-          ))}
-        </View>
+            <View style={styles.tierRow}>
+              {Array.from({ length: 16 }).map((_, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.tierChip,
+                    i < 12 && { backgroundColor: color.accent, borderColor: color.accent },
+                  ]}
+                />
+              ))}
+            </View>
+          </Card>
+        </Pressable>
+
+        {/* loadout */}
+        <Card style={{ marginTop: space(4), padding: space(4) }}>
+          <View style={styles.xpRow}>
+            <Label tone="text">Loadout</Label>
+            <Pressable onPress={() => go('shop')} hitSlop={8}>
+              <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
+                OPEN SHOP →
+              </Mono>
+            </Pressable>
+          </View>
+          <View style={{ flexDirection: 'row', gap: space(4), marginTop: space(3) }}>
+            <AvatarMark size={84} />
+            <View style={{ flex: 1 }}>
+              {LOADOUT.map((row, i) => (
+                <View
+                  key={row.k}
+                  style={[styles.loadoutRow, i === 0 && { borderTopWidth: 0, paddingTop: 0 }]}
+                >
+                  <Label tone="faint" style={{ fontSize: 9 }}>
+                    {row.k}
+                  </Label>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    {row.swatch}
+                    <Mono style={{ fontSize: 11, color: color.text, letterSpacing: 1 }}>
+                      {row.v}
+                    </Mono>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </Card>
 
         {/* play */}
         <View style={{ marginTop: space(6), gap: space(3) }}>
@@ -90,11 +111,16 @@ export function Home() {
         </View>
       </ScrollView>
 
-      {/* ad slot — home/lobby only per spec */}
-      <View style={[styles.adSlot, { paddingBottom: insets.bottom + space(2) }]}>
-        <Mono style={{ fontSize: 9, letterSpacing: 1.5, color: color.faint }}>
-          AD SLOT · NEVER SHOWN DURING A ROUND
-        </Mono>
+      {/* banner ad slot — home/lobby only per spec */}
+      <View style={[styles.adWrap, { paddingBottom: insets.bottom + space(2) }]}>
+        <View style={styles.adBanner}>
+          <Mono style={{ fontSize: 11, letterSpacing: 2, color: color.dim }}>
+            AD · 320 × 50 BANNER
+          </Mono>
+          <Mono style={{ fontSize: 9, letterSpacing: 1, color: color.faint, marginTop: 3 }}>
+            ADMOB ADAPTIVE · NEVER SHOWN DURING A ROUND
+          </Mono>
+        </View>
       </View>
     </View>
   );
@@ -147,32 +173,29 @@ const styles = StyleSheet.create({
     borderColor: color.lineBright,
     backgroundColor: color.surface2,
   },
-  statGrid: {
+  loadoutRow: {
     flexDirection: 'row',
-    marginTop: space(5),
-    borderWidth: 1,
-    borderColor: color.line,
-    borderRadius: radius.md,
-    overflow: 'hidden',
-  },
-  statCell: {
-    flex: 1,
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: space(3.5),
-    borderRightWidth: 1,
-    borderRightColor: color.line,
-    backgroundColor: color.surface,
-  },
-  statVal: {
-    fontFamily: font.display,
-    fontSize: 18,
-    color: color.text,
-  },
-  adSlot: {
+    paddingVertical: space(2),
     borderTopWidth: 1,
     borderTopColor: color.line,
-    alignItems: 'center',
-    paddingTop: space(2.5),
+  },
+  adWrap: {
+    borderTopWidth: 1,
+    borderTopColor: color.line,
     backgroundColor: color.surface,
+    paddingTop: space(2.5),
+    paddingHorizontal: space(5),
+  },
+  adBanner: {
+    height: 64,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: color.lineBright,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: color.surface2,
   },
 });

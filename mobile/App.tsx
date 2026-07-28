@@ -16,6 +16,8 @@ import { color, REDUCED_MOTION } from './src/theme';
 import { GameProvider, Route, useGame } from './src/engine/GameContext';
 import { Splash, DobGate, HandlePick, Permissions } from './src/screens/Onboarding';
 import { Home } from './src/screens/Home';
+import { Shop } from './src/screens/Shop';
+import { SeasonPass } from './src/screens/SeasonPass';
 import { Join, Lobby } from './src/screens/JoinLobby';
 import { RoleReveal } from './src/screens/RoleReveal';
 import { HiderRound } from './src/screens/HiderRound';
@@ -55,6 +57,12 @@ function Router() {
       break;
     case 'home':
       screen = <Home />;
+      break;
+    case 'shop':
+      screen = <Shop />;
+      break;
+    case 'pass':
+      screen = <SeasonPass />;
       break;
     case 'join':
       screen = <Join />;

@@ -21,6 +21,8 @@ export type Route =
   | 'handle'
   | 'permissions'
   | 'home'
+  | 'shop'
+  | 'pass'
   | 'join'
   | 'lobby'
   | 'roleReveal'
@@ -93,6 +95,9 @@ export interface Profile {
   level: number;
   xp: number; // 0..1 through current level
   prestige: number;
+  film: number; // soft currency — cosmetics only
+  owned: string[];
+  paidPass: boolean;
 }
 
 const HIDER_BOTS: Bot[] = [
@@ -324,6 +329,8 @@ interface Game {
   leaveRound: () => void;
   finishRound: () => void;
   addXp: (n: number) => void;
+  purchase: (id: string, costFilm: number) => boolean;
+  buyPass: () => void;
 }
 
 const Ctx = createContext<Game | null>(null);
@@ -335,6 +342,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     level: 7,
     xp: 0.58,
     prestige: 0,
+    film: 1250,
+    owned: ['pin-acid', 'frame-brackets'],
+    paidPass: false,
   });
   const [round, setRound] = useState<RoundState | null>(null);
   const [nextRole, setNextRole] = useState<Role>('hider');
@@ -440,6 +450,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const purchase = useCallback((id: string, costFilm: number) => {
+    let ok = false;
+    setProfile((p) => {
+      if (p.owned.includes(id) || p.film < costFilm) return p;
+      ok = true;
+      return { ...p, film: p.film - costFilm, owned: [...p.owned, id] };
+    });
+    return ok;
+  }, []);
+
+  const buyPass = useCallback(
+    () => setProfile((p) => ({ ...p, paidPass: true })),
+    [],
+  );
+
   return (
     <Ctx.Provider
       value={{
@@ -456,6 +481,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         leaveRound,
         finishRound,
         addXp,
+        purchase,
+        buyPass,
       }}
     >
       {children}

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
   Pressable,
@@ -258,81 +257,78 @@ export function Lobby() {
         />
       </View>
 
-      <SafetyCard
-        visible={safetyOpen}
-        onAck={() => {
-          setAcked(true);
-          setSafetyOpen(false);
-        }}
-        onClose={() => setSafetyOpen(false)}
-      />
+      {safetyOpen && (
+        <SafetyOverlay
+          onAck={() => {
+            setAcked(true);
+            setSafetyOpen(false);
+          }}
+          onClose={() => setSafetyOpen(false)}
+        />
+      )}
     </View>
   );
 }
 
 const RULES = [
-  'Stay on public property. Do not enter private property, fenced areas, or anywhere marked restricted.',
-  'Do not play near traffic. Never cross against signals, never hide near a roadway.',
-  'Do not run. FRAME is a walking game — the speed lock will suspend your round above 10 mph.',
-  'Obey every law, sign, and posted rule of the place you are in.',
-  'If any person asks you to leave or stop playing — security, staff, police, anyone — stop immediately.',
-  'If a spot feels unsafe, it is. Leave. The SOS button removes you from the round with no penalty, ever.',
-  'Phones die. Rounds use heavy GPS and camera. Start above 40% battery or expect to be blacked out.',
+  'Public places only. Fence, gate, "no trespassing" sign — that spot is out.',
+  "Stay off roads and away from traffic. Don't hide between parked cars.",
+  'Walk. The app suspends your round over 10 mph anyway.',
+  'If security, staff, or a cop tells you to stop, stop. The round does not matter.',
+  'The law still applies while you play.',
+  'You can leave any time. SOS → Leave round. No penalty, nobody gets flagged.',
+  "Charge your phone. GPS and camera drain fast — under 40% you probably won't finish the round.",
 ];
 
-function SafetyCard({
-  visible,
-  onAck,
-  onClose,
-}: {
-  visible: boolean;
-  onAck: () => void;
-  onClose: () => void;
-}) {
+function SafetyOverlay({ onAck, onClose }: { onAck: () => void; onClose: () => void }) {
   const [reachedEnd, setReachedEnd] = useState(false);
+  const [viewH, setViewH] = useState(0);
   const insets = useSafeAreaInsets();
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 24) {
+    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 40) {
       setReachedEnd(true);
     }
   };
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.screen, { paddingTop: insets.top + space(4) }]}>
-        <View style={{ paddingHorizontal: space(6) }}>
-          <Label tone="danger">Read all of it</Label>
-          <Text style={styles.h1}>Before you play</Text>
-        </View>
-        <ScrollView
-          onScroll={onScroll}
-          scrollEventThrottle={64}
-          style={{ flex: 1, marginTop: space(4) }}
-          contentContainerStyle={{ paddingHorizontal: space(6), paddingBottom: space(8) }}
-        >
-          {RULES.map((r, i) => (
-            <View key={i} style={styles.ruleRow}>
-              <Text style={styles.ruleIndex}>{String(i + 1).padStart(2, '0')}</Text>
-              <Body style={{ flex: 1, color: color.text }}>{r}</Body>
-            </View>
-          ))}
-          <Rule style={{ marginVertical: space(4) }} />
-          <Mono style={{ fontSize: 11, lineHeight: 17, color: color.faint }}>
-            Your acknowledgment is recorded for this round. FRAME is a game played in the
-            real world; you are responsible for where your body is.
-          </Mono>
-        </ScrollView>
-        <View style={{ padding: space(6), paddingBottom: insets.bottom + space(5) }}>
-          <Btn
-            title={reachedEnd ? 'I understand' : 'Scroll to the end'}
-            disabled={!reachedEnd}
-            onPress={onAck}
-          />
-          <View style={{ height: space(2) }} />
-          <Btn title="Close" variant="outline" onPress={onClose} />
-        </View>
+    <View style={[styles.safetyOverlay, { paddingTop: insets.top + space(4) }]}>
+      <View style={{ paddingHorizontal: space(6) }}>
+        <Label tone="danger">Read all of it</Label>
+        <Text style={styles.h1}>Before you play</Text>
       </View>
-    </Modal>
+      <ScrollView
+        onScroll={onScroll}
+        onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
+        onContentSizeChange={(_, h) => {
+          if (viewH > 0 && h <= viewH + 8) setReachedEnd(true);
+        }}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator
+        style={{ flex: 1, marginTop: space(4) }}
+        contentContainerStyle={{ paddingHorizontal: space(6), paddingBottom: space(8) }}
+      >
+        {RULES.map((r, i) => (
+          <View key={i} style={styles.ruleRow}>
+            <Text style={styles.ruleIndex}>{String(i + 1).padStart(2, '0')}</Text>
+            <Body style={{ flex: 1, color: color.text }}>{r}</Body>
+          </View>
+        ))}
+        <Rule style={{ marginVertical: space(4) }} />
+        <Mono style={{ fontSize: 11, lineHeight: 17, color: color.faint }}>
+          Your acknowledgment is logged for this round. This is a real place with real
+          people in it — you are responsible for where you put yourself.
+        </Mono>
+      </ScrollView>
+      <View style={{ padding: space(6), paddingBottom: insets.bottom + space(5) }}>
+        <Btn
+          title={reachedEnd ? 'I understand' : 'Scroll to the end'}
+          disabled={!reachedEnd}
+          onPress={onAck}
+        />
+        <View style={{ height: space(2) }} />
+        <Btn title="Close" variant="outline" onPress={onClose} />
+      </View>
+    </View>
   );
 }
 
@@ -451,5 +447,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: color.accent,
     width: 26,
+  },
+  safetyOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: color.bg,
+    zIndex: 10,
   },
 });
