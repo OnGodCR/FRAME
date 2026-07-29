@@ -81,8 +81,8 @@ export function SeasonPass() {
           <TierRow key={tier.n} tier={tier} paidPass={profile.paidPass} />
         ))}
         <Mono style={styles.footnote}>
-          Both tracks advance on the same XP. The paid track is cosmetics and FILM only.
-          it never contains buffs, slots, or anything that touches a round.
+          Both tracks advance on the same XP. The paid track is cosmetics and FILM
+          only, and never contains buffs, slots, or anything that touches a round.
         </Mono>
       </ScrollView>
 
