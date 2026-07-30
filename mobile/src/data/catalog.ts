@@ -212,6 +212,86 @@ export const STARTER_BUNDLE = {
  * a brand new one, opened the app already twelve tiers into a pass it had never
  * played. That was demo dressing that read as a bug, because it was one.
  */
+/**
+ * Real-money products.
+ *
+ * **None of these is FILM, and none of them ever can be.** Seeker bidding
+ * spends FILM (JoinLobby, "Bid to seek"), so selling FILM would make a role
+ * advantage purchasable, and marketing/BRIEF.md 9 lists "never imply anything
+ * purchasable helps you win" as a legal line rather than a tone note.
+ *
+ * What is safe to sell: cosmetics, cosmetic bundles, and pass tiers, because
+ * the pass pays out cosmetics only. If a future tier ever pays FILM, tier
+ * skips have to come out of the shop.
+ */
+export interface StoreProduct {
+  id: string;
+  name: string;
+  blurb: string;
+  price: string;
+  /** Struck-through comparison price, where there is a genuine saving. */
+  anchor?: string;
+  /** Cosmetic ids granted. */
+  grants: string[];
+  /** Pass tiers granted, for skips. */
+  tiers?: number;
+  tag?: string;
+}
+
+export const STORE: StoreProduct[] = [
+  {
+    id: 'store-pass',
+    name: 'SEASON PASS',
+    blurb: 'The paid track for the whole season, plus no ads on this account forever.',
+    price: '$4.99',
+    grants: [],
+    tag: 'BEST VALUE',
+  },
+  {
+    id: 'store-darkroom-set',
+    name: 'DARKROOM SET',
+    blurb: 'Three frames, the category everyone else actually sees.',
+    price: '$3.99',
+    anchor: '$8.97',
+    grants: ['frame-darkroom', 'frame-safelight', 'frame-fixer'],
+  },
+  {
+    id: 'store-tier-5',
+    name: '5 TIER SKIP',
+    blurb: 'Jump five pass tiers. Cosmetic rewards only.',
+    price: '$2.99',
+    grants: [],
+    tiers: 5,
+  },
+  {
+    id: 'store-tier-10',
+    name: '10 TIER SKIP',
+    blurb: 'Jump ten pass tiers. Cosmetic rewards only.',
+    price: '$4.99',
+    anchor: '$5.98',
+    grants: [],
+    tiers: 10,
+  },
+  {
+    id: 'store-founder',
+    name: 'FOUNDER BUNDLE',
+    blurb: 'Every shop cosmetic currently in rotation, plus the pass.',
+    price: '$12.99',
+    anchor: '$24.94',
+    grants: [
+      'frame-darkroom',
+      'frame-safelight',
+      'frame-fixer',
+      'pin-negative',
+      'pin-ghost',
+      'static-signal',
+      'tag-prism',
+      'title-developed',
+    ],
+    tag: 'EVERYTHING',
+  },
+];
+
 export const SEASON = {
   number: '01',
   name: 'EXPOSURE',

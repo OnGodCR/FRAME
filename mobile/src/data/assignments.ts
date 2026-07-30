@@ -1,3 +1,5 @@
+import { ECONOMY } from './economy';
+
 // ---------------------------------------------------------------------------
 // The daily assignment.
 //
@@ -169,8 +171,11 @@ export function assignmentFor(now: Date = new Date()): Assignment {
   return ASSIGNMENTS[(((i * 7) % n) + n) % n];
 }
 
-/** What completing today's assignment pays. Cosmetic currency only. */
-export const DAILY_REWARD = { xp: 0.06, film: 75 };
+/**
+ * What completing today's assignment pays. Cosmetic currency only.
+ * Single source is ECONOMY in data/economy.ts.
+ */
+export const DAILY_REWARD = { xp: ECONOMY.dailyCheckin.xp, film: ECONOMY.dailyCheckin.film };
 
 /**
  * The streak is weekly, not daily. A daily streak is the wrong shape for

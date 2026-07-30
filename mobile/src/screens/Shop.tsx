@@ -7,12 +7,12 @@ import { Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { CosmeticPreview } from '../components/Cosmetics';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { CountUp, FadeIn, PressScale, useFlash } from '../components/motion';
-import { Cosmetic, SHOP_ITEMS, SEASON, categoryKind, CATEGORIES } from '../data/catalog';
+import { Cosmetic, SHOP_ITEMS, SEASON, TIER_COUNT, categoryKind, CATEGORIES, STORE } from '../data/catalog';
 import { useGame } from '../engine/GameContext';
 import { Animated } from 'react-native';
 
 export function Shop() {
-  const { go, profile, purchase, buyPass } = useGame();
+  const { go, profile, purchase, buyPass, buyProduct } = useGame();
   const insets = useSafeAreaInsets();
   const frames = SHOP_ITEMS.filter((i) => i.category === 'frame');
   const others = SHOP_ITEMS.filter((i) => i.category !== 'frame');
@@ -64,7 +64,7 @@ export function Shop() {
               <Text style={styles.price}>{profile.paidPass ? 'OWNED' : '$4.99'}</Text>
             </View>
             <Mono style={{ fontSize: 11, color: color.dim, marginTop: space(2) }}>
-              50 tiers of cosmetics and FILM.{'\n'}
+              {TIER_COUNT} tiers of cosmetics and FILM.{'\n'}
               {SEASON.weeks - SEASON.week} weeks left in the season.
             </Mono>
             {!profile.paidPass && (
@@ -79,10 +79,59 @@ export function Shop() {
               />
             )}
             <Pressable onPress={() => go('pass')} hitSlop={8} style={{ marginTop: space(3) }}>
-              <Mono style={styles.viewTiers}>VIEW ALL 50 TIERS →</Mono>
+              <Mono style={styles.viewTiers}>{`VIEW ALL ${TIER_COUNT} TIERS →`}</Mono>
             </Pressable>
           </Card>
         </FadeIn>
+
+        {/* Real money products. Cosmetics and pass tiers only: FILM is never
+            sold, because seeker bidding spends it and that would make a role
+            advantage purchasable. */}
+        <FadeIn index={1}>
+          <View style={styles.sectionHead}>
+            <Label tone="text">Store</Label>
+            <Label tone="faint">REAL MONEY</Label>
+          </View>
+        </FadeIn>
+        {STORE.map((prod, i) => {
+          const owned =
+            prod.id === 'store-pass'
+              ? profile.paidPass
+              : prod.grants.length > 0 && prod.grants.every((g) => profile.owned.includes(g));
+          return (
+            <FadeIn key={prod.id} index={i} delay={100}>
+              <PressScale
+                disabled={owned}
+                onPress={() => {
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  if (prod.id === 'store-pass') buyPass();
+                  buyProduct(prod);
+                }}
+                style={[styles.storeCard, owned && { opacity: 0.55 }]}
+              >
+                <View style={styles.storeTop}>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
+                      <Text style={styles.storeName}>{prod.name}</Text>
+                      {prod.tag && <Mono style={styles.storeTag}>{prod.tag}</Mono>}
+                    </View>
+                    <Mono style={styles.storeBlurb}>{prod.blurb}</Mono>
+                  </View>
+                </View>
+                <View style={styles.storeFoot}>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space(2) }}>
+                    {prod.anchor && <Mono style={styles.storeAnchor}>{prod.anchor}</Mono>}
+                    <Text style={styles.storePrice}>{prod.price}</Text>
+                  </View>
+                  <Mono style={styles.storeCta}>{owned ? 'OWNED' : 'BUY →'}</Mono>
+                </View>
+              </PressScale>
+            </FadeIn>
+          );
+        })}
+        <Mono style={styles.filmNote}>
+          FILM IS NEVER SOLD. IT IS EARNED BY PLAYING, BECAUSE SEEKER BIDDING SPENDS IT.
+        </Mono>
 
         {/* Frames get flagship billing rather than being one tab of five.
             Every check-in photo a hider sends is wearing theirs, and the
@@ -146,23 +195,14 @@ export function Shop() {
               </View>
               <Mono style={styles.filmRowPrice}>+50</Mono>
             </PressScale>
-            <Rule />
-            <View style={styles.filmRow}>
-              <View style={styles.filmRowLeft}>
-                <CosmeticPreview kind="film" size={34} />
-                <View style={styles.filmRowText}>
-                  <Text style={styles.itemName}>1,000 FILM</Text>
-                  <Mono style={styles.filmRowSub}>Spendable on cosmetics only.</Mono>
-                </View>
-              </View>
-              <Mono style={[styles.filmRowPrice, { color: color.text }]}>$2.99</Mono>
-            </View>
           </Card>
 
           <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(4), lineHeight: 16 }}>
+            FILM cannot be bought. Seeker bidding spends it, so selling it would make a
+            role advantage purchasable. Rewarded video is the one exception and it is
+            optional, capped, and never grants buffs.{'\n\n'}
             Any real-money purchase permanently disables all advertising on this account.
-            Not for a season. Forever. Buffs and nerfs are earned in rounds and are never
-            sold.
+            Not for a season. Forever.
           </Mono>
         </FadeIn>
       </ScrollView>
@@ -339,6 +379,42 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: color.text,
     letterSpacing: -0.5,
+  },
+  storeCard: {
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    padding: space(3.5),
+    marginBottom: space(2.5),
+  },
+  storeTop: { flexDirection: 'row', gap: space(3) },
+  storeName: { fontFamily: font.display, fontSize: 19, color: color.text },
+  storeTag: {
+    fontSize: 8,
+    letterSpacing: 1.2,
+    color: color.black,
+    backgroundColor: color.accent,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  storeBlurb: { fontSize: 10, color: color.dim, lineHeight: 15, marginTop: 4 },
+  storeFoot: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: space(3),
+  },
+  storeAnchor: { fontSize: 11, color: color.faint, textDecorationLine: 'line-through' },
+  storePrice: { fontFamily: font.display, fontSize: 22, color: color.accent },
+  storeCta: { fontSize: 10, letterSpacing: 1.4, color: color.accent },
+  filmNote: {
+    fontSize: 9,
+    letterSpacing: 1.1,
+    lineHeight: 14,
+    color: color.faint,
+    marginTop: space(1),
   },
   sectionHead: {
     flexDirection: 'row',

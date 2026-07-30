@@ -112,14 +112,14 @@ the record.
       engaging enough. Needs a middle ground between "photograph a doorway" and
       something with real pull. Think about stakes, variety, and a reason to
       care beyond the FILM.
-- [ ] **Global leaderboard**, ranked on XP.
-- [ ] **Friends tab.** Add by unique friend code and QR. Invite to a game in one
-      tap instead of the friend typing a room code.
-- [ ] **Share the daily capture with friends**, BeReal shaped. Applaud a
-      friend's post to give them 25 FILM.
-- [ ] **Referral system.** Codes entered at signup, 500 FILM each, plus a shared
-      task track (3 daily assignments, 3 wins, 10 games together).
-- [ ] **Shop expansion** for more microtransactions.
+- [x] **Global leaderboard**, ranked on XP. Global and friends scopes.
+- [x] **Friends tab.** Add by friend code and QR, invite in one tap. Report and
+      block on every row. See session-2 14.
+- [x] **Share the daily capture with friends**, BeReal shaped, with applause.
+- [x] **Referral system.** Codes, 500 FILM each, shared task track.
+- [x] **Shop expansion.** Bundles and tier skips. A pre-existing "1,000 FILM for
+      $2.99" SKU was **removed**: seeker bidding spends FILM, so selling it was
+      pay-to-win.
 
 ### Standing constraints these must respect
 
@@ -129,9 +129,30 @@ Every item above is still bound by section 3 and section 5. In particular:
   Friend codes are fine; discovery of people you do not know is not.
 - The age gate means minors are on this platform. Any social surface needs
   report and block from the first commit, not later.
-- FILM is **earned, never sold**, while seeker bidding exists. Applaud rewards
-  and referral grants are new FILM faucets: watch the total supply, because
-  inflating it devalues every price in the shop.
+- **There is exactly one currency and it is called FILM.** If a note, a ticket,
+  or a conversation says "link", "coins", or anything else, it means FILM.
+  Never introduce a second currency without saying so explicitly.
+- FILM is **earned, never sold**, while seeker bidding exists. The shop may sell
+  cosmetics and pass tiers for real money; it must never sell FILM, because
+  bidding would turn that into a purchasable advantage.
+- Applause and referral grants are FILM faucets and are capped for that reason.
+  See section 6.1.
+
+## 6.1 FILM economy, current numbers
+
+Single source of truth is `ECONOMY` in `mobile/src/data/economy.ts`. Change it
+there, not in screens.
+
+| Source | Pays | Notes |
+|---|---|---|
+| Daily check-in | **100 FILM + 100 XP** | Once per day. |
+| Applause received | **20 FILM** | From another player applauding your capture. |
+| Applause received, daily cap | **100 FILM** | Roughly five applauds. Past the cap people can still applaud, it just stops paying, so the social signal survives without the faucet running. |
+| Referral, both sides | **500 FILM** | One time, per pair. |
+
+The cap exists because a group of friends mutually applauding would otherwise
+mint more FILM per day than playing does, which devalues every price in the
+shop.
 
 ## 7. There is no backend yet
 
@@ -147,6 +168,23 @@ Worth stating plainly because the app looks like it has one and does not.
 
 So a "new account" is only new if that device has no stored state. Signing in
 with Google authenticates a person and stores nothing about them.
+
+## 7.1 Record every fixture
+
+**[TEST-FIXTURES.md](TEST-FIXTURES.md) is the register of everything fake in
+the app.** Simulated players, scripted rounds, fake friend codes, placeholder
+prices, procedural photos.
+
+When you add a fixture, add it there **in the same commit**. When you replace
+one with real data, strike it there in the same commit. It ends with a
+pre-launch checklist; anything that must not ship enabled belongs on it.
+
+Two conventions that are not optional:
+
+- Simulated players are visibly tagged. A fake name must never be able to pass
+  for a person.
+- Nothing simulated arrives on its own. A fixture appears because someone asked
+  for it, never by a timer.
 
 ## 8. Useful commands
 

@@ -7,21 +7,45 @@ import {
   saveDaily,
   loadSeen,
   saveSeen,
+  loadFriends,
+  saveFriends,
+  loadApplause,
+  saveApplause,
+  loadReferral,
+  saveReferral,
   clearAll,
   FRESH_SEEN,
   type Seen,
 } from './persist';
 import * as notify from './notify';
-import { passState, type PassState } from '../data/catalog';
+import { passState, XP_PER_TIER, type PassState, type StoreProduct } from '../data/catalog';
 import {
   FRESH_DAILY,
   DAILY_REWARD,
   assignmentFor,
   completeDaily as advanceDaily,
   isDailyOpen,
+  dayIndex,
   type DailyState,
   type Assignment,
 } from '../data/assignments';
+import {
+  ECONOMY,
+  FRESH_APPLAUSE,
+  applausePayout,
+  creditApplause,
+  type ApplauseWallet,
+} from '../data/economy';
+import {
+  FRESH_FRIENDS,
+  FRESH_REFERRAL_PROGRESS,
+  FRIEND_CODE_LENGTH,
+  findByCode,
+  makeFriendCode,
+  normaliseCode,
+  type FriendsState,
+  type ReferralProgress,
+} from '../data/friends';
 import React, {
   createContext,
   useContext,
@@ -58,7 +82,9 @@ export type Route =
   | 'blackout'
   | 'results'
   | 'solo'
-  | 'soloRun';
+  | 'soloRun'
+  | 'friends'
+  | 'leaderboard';
 
 export type Role = 'hider' | 'seeker';
 export type PlayerState = 'alive' | 'tagged' | 'blackout';
@@ -558,6 +584,8 @@ interface Game {
   redeemBundle: (frameId: string, film: number) => void;
   /** Deducts FILM. Used by seeker bidding, which is a sink, not a purchase. */
   spendFilm: (n: number) => void;
+  /** Real-money store purchase. Grants cosmetics and pass tiers, never FILM. */
+  buyProduct: (p: StoreProduct) => void;
   equip: (slot: keyof Equipped, id: string) => void;
   // --- solo ---
   solo: SoloState | null;
@@ -572,6 +600,20 @@ interface Game {
   markSeen: (patch: Partial<Seen>) => void;
   /** Wipes local progression back to a new account. See CLAUDE.md 7. */
   resetProgress: () => void;
+  // --- social ---
+  friends: FriendsState;
+  /** Adds by code. Returns why it failed, or null on success. */
+  addFriend: (code: string) => string | null;
+  removeFriend: (id: string) => void;
+  blockFriend: (id: string) => void;
+  reportFriend: (id: string) => void;
+  /** Applauds a friend's capture. Returns FILM paid, which may be 0 at cap. */
+  applaud: (id: string) => number;
+  /** FILM earned from applause today, and the cap. */
+  applauseToday: { earned: number; cap: number };
+  /** Enters a referral code. Returns why it failed, or null on success. */
+  redeemReferral: (code: string) => string | null;
+  referralProgress: ReferralProgress;
   /** Season pass position, derived from profile.seasonXp. */
   pass: PassState;
   /** Books a local reminder for the next round with this party. */
@@ -590,22 +632,39 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [solo, setSolo] = useState<SoloState | null>(null);
   const [daily, setDaily] = useState<DailyState>(FRESH_DAILY);
   const [seen, setSeen] = useState<Seen>(FRESH_SEEN);
+  const [friends, setFriends] = useState<FriendsState>(() => ({
+    ...FRESH_FRIENDS,
+    myCode: makeFriendCode(),
+  }));
+  const [applause, setApplause] = useState<ApplauseWallet>(FRESH_APPLAUSE);
+  const [referralProgress, setReferralProgress] =
+    useState<ReferralProgress>(FRESH_REFERRAL_PROGRESS);
 
   // Progression survives a restart. Guests have nowhere else for it to live.
   useEffect(() => {
     let live = true;
     (async () => {
-      const [savedProfile, savedAuth, savedDaily, savedSeen] = await Promise.all([
-        loadProfile(),
-        loadAuth(),
-        loadDaily(),
-        loadSeen(),
-      ]);
+      const [savedProfile, savedAuth, savedDaily, savedSeen, savedFriends, savedApplause, savedReferral] =
+        await Promise.all([
+          loadProfile(),
+          loadAuth(),
+          loadDaily(),
+          loadSeen(),
+          loadFriends(),
+          loadApplause(),
+          loadReferral(),
+        ]);
       if (!live) return;
       if (savedProfile) setProfile((p) => ({ ...p, ...savedProfile }));
       if (savedAuth) setAuth(savedAuth);
       if (savedDaily) setDaily(savedDaily);
       if (savedSeen) setSeen(savedSeen);
+      // Keep the generated code if the saved state predates having one.
+      if (savedFriends) {
+        setFriends((f) => ({ ...savedFriends, myCode: savedFriends.myCode || f.myCode }));
+      }
+      if (savedApplause) setApplause(savedApplause);
+      if (savedReferral) setReferralProgress(savedReferral);
       setHydrated(true);
     })();
     return () => {
@@ -629,6 +688,107 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (hydrated) saveSeen(seen);
   }, [seen, hydrated]);
+
+  useEffect(() => {
+    if (hydrated) saveFriends(friends);
+  }, [friends, hydrated]);
+
+  useEffect(() => {
+    if (hydrated) saveApplause(applause);
+  }, [applause, hydrated]);
+
+  useEffect(() => {
+    if (hydrated) saveReferral(referralProgress);
+  }, [referralProgress, hydrated]);
+
+  // --- social ---------------------------------------------------------------
+
+  /**
+   * Adds a friend by code. Codes only: there is no search and no suggestions,
+   * because a code you hand somebody is consent and a list of nearby strangers
+   * is not (marketing/BRIEF.md 9, and the age gate means minors are here).
+   */
+  const addFriend = useCallback(
+    (raw: string): string | null => {
+      const code = normaliseCode(raw);
+      if (code.length < FRIEND_CODE_LENGTH) return 'That code is too short.';
+      if (code === friends.myCode) return 'That is your own code.';
+      if (friends.friends.some((f) => f.code === code)) return 'Already friends.';
+      const found = findByCode(code);
+      if (!found) return 'No player with that code.';
+      setFriends((f) => ({ ...f, friends: [...f.friends, { ...found }] }));
+      return null;
+    },
+    [friends.myCode, friends.friends],
+  );
+
+  const removeFriend = useCallback((id: string) => {
+    setFriends((f) => ({ ...f, friends: f.friends.filter((x) => x.id !== id) }));
+  }, []);
+
+  /** Block is permanent and also removes them from every social surface. */
+  const blockFriend = useCallback((id: string) => {
+    setFriends((f) => ({
+      ...f,
+      friends: f.friends.map((x) => (x.id === id ? { ...x, blocked: true } : x)),
+    }));
+  }, []);
+
+  const reportFriend = useCallback((id: string) => {
+    setFriends((f) => ({
+      ...f,
+      friends: f.friends.map((x) => (x.id === id ? { ...x, reported: true } : x)),
+    }));
+  }, []);
+
+  /**
+   * Applauds a friend's capture. Returns the FILM the RECEIVER would earn.
+   *
+   * Past the daily cap this returns 0 and the applause still registers. That
+   * is deliberate: the social signal is the point, and refusing to let friends
+   * clap for each other would be a worse product than simply not paying for it.
+   *
+   * In this build the player is applauding others, so no FILM lands on their
+   * own balance. The cap is tracked against what they RECEIVE, which the demo
+   * simulates on their own posts.
+   */
+  const applaud = useCallback(
+    (id: string): number => {
+      const today = dayIndex();
+      const payout = applausePayout(applause, today);
+      setFriends((f) => ({
+        ...f,
+        friends: f.friends.map((x) => (x.id === id ? { ...x, applauded: true } : x)),
+      }));
+      if (payout > 0) {
+        setApplause((w) => creditApplause(w, today, payout));
+        setProfile((p) => ({ ...p, film: p.film + payout }));
+      }
+      return payout;
+    },
+    [applause],
+  );
+
+  /** Referral, once per account, paying both sides. */
+  const redeemReferral = useCallback(
+    (raw: string): string | null => {
+      const code = normaliseCode(raw);
+      if (friends.referredBy) return 'You have already used a referral code.';
+      if (code === friends.myCode) return 'That is your own code.';
+      const found = findByCode(code);
+      if (!found) return 'No player with that code.';
+      setFriends((f) => ({
+        ...f,
+        referredBy: code,
+        friends: f.friends.some((x) => x.id === found.id)
+          ? f.friends
+          : [...f.friends, { ...found }],
+      }));
+      setProfile((p) => ({ ...p, film: p.film + ECONOMY.referralFilm }));
+      return null;
+    },
+    [friends.referredBy, friends.myCode],
+  );
   const routeRef = useRef(route);
   routeRef.current = route;
 
@@ -898,6 +1058,26 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  /**
+   * Applies a store purchase in one update.
+   *
+   * Grants cosmetics and pass tiers. **Never FILM**: seeker bidding spends
+   * FILM, so selling it would make a role advantage purchasable. Tier skips
+   * are safe only because every pass tier pays a cosmetic.
+   */
+  const buyProduct = useCallback((prod: StoreProduct) => {
+    setProfile((p) => {
+      const owned = [...new Set([...p.owned, ...prod.grants])];
+      const seasonXp = p.seasonXp + (prod.tiers ?? 0) * XP_PER_TIER;
+      return {
+        ...p,
+        owned,
+        seasonXp,
+        paidPass: p.paidPass || prod.id === 'store-pass' || prod.id === 'store-founder',
+      };
+    });
+  }, []);
+
   const equip = useCallback((slot: keyof Equipped, id: string) => {
     setProfile((p) =>
       p.owned.includes(id) ? { ...p, equipped: { ...p.equipped, [slot]: id } } : p,
@@ -926,6 +1106,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         buyPass,
         redeemBundle,
         spendFilm,
+        buyProduct,
         equip,
         solo,
         startSolo,
@@ -937,6 +1118,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         seen,
         markSeen,
         resetProgress,
+        friends,
+        addFriend,
+        removeFriend,
+        blockFriend,
+        reportFriend,
+        applaud,
+        applauseToday: {
+          earned: applause.day === dayIndex() ? applause.earned : 0,
+          cap: ECONOMY.applauseDailyCap,
+        },
+        redeemReferral,
+        referralProgress,
         pass: passState(profile.seasonXp),
         scheduleNextRound,
       }}

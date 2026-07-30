@@ -33,7 +33,7 @@ const STEPS: { label: string; done: (s: { seen: Seen; daily: DailyState }) => bo
 ];
 
 export function Home() {
-  const { go, profile, daily, dailyAssignment, dailyOpen, pass, seen, resetProgress } = useGame();
+  const { go, profile, daily, dailyAssignment, dailyOpen, pass, seen, resetProgress, friends } = useGame();
   const allStepsDone = STEPS.every((s) => s.done({ seen, daily }));
   const { world, status, request, busy } = useWorld();
   const insets = useSafeAreaInsets();
@@ -192,6 +192,29 @@ export function Home() {
                 <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
                   OPEN →
                 </Mono>
+              </Card>
+            </PressScale>
+          </View>
+        </FadeIn>
+
+        {/* Social. Friends is the only way anyone reaches anyone, so it sits
+            with the play actions rather than buried in progression. */}
+        <FadeIn index={5}>
+          <View style={styles.socialRow}>
+            <PressScale style={{ flex: 1 }} onPress={() => go('friends')}>
+              <Card style={styles.socialCard}>
+                <Label tone="text">Friends</Label>
+                <Text style={styles.socialValue}>
+                  {friends.friends.filter((f) => !f.blocked).length}
+                </Text>
+                <Mono style={styles.socialNote}>ADD BY CODE</Mono>
+              </Card>
+            </PressScale>
+            <PressScale style={{ flex: 1 }} onPress={() => go('leaderboard')}>
+              <Card style={styles.socialCard}>
+                <Label tone="text">Leaderboard</Label>
+                <Text style={styles.socialValue}>{profile.seasonXp.toLocaleString()}</Text>
+                <Mono style={styles.socialNote}>YOUR XP</Mono>
               </Card>
             </PressScale>
           </View>
@@ -544,6 +567,15 @@ const styles = StyleSheet.create({
     color: color.text,
     marginTop: space(2.5),
   },
+  socialRow: { flexDirection: 'row', gap: space(3), marginTop: space(4) },
+  socialCard: { padding: space(3.5) },
+  socialValue: {
+    fontFamily: font.display,
+    fontSize: 26,
+    color: color.text,
+    marginTop: space(1.5),
+  },
+  socialNote: { fontSize: 9, letterSpacing: 1.2, color: color.faint, marginTop: 2 },
   resetLink: {
     fontSize: 9,
     letterSpacing: 1.4,

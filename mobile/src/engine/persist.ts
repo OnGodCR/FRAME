@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Auth, Profile } from './GameContext';
 import type { DailyState } from '../data/assignments';
+import type { FriendsState, ReferralProgress } from '../data/friends';
+import type { ApplauseWallet } from '../data/economy';
 
 // Local persistence for progression. Guests keep everything here and nowhere
 // else, which is the promise the auth screen makes. Signed-in players will
@@ -11,6 +13,9 @@ const AUTH_KEY = 'frame.auth.v1';
 const AGE_KEY = 'frame.agegate.v1';
 const DAILY_KEY = 'frame.daily.v1';
 const SEEN_KEY = 'frame.seen.v1';
+const FRIENDS_KEY = 'frame.friends.v1';
+const APPLAUSE_KEY = 'frame.applause.v1';
+const REFERRAL_KEY = 'frame.referral.v1';
 
 /** Only the durable parts. Anything derived is recomputed on load. */
 type Saved = Pick<
@@ -136,8 +141,42 @@ export async function saveSeen(s: Seen) {
   } catch {}
 }
 
+/** Generic JSON slot. The friends, applause, and referral state are all just
+ *  serialisable objects, so they do not each need a bespoke pair of functions. */
+async function loadJson<T>(key: string): Promise<T | null> {
+  try {
+    const raw = await AsyncStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function saveJson(key: string, value: unknown) {
+  try {
+    await AsyncStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+export const loadFriends = () => loadJson<FriendsState>(FRIENDS_KEY);
+export const saveFriends = (v: FriendsState) => saveJson(FRIENDS_KEY, v);
+
+export const loadApplause = () => loadJson<ApplauseWallet>(APPLAUSE_KEY);
+export const saveApplause = (v: ApplauseWallet) => saveJson(APPLAUSE_KEY, v);
+
+export const loadReferral = () => loadJson<ReferralProgress>(REFERRAL_KEY);
+export const saveReferral = (v: ReferralProgress) => saveJson(REFERRAL_KEY, v);
+
 export async function clearAll() {
   try {
-    await AsyncStorage.multiRemove([KEY, AUTH_KEY, DAILY_KEY, SEEN_KEY]);
+    await AsyncStorage.multiRemove([
+      KEY,
+      AUTH_KEY,
+      DAILY_KEY,
+      SEEN_KEY,
+      FRIENDS_KEY,
+      APPLAUSE_KEY,
+      REFERRAL_KEY,
+    ]);
   } catch {}
 }

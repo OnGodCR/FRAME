@@ -626,7 +626,102 @@ never stranger discovery, report and block on any social surface from the first
 commit, and watch the FILM supply, because applause and referral grants are new
 faucets that devalue every shop price if they run hot.
 
-## 12. Bug found and fixed: the scroll gates could lock a player out
+## 12. Social systems and the economy
+
+Backlog in [CLAUDE.md](../CLAUDE.md) 6 is ticked for everything below. Numbers
+live in `data/economy.ts` and nowhere else.
+
+### One currency, called FILM
+
+Angad confirmed there is only one currency and "link" was just a slip. Written
+into CLAUDE.md 6 as a standing constraint so a future agent does not invent a
+second one from an old note.
+
+### The economy, and why every faucet is capped
+
+| Source | Pays |
+|---|---|
+| Daily check-in | 100 FILM + 100 XP |
+| Applause received | 20 FILM |
+| Applause received, per day | capped at 100 FILM |
+| Referral, both sides | 500 FILM |
+
+**Past the cap, applause still registers and still shows, it just stops
+paying.** That was deliberate and worth keeping: the social signal is the
+point, and silently refusing to let friends clap for each other would be a
+worse product than simply not paying for it.
+
+The cap exists because five friends applauding each other every morning would
+otherwise mint more FILM per day than actually playing does, which devalues
+every price in the shop and undercuts the shop expansion in the same release.
+
+### Friends
+
+`data/friends.ts` and `screens/Friends.tsx`. Friend code, QR, add by code,
+one-tap invite, and report/block/remove on every row from the first commit.
+
+**Codes only. No search, no suggestions, no people-you-may-know.** A code you
+hand somebody is consent; a list of nearby strangers is not, and
+marketing/BRIEF.md 9 makes that a legal line rather than a preference.
+
+QR is loaded lazily and falls back to plain text on web, because
+`react-native-qrcode-svg` is not worth putting in the web bundle for a screen
+that is used on a phone.
+
+**A bug worth recording**, because it looked like the feature was broken:
+`normaliseCode` originally "corrected" confusable characters by mapping O to Q
+and I to J. That rewrote perfectly valid codes into different ones, so a
+correctly typed code failed to match. Worse, the fixture codes themselves
+contained `I` and `L`, which are not in the code alphabet at all. Both are
+fixed: normalisation now only uppercases and strips punctuation, and every
+fixture code uses alphabet characters. **Any new fixture code must too, or it
+can never be entered.**
+
+### Leaderboard
+
+`data/leaderboard.ts` and `screens/Leaderboard.tsx`. Global and friends scopes,
+ranked on season XP, with the player's own row always present.
+
+**Handles and numbers only.** This is the one surface where a player is visible
+to people who are not their friends, so it exposes the minimum: a name they
+chose and a score. There is deliberately no "add friend" button on a global
+row, because that would turn the board into stranger discovery.
+
+### Shop, and a SKU that had to go
+
+`STORE` in `data/catalog.ts`: pass, cosmetic bundles, and tier skips, all
+anchored where there is a real saving.
+
+**A pre-existing "1,000 FILM for $2.99" product was removed.** It predated
+seeker bidding. Once bidding spends FILM, selling FILM makes a role advantage
+purchasable, which is the exact thing marketing/BRIEF.md 9 forbids. Tier skips
+are safe only because every pass tier pays a cosmetic; if a tier ever pays
+FILM, skips have to come out too.
+
+### Test fixtures are now documented
+
+Angad asked for this and it was overdue. [TEST-FIXTURES.md](../TEST-FIXTURES.md)
+registers everything fake in the app: simulated players, the scripted round,
+friend codes that resolve, placeholder prices, procedural photos. It ends with a
+pre-launch checklist of things that must not ship enabled.
+
+CLAUDE.md 7.1 makes keeping it current a standing instruction, with two rules:
+simulated players are visibly tagged, and nothing simulated arrives on its own.
+
+### Verified
+
+Walked on a fresh account: friend added by code, applause paid and the counter
+moved to 20/100, the button flipped to APPLAUDED, global board ranked a level 1
+account 15 of 15, friends board showed KAI at 8,420 above the player. No console
+errors. Typecheck clean, validator 26/26.
+
+### Still open
+
+**The daily assignment redesign.** Angad is right that the prompts are too
+menial, and that needs a design pass rather than another list of nouns. It is
+the last unticked item that is not the backend.
+
+## 13. Bug found and fixed: the scroll gates could lock a player out
 
 Angad hit this on a wide viewport: the legal gate's button stayed on
 SCROLL TO THE END forever and the app could not be entered.
@@ -676,7 +771,7 @@ or an Android tablet has the room to fit it, and there was no iOS equivalent
 because `supportsTablet` is false. Shipping Android without this fix would have
 meant a permanently unusable app on those devices.
 
-## 13. New gotchas
+## 14. New gotchas
 
 - **Browser pane coordinates are NOT 2x, contrary to session 1 gotcha 2.** The
   tool reports `Screenshot size: 375x812` while the returned image is 750x1624.

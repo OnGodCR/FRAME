@@ -32,6 +32,8 @@ import { CheckinFlow } from './src/screens/CheckinFlow';
 import { SeekerRound } from './src/screens/SeekerRound';
 import { Blackout, Results } from './src/screens/Endings';
 import { SoloHub, SoloRun } from './src/screens/Solo';
+import { Friends } from './src/screens/Friends';
+import { Leaderboard } from './src/screens/Leaderboard';
 
 // Navigation depth drives transition direction: going deeper slides in from
 // the right, going back slides in from the left.
@@ -57,6 +59,8 @@ const DEPTH: Record<Route, number> = {
   // slides forward and backing out of it slides back.
   solo: 8,
   soloRun: 9,
+  friends: 8,
+  leaderboard: 8,
 };
 
 function Router() {
@@ -136,6 +140,12 @@ function Router() {
       break;
     case 'soloRun':
       screen = <SoloRun />;
+      break;
+    case 'friends':
+      screen = <Friends />;
+      break;
+    case 'leaderboard':
+      screen = <Leaderboard />;
       break;
   }
 
