@@ -19,6 +19,7 @@ import { ZoneMap } from '../components/ZoneMap';
 import { useWorld } from '../engine/WorldContext';
 import { useGame, SEEKER_BOT } from '../engine/GameContext';
 import { PermissionNote } from './Onboarding';
+import { TEST_MODE } from '../config';
 
 // ---------- join ----------
 
@@ -207,7 +208,7 @@ export const PRESETS: Preset[] = [
 
 /** FILM per bid increment, and what the bots are willing to pay. */
 const BID_STEP = 25;
-const RIVAL_BID = 75;
+const RIVAL_BID = TEST_MODE ? 75 : 0;
 
 /** Which preset the current settings match, if any. */
 function activePreset(s: Record<string, number>): string | null {
@@ -380,7 +381,7 @@ export function Lobby() {
               <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1, marginTop: 4 }}>
                 NOBODY CAN JOIN WITHOUT THE CODE. FRAME NEVER MATCHES YOU WITH STRANGERS.
               </Mono>
-              {simFrom == null && (
+              {simFrom == null && TEST_MODE && (
                 <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

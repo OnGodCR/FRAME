@@ -14,6 +14,7 @@ import {
   IBMPlexMono_600SemiBold,
 } from '@expo-google-fonts/ibm-plex-mono';
 import { color } from './src/theme';
+import { assertProductionSafe } from './src/config';
 import { EASE_OUT } from './src/components/motion';
 import { GameProvider, Route, useGame } from './src/engine/GameContext';
 import { WorldProvider } from './src/engine/WorldContext';
@@ -34,6 +35,7 @@ import { Blackout, Results } from './src/screens/Endings';
 import { SoloHub, SoloRun } from './src/screens/Solo';
 import { Friends } from './src/screens/Friends';
 import { Leaderboard } from './src/screens/Leaderboard';
+import { AccountGate } from './src/components/AccountGate';
 
 // Navigation depth drives transition direction: going deeper slides in from
 // the right, going back slides in from the left.
@@ -106,10 +108,24 @@ function Router() {
       screen = <Home />;
       break;
     case 'shop':
-      screen = <Shop />;
+      screen = (
+        <AccountGate
+          feature="The shop"
+          reason="FILM and anything bought with it are tied to an account, so they survive a lost phone. A guest has nowhere to keep them."
+        >
+          <Shop />
+        </AccountGate>
+      );
       break;
     case 'pass':
-      screen = <SeasonPass />;
+      screen = (
+        <AccountGate
+          feature="The season pass"
+          reason="A pass runs for ten weeks and is worth nothing if it disappears with the app. That needs an account."
+        >
+          <SeasonPass />
+        </AccountGate>
+      );
       break;
     case 'loadout':
       screen = <Loadout />;
@@ -142,10 +158,24 @@ function Router() {
       screen = <SoloRun />;
       break;
     case 'friends':
-      screen = <Friends />;
+      screen = (
+        <AccountGate
+          feature="Friends"
+          reason="Friend codes, requests, and referrals all point at a person. A guest is not a person the server can point back at."
+        >
+          <Friends />
+        </AccountGate>
+      );
       break;
     case 'leaderboard':
-      screen = <Leaderboard />;
+      screen = (
+        <AccountGate
+          feature="The leaderboard"
+          reason="Ranking means being comparable to other players over time, which needs progress that is stored somewhere other than this phone."
+        >
+          <Leaderboard />
+        </AccountGate>
+      );
       break;
   }
 
@@ -168,6 +198,9 @@ function Router() {
     </Animated.View>
   );
 }
+
+// Fails loudly rather than shipping fixtures to real users. See src/config.ts.
+assertProductionSafe();
 
 export default function App() {
   const [loaded] = useFonts({

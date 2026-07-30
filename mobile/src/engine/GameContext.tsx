@@ -18,6 +18,7 @@ import {
   type Seen,
 } from './persist';
 import * as notify from './notify';
+import { TEST_MODE, TIME_SCALE } from '../config';
 import { passState, XP_PER_TIER, type PassState, type StoreProduct } from '../data/catalog';
 import {
   FRESH_DAILY,
@@ -237,7 +238,7 @@ export const FRESH_PROFILE: Profile = {
  *
  * Flip DEMO_SEED to true to get it back for screenshots. Never ship it true.
  */
-const DEMO_SEED = false;
+const DEMO_SEED = false && TEST_MODE;
 
 const SEEDED_PROFILE: Profile = {
   ...FRESH_PROFILE,
@@ -306,7 +307,7 @@ const ROUND_REAL_SECONDS = ROUND_DISPLAY_SECONDS;
  * down one displayed second at a time and the check-in window keeps its real
  * duration relative to everything else.
  */
-export const DEV_TIME_SCALE = 1;
+export const DEV_TIME_SCALE = TIME_SCALE;
 
 let tickerId = 0;
 const ev = (text: string, tone: TickerEvent['tone'] = 'info'): TickerEvent => ({
@@ -600,6 +601,17 @@ interface Game {
   markSeen: (patch: Partial<Seen>) => void;
   /** Wipes local progression back to a new account. See CLAUDE.md 7. */
   resetProgress: () => void;
+  /**
+   * Whether this session may use account-only features: shop, FILM, friends,
+   * leaderboard, referrals.
+   *
+   * Guests cannot. That is not a product preference, it is what the schema
+   * enforces: every social table keys off `profiles`, which keys off
+   * `auth.users`, so a guest has no row to own anything with. The client hides
+   * these surfaces so the app reads honestly; the database would refuse
+   * regardless. See supabase/migrations/0002_social.sql.
+   */
+  hasAccount: boolean;
   // --- social ---
   friends: FriendsState;
   /** Adds by code. Returns why it failed, or null on success. */
@@ -802,7 +814,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!inRound) return;
     const id = setInterval(() => {
       setRound((r) => (r && !r.outcome ? stepRound(r) : r));
-    }, 1000 / DEV_TIME_SCALE);
+    }, 1000 / TIME_SCALE);
     return () => clearInterval(id);
   }, [round?.outcome, round == null, route]);
 
@@ -1118,6 +1130,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         seen,
         markSeen,
         resetProgress,
+        hasAccount: auth != null && auth.kind !== 'guest',
         friends,
         addFriend,
         removeFriend,

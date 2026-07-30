@@ -721,7 +721,90 @@ errors. Typecheck clean, validator 26/26.
 menial, and that needs a design pass rather than another list of nouns. It is
 the last unticked item that is not the backend.
 
-## 13. Bug found and fixed: the scroll gates could lock a player out
+## 13. Backend design, the guest boundary, and one kill switch
+
+### TEST_MODE: one flag, one file
+
+`mobile/src/config.ts`. Set `TEST_MODE` to false and every fixture in the app
+goes with it: the seeded profile, ADD TEST PLAYERS, the friend directory, the
+leaderboard ladder, the rival bid, free store purchases, the test account.
+`EXPO_PUBLIC_TEST_MODE=false` does the same without editing code.
+
+`assertProductionSafe()` runs at app start and **throws** if fixtures are on in
+a production bundle. A silent fixture in a shipped build would put invented
+friends and free purchases in front of real users, so it fails loudly instead.
+
+`TEST_MODE_CONTROLS` lists what the flag governs, so its effect is auditable
+without reading the codebase. **Any new fixture must be gated by it**, or the
+flag is a lie.
+
+### 0002_social.sql
+
+Friends, friend requests, referrals, applause, the leaderboard, and the guest
+boundary. Not applied: applying needs the SQL editor or service_role, and the
+anon key cannot run DDL. Three rules it enforces at the database layer:
+
+**No stranger discovery.** There is no query in the file that returns people
+you are not connected to. Lookup is exact-code only, through a SECURITY DEFINER
+function returning a single row, rate limited to 60 an hour, hiding blocked
+players in both directions. No search, no prefix match, no suggestions.
+
+**Guests own nothing social.** Every social table keys off `profiles`, which
+keys off `auth.users`. A guest has no auth user, so no profile, so no row to
+own anything with, and every policy fails on `auth.uid() is null`. The boundary
+is a property of the schema rather than a check the client is trusted to make.
+
+**FILM is minted only by the server.** The client can never write its own
+balance. `applaud_post` applies the 20 FILM payment and the 100 a day cap in one
+transaction, so a modified client cannot pay itself.
+
+Two design decisions worth defending:
+
+- **Friend requests, not instant adds.** Somebody holding your code should be
+  able to ask, not to attach themselves to you. That matters most for the
+  youngest players here, and it makes a leaked code recoverable rather than
+  permanent. `origin` records whether it came from a code, a QR, or a referral;
+  QR means the two people were physically together, which is the strongest
+  signal there is.
+- **Referrers must be level 2.** Otherwise the farm is obvious: make accounts,
+  refer yourself, collect 500 FILM a time.
+
+### The client seam
+
+`data/social.repo.ts`. Screens call it and never touch Supabase or a fixture
+array directly. Each method already returns the shape the server returns, and
+each maps to a function in the migration, so wiring the backend up is deleting
+the local branches rather than rewriting screens.
+
+### Guest gating
+
+`components/AccountGate.tsx` wraps shop, pass, friends, and leaderboard. It
+exists so the app explains itself rather than failing mysteriously; it is **not**
+the security boundary and deleting it would not open a hole.
+
+Verified: a guest tapping Friends gets "Friends needs an account" rather than
+the screen.
+
+### Three bugs Angad caught, all fixed
+
+- **The QR did not render.** I had gated it to native out of caution.
+  `react-native-qrcode-svg` draws through `react-native-svg`, which is already a
+  dependency and works on web, so the caution bought nothing and cost the
+  feature. Now rendered everywhere, and restyled: acid on near-black inside the
+  same corner brackets the wordmark uses. Scanners need contrast, and acid on
+  #0A0A0C is a stronger ratio than black on white.
+- **The handle screen re-prompted.** A guest sent to auth from the guest wall
+  was asked to name themselves again. `nextAfterAuth()` now skips the handle
+  step whenever one exists, on both the guest and OAuth paths.
+- Removed the "Give this to someone you actually know" line.
+
+### CONTINUE AS TEST ACCOUNT
+
+New, TEST_MODE only, on the auth screen. The Supabase OAuth redirect for Expo Go
+is still unconfigured, so there was otherwise no way to reach account-only
+screens at all. It is a fixture and it is registered as one.
+
+## 14. Bug found and fixed: the scroll gates could lock a player out
 
 Angad hit this on a wide viewport: the legal gate's button stayed on
 SCROLL TO THE END forever and the app could not be entered.
@@ -771,7 +854,7 @@ or an Android tablet has the room to fit it, and there was no iOS equivalent
 because `supportsTablet` is false. Shipping Android without this fix would have
 meant a permanently unusable app on those devices.
 
-## 14. New gotchas
+## 15. New gotchas
 
 - **Browser pane coordinates are NOT 2x, contrary to session 1 gotcha 2.** The
   tool reports `Screenshot size: 375x812` while the returned image is 750x1624.

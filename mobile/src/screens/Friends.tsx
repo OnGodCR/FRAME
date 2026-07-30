@@ -3,12 +3,13 @@ import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
-import { Body, Btn, Card, Label, Mono, Rule } from '../components/ui';
+import { Body, Brackets, Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { FadeIn, PressScale } from '../components/motion';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { useGame } from '../engine/GameContext';
 import { ECONOMY } from '../data/economy';
 import { REFERRAL_TASKS } from '../data/friends';
+import QRCode from 'react-native-qrcode-svg';
 
 // ---------------------------------------------------------------------------
 // Friends.
@@ -21,38 +22,31 @@ import { REFERRAL_TASKS } from '../data/friends';
 // ---------------------------------------------------------------------------
 
 /**
- * QR renderer, loaded lazily.
+ * QR renderer, in the game's palette.
  *
- * react-native-qrcode-svg pulls in native-leaning dependencies that are not
- * worth putting in the web bundle for a screen most people will use on a phone.
- * On web the code is shown as text, which is just as scannable by a human.
+ * Acid on near-black inside the same corner brackets the wordmark and the
+ * viewfinder use, so the code reads as part of FRAME rather than a pasted-in
+ * utility widget. Scanners cope fine: what they need is contrast, and acid on
+ * #0A0A0C is a stronger ratio than the usual black on white.
+ *
+ * Rendered on every platform including web, since react-native-qrcode-svg
+ * draws through react-native-svg, which is already a dependency here.
  */
-function QrBlock({ value, size = 148 }: { value: string; size?: number }) {
-  const [Qr, setQr] = useState<any>(null);
-
-  React.useEffect(() => {
-    if (Platform.OS === 'web') return;
-    let live = true;
-    import('react-native-qrcode-svg')
-      .then((m) => live && setQr(() => m.default))
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  if (!Qr) {
-    return (
-      <View style={[styles.qrFallback, { width: size, height: size }]}>
-        <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1.2 }}>
-          QR ON DEVICE
-        </Mono>
-      </View>
-    );
-  }
+function QrBlock({ value, size = 160 }: { value: string; size?: number }) {
   return (
-    <View style={styles.qrWrap}>
-      <Qr value={value} size={size} backgroundColor="#FFFFFF" color="#000000" />
+    <View style={styles.qrOuter}>
+      <Brackets size={18} thickness={2} inset={-10} tint={color.accent}>
+        <View style={styles.qrWrap}>
+          <QRCode
+            value={value}
+            size={size}
+            backgroundColor={color.black}
+            color={color.accent}
+            ecl="M"
+          />
+        </View>
+      </Brackets>
+      <Mono style={styles.qrCaption}>SCAN TO SEND A FRIEND REQUEST</Mono>
     </View>
   );
 }
@@ -118,9 +112,6 @@ export function Friends() {
                 <QrBlock value={`frame://friend/${friends.myCode}`} />
               </View>
             )}
-            <Mono style={styles.hint}>
-              Give this to someone you actually know. Anyone with it can add you.
-            </Mono>
           </Card>
         </FadeIn>
 
@@ -375,7 +366,20 @@ const styles = StyleSheet.create({
     color: color.accent,
     marginTop: space(2),
   },
-  qrWrap: { padding: space(3), backgroundColor: '#FFFFFF', borderRadius: radius.sm },
+  qrOuter: { alignItems: 'center' },
+  qrWrap: {
+    padding: space(3),
+    backgroundColor: color.black,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: color.accentDim,
+  },
+  qrCaption: {
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: color.faint,
+    marginTop: space(3),
+  },
   qrFallback: {
     borderWidth: 1,
     borderStyle: 'dashed',

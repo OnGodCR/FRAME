@@ -169,6 +169,27 @@ Worth stating plainly because the app looks like it has one and does not.
 So a "new account" is only new if that device has no stored state. Signing in
 with Google authenticates a person and stores nothing about them.
 
+## 7.05 Turning test mode off
+
+**Set `TEST_MODE` to `false` in `mobile/src/config.ts`.** One boolean, one
+file, and every fixture in the app goes with it. Or without editing code:
+`EXPO_PUBLIC_TEST_MODE=false npx expo start`.
+
+`assertProductionSafe()` throws at startup if fixtures are enabled in a
+production bundle, so the mistake fails loudly rather than shipping.
+
+**Any new fixture must be gated by that flag**, or the flag is a lie.
+
+## 7.06 Guests cannot use account features
+
+Shop, FILM, season pass, friends, leaderboard, and referrals all require an
+account. This is enforced in the schema, not the client: every social table
+keys off `profiles`, which keys off `auth.users`, so a guest has no row to own
+anything with and every policy fails on `auth.uid() is null`.
+
+`components/AccountGate.tsx` wraps those routes so the app explains itself
+rather than failing mysteriously. It is not the security boundary.
+
 ## 7.1 Record every fixture
 
 **[TEST-FIXTURES.md](TEST-FIXTURES.md) is the register of everything fake in

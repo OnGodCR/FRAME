@@ -1,5 +1,26 @@
 # FRAME: test fixtures and simulated data
 
+## Turning all of this off
+
+**Set `TEST_MODE` to `false` in [mobile/src/config.ts](mobile/src/config.ts).**
+That is the entire procedure. One boolean, one file. Nothing else needs
+touching and nothing simulated survives it.
+
+Without editing code:
+
+```bash
+EXPO_PUBLIC_TEST_MODE=false npx expo start
+```
+
+A release build **must** have it false. `assertProductionSafe()` runs at app
+start and throws if fixtures are enabled in a production bundle, so the mistake
+fails loudly instead of shipping invented friends to real users.
+
+`TEST_MODE_CONTROLS` in that file lists what the flag governs, so the effect of
+flipping it is auditable without reading the codebase.
+
+---
+
 **Everything in this document is fake.** It exists so the app can be reviewed
 without a backend, without four friends, and without a real camera. None of it
 survives contact with a server.
@@ -40,6 +61,7 @@ Two conventions, both deliberate:
 | All camera output on web | `components/CameraStage.tsx` fallback | Nothing: native uses the real camera |
 | Rival seeker bid | `RIVAL_BID`, `screens/JoinLobby.tsx` | Real bids from the party |
 | Baked Seattle world | `data/world.json` | Live Overpass fetch, already works |
+| CONTINUE AS TEST ACCOUNT on the auth screen | `screens/AuthGate.tsx` | Real Google or Apple sign-in |
 
 ---
 
@@ -156,8 +178,25 @@ those photos exist, expect the validator to reject valid captures.
 
 ---
 
-## 10. Before any public build
+## 10. The account boundary is not a fixture
 
+Guests genuinely cannot use the shop, FILM, friends, the leaderboard, or
+referrals, and that is **not** enforced by the client. Every social table keys
+off `profiles`, which keys off `auth.users`, so a guest has no row to own
+anything with and every policy fails on `auth.uid() is null`. See
+`supabase/migrations/0002_social.sql`.
+
+`components/AccountGate.tsx` exists so the app reads honestly rather than
+failing mysteriously. Deleting it would not open a hole.
+
+**CONTINUE AS TEST ACCOUNT** on the auth screen is a fixture, and the one place
+that boundary is faked. It exists because the Supabase OAuth redirect for Expo
+Go is still unconfigured, so there is otherwise no way to review account-only
+screens. It disappears with TEST_MODE.
+
+## 11. Before any public build
+
+- [ ] `TEST_MODE` is false in `src/config.ts`
 - [ ] `DEMO_SEED` is false
 - [ ] `DEV_TIME_SCALE` is 1
 - [ ] `ADD TEST PLAYERS` is removed or gated behind a dev flag

@@ -9,12 +9,23 @@ import { color, font, radius, space } from '../theme';
 import { Body, Btn, Label, Mono } from '../components/ui';
 import { FadeIn, PressScale } from '../components/motion';
 import { supabase, supabaseReady } from '../lib/supabase';
+import { TEST_MODE } from '../config';
 import { useGame } from '../engine/GameContext';
 
 type Provider = 'google' | 'apple';
 
 export function AuthGate() {
-  const { go, setAuth } = useGame();
+  const { go, setAuth, profile } = useGame();
+
+  /**
+   * Where to go after choosing an account type.
+   *
+   * Skips the handle step when one already exists. Reaching this screen a
+   * second time is normal now: a guest who taps into the shop or friends is
+   * sent here, and asking them to name themselves again reads as the app
+   * having forgotten who they are.
+   */
+  const nextAfterAuth = () => (profile.handle ? 'home' : 'handle');
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +67,7 @@ export function AuthGate() {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setAuth({ kind: provider, email: sess.user?.email ?? null });
-      go('handle');
+      go(nextAfterAuth());
     } catch (e: any) {
       // The most likely cause by far is that the provider has not been enabled
       // in the Supabase dashboard yet, so say that rather than dumping a stack.
@@ -127,9 +138,21 @@ export function AuthGate() {
           sub="progress stays on this device only"
           onPress={() => {
             setAuth({ kind: 'guest', email: null });
-            go('handle');
+            go(nextAfterAuth());
           }}
         />
+        {TEST_MODE && (
+          <Btn
+            title="Continue as test account"
+            variant="ghost"
+            style={{ marginTop: space(2) }}
+            sub="test mode only, stands in for a signed-in account"
+            onPress={() => {
+              setAuth({ kind: 'google', email: 'test@frame.local' });
+              go(nextAfterAuth());
+            }}
+          />
+        )}
         <Mono style={styles.footnote}>
           Guests get a device-local account. We collect no email address at all.
         </Mono>

@@ -1,3 +1,4 @@
+import { TEST_MODE } from '../config';
 // ---------------------------------------------------------------------------
 // Friends.
 //
@@ -75,13 +76,20 @@ export interface FriendsState {
  * People who exist to be findable by code in the demo. Nobody appears in the
  * friends list until their code is deliberately entered.
  */
-export const DIRECTORY: Friend[] = [
+const TEST_DIRECTORY: Friend[] = [
   { id: 'kai', handle: 'KAI', code: 'KAY2XQ7M', level: 9, xp: 8420, postedToday: true },
   { id: 'maya', handle: 'MAYA', code: 'MAYA5TRW', level: 12, xp: 11930, postedToday: true },
   { id: 'dev', handle: 'DEV', code: 'DEV77KPZ', level: 6, xp: 5210, postedToday: false },
   { id: 'jules', handle: 'JULES', code: 'JUKE3NBH', level: 15, xp: 14680, postedToday: true },
   { id: 'ari', handle: 'ARI', code: 'ARN9WQDF', level: 4, xp: 3140, postedToday: false },
 ];
+
+/**
+ * Findable-by-code players. Empty outside test mode: with TEST_MODE off there
+ * is no local directory at all and lookups go to the server, which is the only
+ * place a real player can be found.
+ */
+export const DIRECTORY: Friend[] = TEST_MODE ? TEST_DIRECTORY : [];
 
 export const FRESH_FRIENDS: FriendsState = {
   myCode: '',

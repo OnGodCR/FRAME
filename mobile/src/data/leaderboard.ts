@@ -1,3 +1,4 @@
+import { TEST_MODE } from '../config';
 import { DIRECTORY, type Friend } from './friends';
 
 // ---------------------------------------------------------------------------
@@ -27,7 +28,7 @@ export interface LeaderRow {
  * A plausible global ladder. Deterministic so the ranking does not reshuffle
  * every render, which would make the player's own position feel meaningless.
  */
-const GLOBAL_LADDER: LeaderRow[] = [
+const TEST_LADDER: LeaderRow[] = [
   { id: 'g1', handle: 'NOCTURNE', level: 41, xp: 40_820 },
   { id: 'g2', handle: 'HALFLIGHT', level: 38, xp: 37_460 },
   { id: 'g3', handle: 'VESPER', level: 35, xp: 34_910 },
@@ -43,6 +44,9 @@ const GLOBAL_LADDER: LeaderRow[] = [
   { id: 'g13', handle: 'LATENT', level: 5, xp: 4_120 },
   { id: 'g14', handle: 'OVEREXPOSED', level: 3, xp: 2_050 },
 ];
+
+/** Empty outside test mode: a real ladder comes from leaderboard_global. */
+const GLOBAL_LADDER: LeaderRow[] = TEST_MODE ? TEST_LADDER : [];
 
 export type Scope = 'global' | 'friends';
 
