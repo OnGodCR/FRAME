@@ -80,7 +80,75 @@ never depict unsafe hiding, never imply anything purchasable helps you win.
 These constrain product design as much as copy: a feature that puts strangers
 in contact with each other is out regardless of how it is described.
 
-## 6. Useful commands
+## 6. Current backlog
+
+Angad's list, 2026-07-30. **Keep this updated as items land**, and write the
+detail into the session handoff rather than here. This section is the index, not
+the record.
+
+### Bugs
+
+- [x] **Daily assignment paid out twice / marked done incorrectly.** The payout
+      called `setProfile` inside a `setDaily` updater, nested inside a `setSolo`
+      updater. React may invoke an updater more than once, so FILM could be paid
+      twice. Now a plain effect. See session-2 13.
+- [x] **Round clock jumped 7 to 8 seconds per tick.** It was scaled by
+      `DEMO_SPEED`. The round clock is now real time, 1 second per second.
+- [x] **Map opened too zoomed in.** Default camera zoom lowered.
+
+### Quick wins
+
+- [x] **Host a round / Join with code moved above the fold**, before progression.
+- [x] **Season pass shortened.** 50 tiers at 1000 XP was unfinishable inside a
+      10 week season. Now 30 tiers at 500 XP.
+- [x] **Reset progress** control, so a device can be returned to a true new
+      account without clearing app data by hand.
+
+### Not started, roughly in dependency order
+
+- [ ] **The backend does not exist.** See section 7 below. Nothing else in this
+      list is genuinely multiplayer until it does.
+- [ ] **Daily assignment design.** Current prompts are too menial and not
+      engaging enough. Needs a middle ground between "photograph a doorway" and
+      something with real pull. Think about stakes, variety, and a reason to
+      care beyond the FILM.
+- [ ] **Global leaderboard**, ranked on XP.
+- [ ] **Friends tab.** Add by unique friend code and QR. Invite to a game in one
+      tap instead of the friend typing a room code.
+- [ ] **Share the daily capture with friends**, BeReal shaped. Applaud a
+      friend's post to give them 25 FILM.
+- [ ] **Referral system.** Codes entered at signup, 500 FILM each, plus a shared
+      task track (3 daily assignments, 3 wins, 10 games together).
+- [ ] **Shop expansion** for more microtransactions.
+
+### Standing constraints these must respect
+
+Every item above is still bound by section 3 and section 5. In particular:
+
+- A friends list and a shared feed must never become **stranger** contact.
+  Friend codes are fine; discovery of people you do not know is not.
+- The age gate means minors are on this platform. Any social surface needs
+  report and block from the first commit, not later.
+- FILM is **earned, never sold**, while seeker bidding exists. Applaud rewards
+  and referral grants are new FILM faucets: watch the total supply, because
+  inflating it devalues every price in the shop.
+
+## 7. There is no backend yet
+
+Worth stating plainly because the app looks like it has one and does not.
+
+- **No database calls exist anywhere in the client.** Supabase is used only for
+  OAuth sign-in. There is not a single `.from()`, insert, or select.
+- **All state is device-local `AsyncStorage`.** Progression, the daily streak,
+  and milestones live only on that phone.
+- **`supabase/migrations/0001_core.sql` has never been applied.**
+- Two people on two phones therefore share nothing. Parties, rosters, and the
+  photo feeds are simulated locally.
+
+So a "new account" is only new if that device has no stored state. Signing in
+with Google authenticates a person and stores nothing about them.
+
+## 8. Useful commands
 
 ```bash
 node mobile/src/validation/signals.test.mjs

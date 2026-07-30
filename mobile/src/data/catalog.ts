@@ -42,23 +42,23 @@ const C = {
 export const COSMETICS: Cosmetic[] = [
   // ---- titles ----
   { id: 'title-unseen', name: 'UNSEEN', category: 'title', tint: C.acid, source: 'default' },
-  { id: 'title-patient', name: '"PATIENT"', category: 'title', tint: C.acid, source: 'free', tier: 11 },
+  { id: 'title-patient', name: '"PATIENT"', category: 'title', tint: C.acid, source: 'free', tier: 4 },
   { id: 'title-developed', name: '"DEVELOPED"', category: 'title', tint: C.acid, source: 'shop', cost: 300 },
-  { id: 'title-overexposed', name: '"OVEREXPOSED"', category: 'title', tint: C.yellow, source: 'paid', tier: 15 },
-  { id: 'title-unseen2', name: '"UNSEEN II"', category: 'title', tint: C.cyan, source: 'free', tier: 16 },
-  { id: 'title-latent', name: '"LATENT IMAGE"', category: 'title', tint: C.purple, source: 'paid', tier: 24 },
-  { id: 'title-stilllife', name: '"STILL LIFE"', category: 'title', tint: C.mint, source: 'free', tier: 28 },
-  { id: 'title-vanished', name: '"VANISHED"', category: 'title', tint: C.orange, source: 'paid', tier: 35 },
-  { id: 'title-neverfound', name: '"NEVER FOUND"', category: 'title', tint: C.red, source: 'paid', tier: 50 },
+  { id: 'title-overexposed', name: '"OVEREXPOSED"', category: 'title', tint: C.yellow, source: 'paid', tier: 11 },
+  { id: 'title-unseen2', name: '"UNSEEN II"', category: 'title', tint: C.cyan, source: 'free', tier: 8 },
+  { id: 'title-latent', name: '"LATENT IMAGE"', category: 'title', tint: C.purple, source: 'paid', tier: 15 },
+  { id: 'title-stilllife', name: '"STILL LIFE"', category: 'title', tint: C.mint, source: 'free', tier: 24 },
+  { id: 'title-vanished', name: '"VANISHED"', category: 'title', tint: C.orange, source: 'paid', tier: 22 },
+  { id: 'title-neverfound', name: '"NEVER FOUND"', category: 'title', tint: C.red, source: 'paid', tier: 30 },
 
   // ---- map pins ----
   { id: 'pin-acid', name: 'ACID DOT', category: 'pin', tint: C.acid, source: 'default' },
   { id: 'pin-negative', name: 'NEGATIVE', category: 'pin', tint: C.white, source: 'shop', cost: 450 },
   { id: 'pin-ghost', name: 'GHOST GRID', category: 'pin', tint: C.cyan, source: 'shop', cost: 600 },
-  { id: 'pin-halftone', name: 'HALFTONE', category: 'pin', tint: C.orange, source: 'paid', tier: 10 },
-  { id: 'pin-pinhole', name: 'PINHOLE', category: 'pin', tint: C.silver, source: 'free', tier: 22 },
-  { id: 'pin-aperture', name: 'APERTURE', category: 'pin', tint: C.mint, source: 'paid', tier: 20 },
-  { id: 'pin-burn', name: 'BURN', category: 'pin', tint: C.red, source: 'paid', tier: 40 },
+  { id: 'pin-halftone', name: 'HALFTONE', category: 'pin', tint: C.orange, source: 'paid', tier: 5 },
+  { id: 'pin-pinhole', name: 'PINHOLE', category: 'pin', tint: C.silver, source: 'free', tier: 16 },
+  { id: 'pin-aperture', name: 'APERTURE', category: 'pin', tint: C.mint, source: 'paid', tier: 13 },
+  { id: 'pin-burn', name: 'BURN', category: 'pin', tint: C.red, source: 'paid', tier: 25 },
 
   // ---- photo frames ----
   { id: 'frame-brackets', name: 'BRACKETS', category: 'frame', tint: C.acid, source: 'default' },
@@ -68,11 +68,11 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'frame-darkroom', name: 'DARKROOM', category: 'frame', tint: C.orange, source: 'shop', cost: 400 },
   { id: 'frame-safelight', name: 'SAFELIGHT', category: 'frame', tint: C.red, source: 'shop', cost: 550 },
   { id: 'frame-fixer', name: 'FIXER', category: 'frame', tint: C.mint, source: 'shop', cost: 750 },
-  { id: 'frame-contact', name: 'CONTACT SHEET', category: 'frame', tint: C.cyan, source: 'paid', tier: 9 },
-  { id: 'frame-redscale', name: 'REDSCALE', category: 'frame', tint: C.red, source: 'paid', tier: 14 },
-  { id: 'frame-sprocket', name: 'SPROCKET', category: 'frame', tint: C.silver, source: 'free', tier: 19 },
-  { id: 'frame-lightleak', name: 'LIGHT LEAK', category: 'frame', tint: C.yellow, source: 'paid', tier: 30 },
-  { id: 'frame-polaroid', name: 'POLAROID', category: 'frame', tint: C.white, source: 'paid', tier: 44 },
+  { id: 'frame-contact', name: 'CONTACT SHEET', category: 'frame', tint: C.cyan, source: 'paid', tier: 3 },
+  { id: 'frame-redscale', name: 'REDSCALE', category: 'frame', tint: C.red, source: 'paid', tier: 10 },
+  { id: 'frame-sprocket', name: 'SPROCKET', category: 'frame', tint: C.silver, source: 'free', tier: 12 },
+  { id: 'frame-lightleak', name: 'LIGHT LEAK', category: 'frame', tint: C.yellow, source: 'paid', tier: 18 },
+  { id: 'frame-polaroid', name: 'POLAROID', category: 'frame', tint: C.white, source: 'paid', tier: 27 },
   // Bundle-only. Not buyable with FILM at any price, which is the entire
   // reason it converts: see STARTER_BUNDLE below.
   { id: 'frame-firstlight', name: 'FIRST LIGHT', category: 'frame', tint: C.mint, source: 'bundle' },
@@ -80,18 +80,18 @@ export const COSMETICS: Cosmetic[] = [
   // ---- blackout styles ----
   { id: 'static-default', name: 'STATIC', category: 'blackout', tint: C.silver, source: 'default' },
   { id: 'static-signal', name: 'SIGNAL LOST', category: 'blackout', tint: C.silver, source: 'shop', cost: 550 },
-  { id: 'static-grain', name: 'GRAIN', category: 'blackout', tint: C.white, source: 'paid', tier: 13 },
-  { id: 'static-fogged', name: 'FOGGED', category: 'blackout', tint: C.cyan, source: 'free', tier: 25 },
-  { id: 'static-torn', name: 'TORN NEGATIVE', category: 'blackout', tint: C.orange, source: 'paid', tier: 33 },
-  { id: 'static-developing', name: 'DEVELOPING', category: 'blackout', tint: C.pink, source: 'paid', tier: 47 },
+  { id: 'static-grain', name: 'GRAIN', category: 'blackout', tint: C.white, source: 'paid', tier: 8 },
+  { id: 'static-fogged', name: 'FOGGED', category: 'blackout', tint: C.cyan, source: 'free', tier: 20 },
+  { id: 'static-torn', name: 'TORN NEGATIVE', category: 'blackout', tint: C.orange, source: 'paid', tier: 20 },
+  { id: 'static-developing', name: 'DEVELOPING', category: 'blackout', tint: C.pink, source: 'paid', tier: 28 },
 
   // ---- tag animations ----
   { id: 'tag-shutter', name: 'SHUTTER', category: 'tag', tint: C.acid, source: 'default' },
   { id: 'tag-prism', name: 'PRISM', category: 'tag', tint: C.purple, source: 'shop', cost: 800 },
-  { id: 'tag-longexp', name: 'LONG EXPOSURE', category: 'tag', tint: C.purple, source: 'paid', tier: 12 },
-  { id: 'tag-strobe', name: 'STROBE', category: 'tag', tint: C.yellow, source: 'paid', tier: 26 },
-  { id: 'tag-flash', name: 'FLASH BULB', category: 'tag', tint: C.white, source: 'free', tier: 31 },
-  { id: 'tag-double', name: 'DOUBLE EXPOSURE', category: 'tag', tint: C.mint, source: 'paid', tier: 38 },
+  { id: 'tag-longexp', name: 'LONG EXPOSURE', category: 'tag', tint: C.purple, source: 'paid', tier: 6 },
+  { id: 'tag-strobe', name: 'STROBE', category: 'tag', tint: C.yellow, source: 'paid', tier: 16 },
+  { id: 'tag-flash', name: 'FLASH BULB', category: 'tag', tint: C.white, source: 'free', tier: 28 },
+  { id: 'tag-double', name: 'DOUBLE EXPOSURE', category: 'tag', tint: C.mint, source: 'paid', tier: 23 },
 ];
 
 export const byId = (id: string) => COSMETICS.find((c) => c.id === id);
@@ -101,8 +101,20 @@ export const categoryKind = (cat: Category): PreviewKind =>
 
 export const SHOP_ITEMS = COSMETICS.filter((c) => c.source === 'shop');
 
+/**
+ * Pass length. 50 tiers at 1000 XP was unfinishable: a player doing the daily
+ * plus a round earns roughly 300 season XP a day, so 50,000 XP is about 160
+ * days against a 70 day season. Someone who buys a pass they cannot complete
+ * does not buy the next one.
+ *
+ * 30 tiers at 500 is about 50 days at the same rate, which finishes inside the
+ * season with room for missed days. Revisit once there is real play data.
+ */
+export const TIER_COUNT = 30;
+export const XP_PER_TIER = 500;
+
 // ---------------------------------------------------------------------------
-// Season pass: 50 tiers, two tracks.
+// Season pass: TIER_COUNT tiers, two tracks.
 // Cosmetic tiers are derived from the catalog above; the gaps are filled with
 // FILM so neither track has dead stretches.
 // ---------------------------------------------------------------------------
@@ -136,7 +148,7 @@ const film = (amount: number): TierReward => ({
 
 // The free track is deliberately sparse. That gap is what the paid track
 // sells. Milestones are included so every tenth tier pays out on both.
-const FREE_FILM = [2, 5, 8, 10, 12, 17, 20, 21, 27, 30, 34, 37, 40, 42, 46, 49, 50];
+const FREE_FILM = [2, 5, 11, 14, 17, 23, 26, 29];
 
 function buildTiers(): Tier[] {
   const freeCos = new Map<number, Cosmetic>();
@@ -146,14 +158,14 @@ function buildTiers(): Tier[] {
     if (c.source === 'paid' && c.tier) paidCos.set(c.tier, c);
   }
 
-  return Array.from({ length: 50 }, (_, i) => {
+  return Array.from({ length: TIER_COUNT }, (_, i) => {
     const n = i + 1;
     const milestone = n % 10 === 0;
 
     let free: TierReward | undefined;
     const fc = freeCos.get(n);
     if (fc) free = asReward(fc);
-    else if (FREE_FILM.includes(n)) free = film(n >= 30 ? 100 : 50);
+    else if (FREE_FILM.includes(n)) free = film(n >= TIER_COUNT * 0.6 ? 100 : 50);
 
     // Every paid tier pays out something; a dead row on the track people
     // bought reads as a bug.
@@ -207,8 +219,7 @@ export const SEASON = {
   weeks: 10,
 };
 
-export const TIER_COUNT = 50;
-export const XP_PER_TIER = 1000;
+
 
 export interface PassState {
   /** 1-based, capped at TIER_COUNT. */

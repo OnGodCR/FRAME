@@ -7,6 +7,7 @@ import {
   saveDaily,
   loadSeen,
   saveSeen,
+  clearAll,
   FRESH_SEEN,
   type Seen,
 } from './persist';
@@ -257,23 +258,29 @@ export const ROUND_DISPLAY_SECONDS = ROUND_DISPLAY_MINUTES * 60;
  * Two things fix that: DEMO_SPEED is now surfaced in the round UI, and a round
  * can be started at real time instead.
  */
-const ROUND_REAL_SECONDS = 250;
+/**
+ * The round now runs in real time: one displayed second per real second.
+ *
+ * It used to compress 30 display minutes into 250 real seconds, which made the
+ * clock jump 7 to 8 seconds per tick and read as a broken timer. Everything on
+ * the timeline is therefore authored in real seconds now, and the check-in
+ * ticks sit at the honest 5 minute spacing from PRD 4.2 rather than at
+ * scaled-down stand-ins.
+ *
+ * The cost is that watching a whole round takes 30 minutes, which is correct
+ * for a player and slow for a reviewer. That is what DEV_TIME_SCALE is for.
+ */
+const ROUND_REAL_SECONDS = ROUND_DISPLAY_SECONDS;
 
 /**
- * Multiplier between the displayed clock and real elapsed time. Surfaced next
- * to the round clock so a racing timer reads as a stated demo property rather
- * than a bug.
+ * Development-only clock multiplier. 1 is real time and is what ships.
  *
- * A genuine real-time mode is deliberately NOT implemented here. It looks like
- * a one-line change and is not: the script timeline is authored in compressed
- * seconds while CHECKIN_WINDOW is in real seconds, so simply stretching the
- * clock would also stretch the check-in window to about five minutes and
- * quietly break the one mechanic that has to stay exact. Doing it properly
- * means separating the script clock from the wall clock and tracking which
- * script keys have already fired, in an engine that is slated for replacement
- * by server state. See claude/session-2.md.
+ * Raise it to skim a full round quickly while working on the round screens.
+ * It scales the tick interval, not the timeline, so the clock still counts
+ * down one displayed second at a time and the check-in window keeps its real
+ * duration relative to everything else.
  */
-export const DEMO_SPEED = Math.round((ROUND_DISPLAY_SECONDS / ROUND_REAL_SECONDS) * 10) / 10;
+export const DEV_TIME_SCALE = 1;
 
 let tickerId = 0;
 const ev = (text: string, tone: TickerEvent['tone'] = 'info'): TickerEvent => ({
@@ -307,7 +314,9 @@ function freshRound(role: Role): RoundState {
 
 type Script = Record<number, (r: RoundState) => void>;
 
-const CHECKIN_WINDOW = 45; // real seconds ≙ "0:60" in fiction; close enough for demo
+/** PRD 4.4: 60 seconds from the tick to submit. Real seconds now that the
+ *  round clock is real time, so this is the actual specified window. */
+const CHECKIN_WINDOW = 60;
 
 /**
  * The hider's check-in ticks, as elapsed real seconds into the round.
@@ -320,11 +329,14 @@ const CHECKIN_WINDOW = 45; // real seconds ≙ "0:60" in fiction; close enough f
  * `window_open` timestamps the server writes at round start.
  */
 export const HIDER_CHECKIN_TICKS = [
-  { index: 4, at: 20 },
-  { index: 5, at: 150 },
+  { index: 1, at: 5 * 60 },
+  { index: 2, at: 10 * 60 },
+  { index: 3, at: 15 * 60 },
+  { index: 4, at: 20 * 60 },
+  { index: 5, at: 25 * 60 },
 ] as const;
 
-const hiderScript: Script = {
+const hiderScriptAuthored: Script = {
   6: (r) => r.ticker.unshift(ev('MAYA passed check-in 03')),
   14: (r) => r.ticker.unshift(ev('BEACON at Fountain Plaza claimed by JULES')),
   72: (r) => {
@@ -355,16 +367,24 @@ const hiderScript: Script = {
 
 // Opening each check-in window is generated rather than written out, so the
 // timeline and the scheduled notifications cannot disagree.
-for (const tick of HIDER_CHECKIN_TICKS) {
-  hiderScript[tick.at] = (r) => {
-    r.checkin = {
-      index: tick.index,
-      openedAt: tick.at,
-      deadline: tick.at + CHECKIN_WINDOW,
-      submitted: false,
-    };
-  };
+/**
+ * The ambient script was authored against the old 250 second compressed round.
+ * Now that the clock is real time, those beats are stretched across the full
+ * 30 minutes so the round does not fire everything in its first four minutes
+ * and then go silent. Rescaling preserves the authored pacing rather than
+ * requiring every key to be rewritten by hand.
+ */
+const AUTHORED_ROUND_SECONDS = 250;
+
+function rescale(s: Script): Script {
+  const scale = ROUND_REAL_SECONDS / AUTHORED_ROUND_SECONDS;
+  const out: Script = {};
+  for (const key of Object.keys(s)) {
+    out[Math.round(Number(key) * scale)] = s[Number(key)];
+  }
+  return out;
 }
+
 
 let photoId = 0;
 const feed = (r: RoundState, botId: string, idx: number) => {
@@ -394,7 +414,7 @@ const revealAll = (r: RoundState, ttl = 30) => {
     );
 };
 
-const seekerScript: Script = {
+const seekerScriptAuthored: Script = {
   4: (r) => r.ticker.unshift(ev('Check-in tick 01 sent to all hiders')),
   8: (r) => feed(r, 'maya', 1),
   12: (r) => feed(r, 'jules', 1),
@@ -436,6 +456,22 @@ const seekerScript: Script = {
     }
   },
 };
+
+const hiderScript: Script = rescale(hiderScriptAuthored);
+const seekerScript: Script = rescale(seekerScriptAuthored);
+
+// Check-in windows are added after the rescale because they are already
+// authored in real seconds, at the honest 5 minute spacing from PRD 4.2.
+for (const tick of HIDER_CHECKIN_TICKS) {
+  hiderScript[tick.at] = (r) => {
+    r.checkin = {
+      index: tick.index,
+      openedAt: tick.at,
+      deadline: tick.at + CHECKIN_WINDOW,
+      submitted: false,
+    };
+  };
+}
 
 function stepRound(r: RoundState): RoundState {
   const next: RoundState = {
@@ -534,6 +570,8 @@ interface Game {
   // --- milestones and retention ---
   seen: Seen;
   markSeen: (patch: Partial<Seen>) => void;
+  /** Wipes local progression back to a new account. See CLAUDE.md 7. */
+  resetProgress: () => void;
   /** Season pass position, derived from profile.seasonXp. */
   pass: PassState;
   /** Books a local reminder for the next round with this party. */
@@ -604,7 +642,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!inRound) return;
     const id = setInterval(() => {
       setRound((r) => (r && !r.outcome ? stepRound(r) : r));
-    }, 1000);
+    }, 1000 / DEV_TIME_SCALE);
     return () => clearInterval(id);
   }, [round?.outcome, round == null, route]);
 
@@ -675,20 +713,44 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
    * validation time, so that a player who backs out mid-sequence is not
    * credited, and so the payout can never be applied twice.
    */
+  /**
+   * Leaving the run. A passed daily assignment pays out here rather than at
+   * validation time, so that a player who backs out mid-sequence is not
+   * credited.
+   *
+   * The payout deliberately does NOT live inside a state updater. It used to
+   * call setProfile from inside a setDaily updater nested in a setSolo updater,
+   * and React is free to invoke an updater more than once, which could pay the
+   * FILM twice. Updaters must stay pure; side effects go here, guarded by the
+   * same isDailyOpen check so a second run on the same day still pays nothing.
+   */
   const exitSolo = useCallback(() => {
-    setSolo((s) => {
-      if (s && s.mode === 'daily' && s.outcome === 'passed') {
-        // Guarded on isDailyOpen so a second run on the same day cannot pay
-        // out twice, whatever route the player took to get here.
-        setDaily((d) => {
-          if (!isDailyOpen(d)) return d;
-          setProfile((p) => withXp({ ...p, film: p.film + DAILY_REWARD.film }, DAILY_REWARD.xp));
-          return advanceDaily(d);
-        });
-      }
-      return null;
-    });
+    const s = solo;
+    if (s && s.mode === 'daily' && s.outcome === 'passed' && isDailyOpen(daily)) {
+      setDaily((d) => (isDailyOpen(d) ? advanceDaily(d) : d));
+      setProfile((p) => withXp({ ...p, film: p.film + DAILY_REWARD.film }, DAILY_REWARD.xp));
+    }
+    setSolo(null);
     go('home');
+  }, [go, solo, daily]);
+
+  /**
+   * Wipes local progression back to a genuinely new account.
+   *
+   * There is no server (see CLAUDE.md 7), so "new account" means "this device
+   * has no stored state". Without this the only way to test a first run is
+   * clearing app data by hand, and on web it means clearing site storage, which
+   * is easy to get wrong and easy to mistake for a bug.
+   */
+  const resetProgress = useCallback(async () => {
+    await clearAll();
+    setProfile(FRESH_PROFILE);
+    setDaily(FRESH_DAILY);
+    setSeen(FRESH_SEEN);
+    setRound(null);
+    setSolo(null);
+    setAuth(null);
+    go('splash');
   }, [go]);
 
   const markSeen = useCallback(
@@ -874,6 +936,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         dailyOpen: isDailyOpen(daily),
         seen,
         markSeen,
+        resetProgress,
         pass: passState(profile.seasonXp),
         scheduleNextRound,
       }}
@@ -896,8 +959,7 @@ export function fmtClock(totalSeconds: number): string {
   return `${m}:${ss.toString().padStart(2, '0')}`;
 }
 
-/** Display round clock: scales the compressed real timeline to a 30:00 fiction. */
+/** Time left in the round. Real seconds, counting down one at a time. */
 export function roundClock(r: RoundState): string {
-  const frac = Math.max(0, 1 - r.elapsed / r.totalReal);
-  return fmtClock(frac * ROUND_DISPLAY_SECONDS);
+  return fmtClock(Math.max(0, r.totalReal - r.elapsed));
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import * as Haptics from 'expo-haptics';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { color, font, radius, space } from '../theme';
@@ -32,7 +33,7 @@ const STEPS: { label: string; done: (s: { seen: Seen; daily: DailyState }) => bo
 ];
 
 export function Home() {
-  const { go, profile, daily, dailyAssignment, dailyOpen, pass, seen } = useGame();
+  const { go, profile, daily, dailyAssignment, dailyOpen, pass, seen, resetProgress } = useGame();
   const allStepsDone = STEPS.every((s) => s.done({ seen, daily }));
   const { world, status, request, busy } = useWorld();
   const insets = useSafeAreaInsets();
@@ -166,6 +167,36 @@ export function Home() {
           </PressScale>
         </FadeIn>
 
+        {/* play */}
+        <FadeIn index={4}>
+          <View style={{ marginTop: space(6), gap: space(3) }}>
+            <Btn title="Host a round" onPress={() => go('lobby')} />
+            <Btn title="Join with code" variant="outline" onPress={() => go('join')} />
+            {/* The map legend is reference material, not a one-time cutscene.
+                The most cited FTUE failure in this genre is a tutorial that can
+                never be seen again, so it gets a real card on the main screen
+                rather than a text link that is easy to miss. */}
+            <PressScale onPress={() => go('mapTutorial')}>
+              <Card style={styles.legendCard}>
+                <View style={styles.legendGlyphs}>
+                  {[color.accent, '#9BE8FF', '#D8B4FF'].map((tint) => (
+                    <View key={tint} style={[styles.legendDiamond, { borderColor: tint }]} />
+                  ))}
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Label tone="text">How to read the map</Label>
+                  <Mono style={{ fontSize: 10, color: color.faint, marginTop: 3 }}>
+                    What the three pin types do
+                  </Mono>
+                </View>
+                <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
+                  OPEN →
+                </Mono>
+              </Card>
+            </PressScale>
+          </View>
+        </FadeIn>
+
         {/* Progressive disclosure. The pass, loadout, and shop are all empty
             and meaningless before the first capture, and showing three dead
             cards to a new player buries the one thing they should actually do.
@@ -262,34 +293,18 @@ export function Home() {
           </>
         )}
 
-        {/* play */}
-        <FadeIn index={4}>
-          <View style={{ marginTop: space(6), gap: space(3) }}>
-            <Btn title="Host a round" onPress={() => go('lobby')} />
-            <Btn title="Join with code" variant="outline" onPress={() => go('join')} />
-            {/* The map legend is reference material, not a one-time cutscene.
-                The most cited FTUE failure in this genre is a tutorial that can
-                never be seen again, so it gets a real card on the main screen
-                rather than a text link that is easy to miss. */}
-            <PressScale onPress={() => go('mapTutorial')}>
-              <Card style={styles.legendCard}>
-                <View style={styles.legendGlyphs}>
-                  {[color.accent, '#9BE8FF', '#D8B4FF'].map((tint) => (
-                    <View key={tint} style={[styles.legendDiamond, { borderColor: tint }]} />
-                  ))}
-                </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Label tone="text">How to read the map</Label>
-                  <Mono style={{ fontSize: 10, color: color.faint, marginTop: 3 }}>
-                    What the three pin types do
-                  </Mono>
-                </View>
-                <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
-                  OPEN →
-                </Mono>
-              </Card>
-            </PressScale>
-          </View>
+        {/* There is no server (CLAUDE.md 7), so a "new account" is just a
+            device with no stored state. Without this the only way to test a
+            first run is clearing app data by hand. */}
+        <FadeIn index={6}>
+          <PressScale
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              resetProgress();
+            }}
+          >
+            <Mono style={styles.resetLink}>RESET PROGRESS · LOCAL ONLY</Mono>
+          </PressScale>
         </FadeIn>
 
         {/* world layer: real landmarks near the player */}
@@ -528,6 +543,14 @@ const styles = StyleSheet.create({
     lineHeight: 25,
     color: color.text,
     marginTop: space(2.5),
+  },
+  resetLink: {
+    fontSize: 9,
+    letterSpacing: 1.4,
+    color: color.faint,
+    textAlign: 'center',
+    marginTop: space(5),
+    paddingVertical: space(2),
   },
   legendCard: {
     flexDirection: 'row',

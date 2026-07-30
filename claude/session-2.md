@@ -532,7 +532,101 @@ round with friends) that disappears once complete rather than becoming a
 permanent chore list. It deliberately ends at playing with friends and not at
 anything purchasable.
 
-## 11. Bug found and fixed: the scroll gates could lock a player out
+## 11. Third pass on Angad's review
+
+Backlog now lives in [CLAUDE.md](../CLAUDE.md) 6 so a future agent inherits it.
+Tick items there as they land; the reasoning goes here.
+
+### The honest answer to "is the backend connected"
+
+**No, and nothing in the client has ever talked to a database.** Verified by
+grep: there is not a single `.from()`, insert, or select anywhere in
+`mobile/src`. Supabase appears only in `AuthGate.tsx`, purely for OAuth
+sign-in. `0001_core.sql` has never been applied.
+
+So "is a new account treated as new" has an odd answer: accounts do not exist.
+All state is device-local `AsyncStorage`, and a new account just means a device
+with no stored state. Signing in with Google authenticates a person and stores
+nothing about them. Two phones share nothing. Written up as CLAUDE.md 7 because
+the app looks like it has a backend and does not.
+
+### Why the daily looked already done
+
+Two separate things, and only one was a code bug.
+
+**The artifact:** the daily was completed in the browser preview during
+testing, on the same origin, so `localStorage` carried it over. Nothing in the
+app marked it done on its own.
+
+**The real bug, now fixed:** the payout called `setProfile` from inside a
+`setDaily` updater, nested inside a `setSolo` updater. React may invoke an
+updater more than once, and a side effect in there can therefore run twice, so
+the FILM could be paid twice. Updaters must stay pure. The payout is now a
+plain effect in `exitSolo`, still guarded by `isDailyOpen`.
+
+Also added **RESET PROGRESS** on home. With no server, the only other way to
+get a true new account was clearing app data by hand, which is easy to get
+wrong and easy to mistake for a bug.
+
+### The round clock
+
+It was scaled by `DEMO_SPEED`, compressing 30 minutes into 250 seconds, so each
+tick moved the display 7 to 8 seconds. That is gone. The clock is real time
+now: `roundClock` is simply `totalReal - elapsed`, and the timeline is authored
+in real seconds.
+
+Consequences worth knowing:
+
+- **Check-in ticks moved to the honest PRD 4.2 spacing**, every 5 minutes, five
+  per round, replacing the two scaled stand-ins at 20 s and 150 s.
+- `CHECKIN_WINDOW` is now **60 seconds**, the actual PRD 4.4 figure, rather
+  than 45 seconds standing in for a fictional 60.
+- The ambient script was authored against the old 250 second round, so it is
+  **rescaled** at module load rather than rewritten by hand, preserving its
+  pacing across the full 30 minutes.
+- `DEV_TIME_SCALE` exists for skimming a round while working. It ships at 1.
+
+**Not fully verified.** The clock counts down one second at a time, confirmed
+(1740, 1739, 1738 with no skips). But in the headless browser pane it advances
+at roughly half wall time. A raw `setInterval(1000)` in the same page fires at
+a true 1 Hz, so it is not plain timer throttling; it may be React scheduling in
+a hidden tab, or a genuine halving. **Attempts to instrument it were defeated
+by bundle caching, so this is unresolved.** Check it on a device: if the clock
+runs at half speed there too, it is a real bug and the suspect is the round
+interval effect being torn down and recreated.
+
+### Everything else in that pass
+
+- **Host a round and Join with code moved above** the progression cards. The
+  two things a returning player came to do were below three cards about
+  cosmetics.
+- **Map opens at `DEFAULT_ZOOM = 1.15`** rather than 2. At 2 most of the zone
+  and most POIs were off screen, and a hider needs to see where they can run to
+  more than they need detail underfoot.
+- **Season pass cut from 50 tiers at 1000 XP to 30 at 500.** A player doing the
+  daily plus a round earns roughly 300 season XP a day, so the old track was
+  about 160 days against a 70 day season: literally unfinishable, and someone
+  who cannot complete a pass does not buy the next one. Cosmetic tier numbers
+  were remapped across the shorter track rather than dropped, so no reward was
+  lost.
+- **A TDZ crash was caught and fixed** while doing that: `TIERS` is built at
+  module load and referenced `TIER_COUNT`, which was declared 70 lines later.
+  `tsc` cannot see this; it only fails at runtime. The constants moved above.
+
+### Still not started
+
+The large features are untouched and specified in CLAUDE.md 6: global
+leaderboard, friends tab with codes and QR, sharing the daily capture with
+applause, referrals, and shop expansion. **The daily assignment redesign is
+also still open**: the current prompts are too menial, which Angad is right
+about, and that needs a design pass rather than another list of nouns.
+
+Every one of those is bound by the constraints in CLAUDE.md 6: friend codes but
+never stranger discovery, report and block on any social surface from the first
+commit, and watch the FILM supply, because applause and referral grants are new
+faucets that devalue every shop price if they run hot.
+
+## 12. Bug found and fixed: the scroll gates could lock a player out
 
 Angad hit this on a wide viewport: the legal gate's button stayed on
 SCROLL TO THE END forever and the app could not be entered.
@@ -582,7 +676,7 @@ or an Android tablet has the room to fit it, and there was no iOS equivalent
 because `supportsTablet` is false. Shipping Android without this fix would have
 meant a permanently unusable app on those devices.
 
-## 12. New gotchas
+## 13. New gotchas
 
 - **Browser pane coordinates are NOT 2x, contrary to session 1 gotcha 2.** The
   tool reports `Screenshot size: 375x812` while the returned image is 750x1624.

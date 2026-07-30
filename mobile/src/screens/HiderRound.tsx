@@ -17,7 +17,7 @@ import { useWorld } from '../engine/WorldContext';
 import { useHeading } from '../engine/useHeading';
 import { PoiSheet } from '../components/PoiSheet';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
-import { fmtClock, roundClock, useGame, DEMO_SPEED } from '../engine/GameContext';
+import { fmtClock, roundClock, useGame, HIDER_CHECKIN_TICKS } from '../engine/GameContext';
 
 const SELF = { x: 0.47, y: 0.56 };
 const ZONE_DIAMETER_M = 2000;
@@ -34,7 +34,7 @@ export function HiderRound() {
   const [openPoi, setOpenPoi] = useState<Poi | null>(null);
   const [claimed, setClaimed] = useState<string[]>([]);
   const { world } = useWorld();
-  const { zoom, step, pinch } = useMapCamera(2);
+  const { zoom, step, pinch } = useMapCamera();
   const { heading } = useHeading();
 
   const checkinOpen = !!round?.checkin && !round.checkin.submitted;
@@ -66,7 +66,11 @@ export function HiderRound() {
 
   const t = round.elapsed;
   const pinged = round.pingFlashUntil != null && t < round.pingFlashUntil;
-  const nextTickAt = round.checkin ? null : t < 20 ? 20 : t < 150 ? 150 : null;
+  // Derived from the single source rather than hardcoded, so the countdown
+  // cannot disagree with when a tick actually fires.
+  const nextTickAt = round.checkin
+    ? null
+    : (HIDER_CHECKIN_TICKS.find((k) => k.at > t)?.at ?? null);
   const alive = round.bots.filter((b) => b.state === 'alive').length + 1;
 
   const markers: MapMarker[] = [
@@ -103,9 +107,6 @@ export function HiderRound() {
             ROUND
           </Label>
           <Text style={styles.clock}>{roundClock(round)}</Text>
-          {/* The demo clock runs ~7x real time. Saying so is the difference
-              between a deliberate compression and an apparent bug. */}
-          <Mono style={styles.paceTag}>DEMO PACE · {DEMO_SPEED}× REAL TIME</Mono>
         </View>
         <View style={{ alignItems: 'center' }}>
           <Label tone="accent">Hiding</Label>

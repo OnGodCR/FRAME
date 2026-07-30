@@ -18,7 +18,10 @@ import { useWorld } from '../engine/WorldContext';
 import { useHeading } from '../engine/useHeading';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
-import { FeedPhoto, fmtClock, roundClock, useGame, DEMO_SPEED } from '../engine/GameContext';
+import { FeedPhoto, fmtClock, roundClock, useGame } from '../engine/GameContext';
+
+/** Reveal ticks in real seconds, matching the lobby's default of every 10 min. */
+const REVEAL_TICKS = [10 * 60, 20 * 60];
 
 export function SeekerRound() {
   const { round, leaveRound, tag } = useGame();
@@ -26,13 +29,14 @@ export function SeekerRound() {
   const { width, height } = useWindowDimensions();
   const [openPhoto, setOpenPhoto] = useState<FeedPhoto | null>(null);
   const { world } = useWorld();
-  const { zoom, step, pinch } = useMapCamera(2);
+  const { zoom, step, pinch } = useMapCamera();
   const { heading } = useHeading();
 
   if (!round) return null;
   const t = round.elapsed;
   const alive = round.bots.filter((b) => b.state === 'alive');
-  const nextRevealAt = t < 32 ? 32 : t < 128 ? 128 : null;
+  // PRD 4.2 default: a reveal every 10 minutes, in real seconds.
+  const nextRevealAt = REVEAL_TICKS.find((k) => k > t) ?? null;
 
   const markers: MapMarker[] = [
     { key: 'me', x: 0.5, y: 0.5, kind: 'seeker', label: 'YOU', heading },
@@ -62,7 +66,6 @@ export function SeekerRound() {
             ROUND
           </Label>
           <Text style={styles.clock}>{roundClock(round)}</Text>
-          <Mono style={styles.paceTag}>DEMO PACE · {DEMO_SPEED}× REAL TIME</Mono>
         </View>
         <View style={{ alignItems: 'center' }}>
           <Label tone="danger">Seeking</Label>

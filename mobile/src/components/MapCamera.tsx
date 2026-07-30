@@ -13,7 +13,17 @@ const clamp = (v: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, v));
  * The buttons are not just a web fallback: one-handed play while walking is the
  * normal case for this game, and a pinch needs two hands.
  */
-export function useMapCamera(initial = 2) {
+/**
+ * Default zoom. 1 shows the whole zone; higher numbers move in.
+ *
+ * This opened at 2, which framed the player so tightly that most of the zone
+ * and most of the POIs were off screen. A hider needs to see where they can
+ * run to more than they need detail underfoot, so the map now opens wide and
+ * the player zooms in when they want to.
+ */
+export const DEFAULT_ZOOM = 1.15;
+
+export function useMapCamera(initial = DEFAULT_ZOOM) {
   const [zoom, setZoomState] = useState(initial);
   const start = useRef(initial);
 
