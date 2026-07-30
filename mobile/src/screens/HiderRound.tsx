@@ -17,7 +17,7 @@ import { useWorld } from '../engine/WorldContext';
 import { useHeading } from '../engine/useHeading';
 import { PoiSheet } from '../components/PoiSheet';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
-import { fmtClock, roundClock, useGame } from '../engine/GameContext';
+import { fmtClock, roundClock, useGame, DEMO_SPEED } from '../engine/GameContext';
 
 const SELF = { x: 0.47, y: 0.56 };
 const ZONE_DIAMETER_M = 2000;
@@ -103,6 +103,9 @@ export function HiderRound() {
             ROUND
           </Label>
           <Text style={styles.clock}>{roundClock(round)}</Text>
+          {/* The demo clock runs ~7x real time. Saying so is the difference
+              between a deliberate compression and an apparent bug. */}
+          <Mono style={styles.paceTag}>DEMO PACE · {DEMO_SPEED}× REAL TIME</Mono>
         </View>
         <View style={{ alignItems: 'center' }}>
           <Label tone="accent">Hiding</Label>
@@ -213,6 +216,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10,10,12,0.82)',
     borderBottomWidth: 1,
     borderBottomColor: color.line,
+  },
+  paceTag: {
+    fontSize: 8,
+    letterSpacing: 1,
+    color: color.faint,
+    marginTop: 1,
   },
   clock: {
     fontFamily: font.display,

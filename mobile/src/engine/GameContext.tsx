@@ -1,4 +1,26 @@
-import { loadProfile, saveProfile, loadAuth, saveAuth } from './persist';
+import {
+  loadProfile,
+  saveProfile,
+  loadAuth,
+  saveAuth,
+  loadDaily,
+  saveDaily,
+  loadSeen,
+  saveSeen,
+  FRESH_SEEN,
+  type Seen,
+} from './persist';
+import * as notify from './notify';
+import { passState, type PassState } from '../data/catalog';
+import {
+  FRESH_DAILY,
+  DAILY_REWARD,
+  assignmentFor,
+  completeDaily as advanceDaily,
+  isDailyOpen,
+  type DailyState,
+  type Assignment,
+} from '../data/assignments';
 import React, {
   createContext,
   useContext,
@@ -13,7 +35,7 @@ import React, {
 // Everything a real deployment would get from the server (ticks, reveals,
 // eliminations, other players) is scripted here on a compressed timeline so a
 // full round is experienceable in a few minutes. Timers the player sees are
-// rendered from a scaled "round clock" so the UI reads like a real 45:00 round.
+// rendered from a scaled "round clock" so the UI reads like a real 30:00 round.
 // ---------------------------------------------------------------------------
 
 export type Route =
@@ -22,7 +44,6 @@ export type Route =
   | 'legal'
   | 'auth'
   | 'handle'
-  | 'permissions'
   | 'mapTutorial'
   | 'home'
   | 'shop'
@@ -34,7 +55,9 @@ export type Route =
   | 'round'
   | 'checkin'
   | 'blackout'
-  | 'results';
+  | 'results'
+  | 'solo'
+  | 'soloRun';
 
 export type Role = 'hider' | 'seeker';
 export type PlayerState = 'alive' | 'tagged' | 'blackout';
@@ -95,6 +118,29 @@ export interface RoundState {
   outcome: null | 'survived' | 'blackout' | 'cleared' | 'timeup' | 'left';
 }
 
+/**
+ * Solo modes. Neither needs a party, a server, or anyone else to be awake.
+ *
+ * 'test'  TEST FRAME. The practice run. A real 60 second window and the real
+ *         capture sequence, so the first time a player feels that timer is not
+ *         also the first time their survival depends on it. Letting it expire
+ *         is allowed and shows them the blackout state once, deliberately.
+ * 'daily' The daily assignment. One prompt, shared worldwide, no timer, pays
+ *         XP and FILM. See data/assignments.ts.
+ */
+export type SoloMode = 'test' | 'daily';
+
+export interface SoloState {
+  mode: SoloMode;
+  elapsed: number;
+  /** Seconds allowed, or null for an untimed run. */
+  window: number | null;
+  outcome: 'pending' | 'passed' | 'expired';
+}
+
+/** The practice window matches the real one so the rehearsal is honest. */
+export const TEST_FRAME_WINDOW = 60;
+
 export interface Equipped {
   title: string;
   pin: string;
@@ -113,10 +159,80 @@ export interface Profile {
   level: number;
   xp: number; // 0..1 through current level
   prestige: number;
-  film: number; // soft currency, cosmetics only
+  /**
+   * Soft currency. Cosmetics only, and **earned only**.
+   *
+   * FILM must never become purchasable with real money while seeker bidding
+   * exists (see `bidSeeker`), because that would turn a role advantage into
+   * something you can buy. marketing/BRIEF.md 9 lists "never imply anything
+   * purchasable helps you win" as a legal line, not a tone note.
+   */
+  film: number;
+  /** Drives season pass tier. See passState() in data/catalog.ts. */
+  seasonXp: number;
   owned: string[];
   equipped: Equipped;
   paidPass: boolean;
+}
+
+/**
+ * What a real new account looks like. Level 1, nothing earned, nothing owned
+ * beyond the defaults that every account has.
+ *
+ * FILM starts at zero deliberately. The daily assignment pays 75, the cheapest
+ * shop item is 300, so the shop becomes reachable in about four days of showing
+ * up. That is the intended habit loop and handing over a pile of currency at
+ * install would remove the only reason to come back on day two.
+ */
+export const FRESH_PROFILE: Profile = {
+  handle: '',
+  level: 1,
+  xp: 0,
+  prestige: 0,
+  film: 0,
+  seasonXp: 0,
+  owned: ['title-unseen', 'pin-acid', 'frame-brackets', 'static-default', 'tag-shutter'],
+  equipped: {
+    title: 'title-unseen',
+    pin: 'pin-acid',
+    frame: 'frame-brackets',
+    blackout: 'static-default',
+    tag: 'tag-shutter',
+  },
+  paidPass: false,
+};
+
+/**
+ * A mid-progression account, purely so the pass, loadout, and shop screens can
+ * be reviewed with something in them. Off by default: this used to be the
+ * initial state for everyone, which meant a new install opened at level 7 with
+ * 1,250 FILM and twelve tiers of a pass it had never played.
+ *
+ * Flip DEMO_SEED to true to get it back for screenshots. Never ship it true.
+ */
+const DEMO_SEED = false;
+
+const SEEDED_PROFILE: Profile = {
+  ...FRESH_PROFILE,
+  level: 7,
+  xp: 0.58,
+  film: 1250,
+  seasonXp: 11_420,
+  owned: [...FRESH_PROFILE.owned, 'title-patient'],
+};
+
+/**
+ * Applies XP and rolls levels. Shared so every award path behaves the same.
+ * Season XP accumulates alongside, which is what actually advances the pass.
+ */
+function withXp(p: Profile, n: number): Profile {
+  let xp = p.xp + n;
+  let level = p.level;
+  while (xp >= 1) {
+    xp -= 1;
+    level += 1;
+  }
+  return { ...p, xp, level, seasonXp: p.seasonXp + Math.round(n * 1000) };
 }
 
 const HIDER_BOTS: Bot[] = [
@@ -127,8 +243,37 @@ const HIDER_BOTS: Bot[] = [
 ];
 export const SEEKER_BOT = { id: 'kai', name: 'KAI' };
 
-export const ROUND_DISPLAY_SECONDS = 45 * 60;
+/** Default round length. 30 minutes, not 45: a shorter round means more rounds
+ *  per session, more results screens, and a lower bar to saying yes to one. */
+export const ROUND_DISPLAY_MINUTES = 30;
+export const ROUND_DISPLAY_SECONDS = ROUND_DISPLAY_MINUTES * 60;
+/**
+ * How long a demo round actually takes in real seconds. The displayed clock is
+ * scaled from this up to ROUND_DISPLAY_SECONDS, so the round clock visibly runs
+ * about 7x faster than a wall clock. That is intentional (a reviewer should not
+ * have to stand outside for half an hour to see the whole arc) but it was
+ * completely unlabelled, which reads as a bug.
+ *
+ * Two things fix that: DEMO_SPEED is now surfaced in the round UI, and a round
+ * can be started at real time instead.
+ */
 const ROUND_REAL_SECONDS = 250;
+
+/**
+ * Multiplier between the displayed clock and real elapsed time. Surfaced next
+ * to the round clock so a racing timer reads as a stated demo property rather
+ * than a bug.
+ *
+ * A genuine real-time mode is deliberately NOT implemented here. It looks like
+ * a one-line change and is not: the script timeline is authored in compressed
+ * seconds while CHECKIN_WINDOW is in real seconds, so simply stretching the
+ * clock would also stretch the check-in window to about five minutes and
+ * quietly break the one mechanic that has to stay exact. Doing it properly
+ * means separating the script clock from the wall clock and tracking which
+ * script keys have already fired, in an engine that is slated for replacement
+ * by server state. See claude/session-2.md.
+ */
+export const DEMO_SPEED = Math.round((ROUND_DISPLAY_SECONDS / ROUND_REAL_SECONDS) * 10) / 10;
 
 let tickerId = 0;
 const ev = (text: string, tone: TickerEvent['tone'] = 'info'): TickerEvent => ({
@@ -164,12 +309,24 @@ type Script = Record<number, (r: RoundState) => void>;
 
 const CHECKIN_WINDOW = 45; // real seconds ≙ "0:60" in fiction; close enough for demo
 
+/**
+ * The hider's check-in ticks, as elapsed real seconds into the round.
+ *
+ * Single source of truth: the scripted timeline below and the local
+ * notifications scheduled in `startRound` both derive from this. They must
+ * never drift, because a notification firing at a moment the engine does not
+ * agree is a check-in window is exactly the bug that gets someone eliminated
+ * for nothing. When server state replaces this engine, these become the
+ * `window_open` timestamps the server writes at round start.
+ */
+export const HIDER_CHECKIN_TICKS = [
+  { index: 4, at: 20 },
+  { index: 5, at: 150 },
+] as const;
+
 const hiderScript: Script = {
   6: (r) => r.ticker.unshift(ev('MAYA passed check-in 03')),
   14: (r) => r.ticker.unshift(ev('BEACON at Fountain Plaza claimed by JULES')),
-  20: (r) => {
-    r.checkin = { index: 4, openedAt: 20, deadline: 20 + CHECKIN_WINDOW, submitted: false };
-  },
   72: (r) => {
     r.pingFlashUntil = 80;
     r.ticker.unshift(ev("Reveal tick · you've been pinged", 'warn'));
@@ -188,9 +345,6 @@ const hiderScript: Script = {
     r.shrinkWarnUntil = null;
     r.ticker.unshift(ev('Zone contracted · 750 m radius', 'warn'));
   },
-  150: (r) => {
-    r.checkin = { index: 5, openedAt: 150, deadline: 150 + CHECKIN_WINDOW, submitted: false };
-  },
   204: (r) => {
     const ari = r.bots.find((b) => b.id === 'ari')!;
     ari.state = 'blackout';
@@ -198,6 +352,19 @@ const hiderScript: Script = {
   },
   222: (r) => r.ticker.unshift(ev('JULES used GHOST PING', 'accent')),
 };
+
+// Opening each check-in window is generated rather than written out, so the
+// timeline and the scheduled notifications cannot disagree.
+for (const tick of HIDER_CHECKIN_TICKS) {
+  hiderScript[tick.at] = (r) => {
+    r.checkin = {
+      index: tick.index,
+      openedAt: tick.at,
+      deadline: tick.at + CHECKIN_WINDOW,
+      submitted: false,
+    };
+  };
+}
 
 let photoId = 0;
 const feed = (r: RoundState, botId: string, idx: number) => {
@@ -352,50 +519,55 @@ interface Game {
   addXp: (n: number) => void;
   purchase: (id: string, costFilm: number) => boolean;
   buyPass: () => void;
+  redeemBundle: (frameId: string, film: number) => void;
+  /** Deducts FILM. Used by seeker bidding, which is a sink, not a purchase. */
+  spendFilm: (n: number) => void;
   equip: (slot: keyof Equipped, id: string) => void;
+  // --- solo ---
+  solo: SoloState | null;
+  startSolo: (mode: SoloMode) => void;
+  passSolo: () => void;
+  exitSolo: () => void;
+  daily: DailyState;
+  dailyAssignment: Assignment;
+  dailyOpen: boolean;
+  // --- milestones and retention ---
+  seen: Seen;
+  markSeen: (patch: Partial<Seen>) => void;
+  /** Season pass position, derived from profile.seasonXp. */
+  pass: PassState;
+  /** Books a local reminder for the next round with this party. */
+  scheduleNextRound: (when: Date) => void;
 }
 
 const Ctx = createContext<Game | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [route, setRoute] = useState<Route>('splash');
-  const [profile, setProfile] = useState<Profile>({
-    handle: '',
-    level: 7,
-    xp: 0.58,
-    prestige: 0,
-    film: 1250,
-    // Defaults, plus the free-track cosmetics already claimed by tier 12.
-    owned: [
-      'title-unseen',
-      'pin-acid',
-      'frame-brackets',
-      'static-default',
-      'tag-shutter',
-      'title-patient',
-    ],
-    equipped: {
-      title: 'title-unseen',
-      pin: 'pin-acid',
-      frame: 'frame-brackets',
-      blackout: 'static-default',
-      tag: 'tag-shutter',
-    },
-    paidPass: false,
-  });
+  const [profile, setProfile] = useState<Profile>(DEMO_SEED ? SEEDED_PROFILE : FRESH_PROFILE);
   const [round, setRound] = useState<RoundState | null>(null);
   const [nextRole, setNextRole] = useState<Role>('hider');
   const [auth, setAuth] = useState<Auth | null>(null);
   const [hydrated, setHydrated] = useState(false);
+  const [solo, setSolo] = useState<SoloState | null>(null);
+  const [daily, setDaily] = useState<DailyState>(FRESH_DAILY);
+  const [seen, setSeen] = useState<Seen>(FRESH_SEEN);
 
   // Progression survives a restart. Guests have nowhere else for it to live.
   useEffect(() => {
     let live = true;
     (async () => {
-      const [savedProfile, savedAuth] = await Promise.all([loadProfile(), loadAuth()]);
+      const [savedProfile, savedAuth, savedDaily, savedSeen] = await Promise.all([
+        loadProfile(),
+        loadAuth(),
+        loadDaily(),
+        loadSeen(),
+      ]);
       if (!live) return;
       if (savedProfile) setProfile((p) => ({ ...p, ...savedProfile }));
       if (savedAuth) setAuth(savedAuth);
+      if (savedDaily) setDaily(savedDaily);
+      if (savedSeen) setSeen(savedSeen);
       setHydrated(true);
     })();
     return () => {
@@ -411,6 +583,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (auth) saveAuth(auth);
   }, [auth]);
+
+  useEffect(() => {
+    if (hydrated) saveDaily(daily);
+  }, [daily, hydrated]);
+
+  useEffect(() => {
+    if (hydrated) saveSeen(seen);
+  }, [seen, hydrated]);
   const routeRef = useRef(route);
   routeRef.current = route;
 
@@ -431,6 +611,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // react to outcomes
   useEffect(() => {
     if (!round?.outcome) return;
+    // The round is over however it ended. Any tick still pending would fire
+    // into a game that no longer exists.
+    notify.cancelAll();
     if (round.outcome === 'blackout') {
       go('blackout');
     } else if (round.outcome !== 'left') {
@@ -438,12 +621,115 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [round?.outcome]);
 
+  // PRD 4.6: a hider is told a reveal happened so they can react, but never
+  // what the seeker actually sees. Reveal ticks are server-driven and so
+  // cannot be scheduled ahead like check-ins; in the demo the scripted
+  // timeline stands in for that push.
+  const pingedAt = round?.role === 'hider' ? round.pingFlashUntil : null;
+  useEffect(() => {
+    if (pingedAt == null) return;
+    notify.pingReveal();
+  }, [pingedAt]);
+
+  // --- solo modes ----------------------------------------------------------
+
+  // 1 Hz clock for a timed solo run. Only TEST FRAME has a window; the daily
+  // assignment is something you do on a walk and rushing it teaches nothing.
+  useEffect(() => {
+    if (!solo || solo.window == null || solo.outcome !== 'pending') return;
+    if (route !== 'soloRun') return;
+    const id = setInterval(() => {
+      setSolo((s) => {
+        if (!s || s.window == null || s.outcome !== 'pending') return s;
+        const elapsed = s.elapsed + 1;
+        return {
+          ...s,
+          elapsed,
+          outcome: elapsed >= s.window ? 'expired' : 'pending',
+        };
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [solo?.outcome, solo == null, solo?.window, route]);
+
+  const startSolo = useCallback(
+    (mode: SoloMode) => {
+      setSolo({
+        mode,
+        elapsed: 0,
+        window: mode === 'test' ? TEST_FRAME_WINDOW : null,
+        outcome: 'pending',
+      });
+      go('soloRun');
+    },
+    [go],
+  );
+
+  const passSolo = useCallback(() => {
+    setSolo((s) => (s && s.outcome === 'pending' ? { ...s, outcome: 'passed' } : s));
+    setSeen((s) => ({ ...s, practised: true }));
+  }, []);
+
+  /**
+   * Leaving the run. A passed daily assignment pays out here rather than at
+   * validation time, so that a player who backs out mid-sequence is not
+   * credited, and so the payout can never be applied twice.
+   */
+  const exitSolo = useCallback(() => {
+    setSolo((s) => {
+      if (s && s.mode === 'daily' && s.outcome === 'passed') {
+        // Guarded on isDailyOpen so a second run on the same day cannot pay
+        // out twice, whatever route the player took to get here.
+        setDaily((d) => {
+          if (!isDailyOpen(d)) return d;
+          setProfile((p) => withXp({ ...p, film: p.film + DAILY_REWARD.film }, DAILY_REWARD.xp));
+          return advanceDaily(d);
+        });
+      }
+      return null;
+    });
+    go('home');
+  }, [go]);
+
+  const markSeen = useCallback(
+    (patch: Partial<Seen>) => setSeen((s) => ({ ...s, ...patch })),
+    [],
+  );
+
+  /** A local reminder, so "same crew, Friday" survives closing the app. */
+  const scheduleNextRound = useCallback((when: Date) => {
+    notify.scheduleRoundReminder(when);
+  }, []);
+
   const startRound = useCallback(
     (role?: Role) => {
       const r = role ?? nextRole;
       setNextRole(r);
       setRound(freshRound(r));
       go('roleReveal');
+
+      // Contextual permission, at the first round rather than at launch, and
+      // only for the role that actually receives ticks. Seekers do not submit
+      // check-ins (PRD 4.4), so there is nothing to alert them about yet.
+      if (r !== 'hider') {
+        notify.cancelAll();
+        return;
+      }
+      // The round clock starts now, so the windows are known now. Schedule the
+      // whole round up front: this is the entire point of the mechanic working
+      // with the phone in a pocket.
+      const startedAt = Date.now();
+      (async () => {
+        const granted = await notify.ensurePermission();
+        if (!granted) return;
+        await notify.scheduleTicks(
+          HIDER_CHECKIN_TICKS.map((t) => ({
+            index: t.index,
+            opensAt: new Date(startedAt + t.at * 1000),
+            closesAt: new Date(startedAt + (t.at + CHECKIN_WINDOW) * 1000),
+          })),
+        );
+      })();
     },
     [nextRole, go],
   );
@@ -452,8 +738,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // player is still looking at the confirmation screen, and that must not
   // count against them.
   const submitCheckin = useCallback(() => {
+    let submittedIndex: number | null = null;
     setRound((r) => {
       if (!r || !r.checkin) return r;
+      submittedIndex = r.checkin.index;
       return {
         ...r,
         checkin: null,
@@ -464,6 +752,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ],
       };
     });
+    // Telling someone who already submitted that they are 20 seconds from
+    // being blacked out is worse than sending nothing at all.
+    if (submittedIndex !== null) notify.cancelTick(submittedIndex);
   }, []);
 
   const tag = useCallback(() => {
@@ -487,26 +778,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const leaveRound = useCallback(() => {
+    notify.cancelAll();
     setRound(null);
     go('home');
   }, [go]);
 
   const finishRound = useCallback(() => {
+    notify.cancelAll();
     setNextRole((prev) => (round?.role === 'hider' ? 'seeker' : 'hider'));
     setRound(null);
+    setSeen((s) => (s.finishedRound ? s : { ...s, finishedRound: true }));
   }, [round?.role]);
 
-  const addXp = useCallback((n: number) => {
-    setProfile((p) => {
-      let xp = p.xp + n;
-      let level = p.level;
-      while (xp >= 1) {
-        xp -= 1;
-        level += 1;
-      }
-      return { ...p, xp, level };
-    });
-  }, []);
+  const addXp = useCallback((n: number) => setProfile((p) => withXp(p, n)), []);
 
   const setHandle = useCallback(
     (h: string) => setProfile((p) => ({ ...p, handle: h })),
@@ -525,6 +809,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const buyPass = useCallback(
     () => setProfile((p) => ({ ...p, paidPass: true })),
+    [],
+  );
+
+  /**
+   * The first-purchase bundle. One update rather than a purchase plus a grant
+   * plus an equip, so a bundle can never half-apply. Equips the frame on the
+   * spot: the whole pitch is that other players see it, so leaving it sitting
+   * unequipped in the loadout would undercut the thing that was just sold.
+   */
+  const redeemBundle = useCallback((frameId: string, film: number) => {
+    setProfile((p) =>
+      p.owned.includes(frameId)
+        ? p
+        : {
+            ...p,
+            film: p.film + film,
+            owned: [...p.owned, frameId],
+            equipped: { ...p.equipped, frame: frameId },
+          },
+    );
+  }, []);
+
+  const spendFilm = useCallback(
+    (n: number) => setProfile((p) => ({ ...p, film: Math.max(0, p.film - n) })),
     [],
   );
 
@@ -554,7 +862,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         addXp,
         purchase,
         buyPass,
+        redeemBundle,
+        spendFilm,
         equip,
+        solo,
+        startSolo,
+        passSolo,
+        exitSolo,
+        daily,
+        dailyAssignment: assignmentFor(),
+        dailyOpen: isDailyOpen(daily),
+        seen,
+        markSeen,
+        pass: passState(profile.seasonXp),
+        scheduleNextRound,
       }}
     >
       {children}
@@ -575,7 +896,7 @@ export function fmtClock(totalSeconds: number): string {
   return `${m}:${ss.toString().padStart(2, '0')}`;
 }
 
-/** Display round clock: scales the compressed real timeline to a 45:00 fiction. */
+/** Display round clock: scales the compressed real timeline to a 30:00 fiction. */
 export function roundClock(r: RoundState): string {
   const frac = Math.max(0, 1 - r.elapsed / r.totalReal);
   return fmtClock(frac * ROUND_DISPLAY_SECONDS);

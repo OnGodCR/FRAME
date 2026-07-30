@@ -5,7 +5,7 @@ import { color, font, radius, space } from '../theme';
 import { Bar, Btn, Card, Label, Mono } from '../components/ui';
 import { AvatarMark, CosmeticPreview } from '../components/Cosmetics';
 import { CountUp, FadeIn, PressScale } from '../components/motion';
-import { SEASON, byId, categoryKind } from '../data/catalog';
+import { SEASON, TIER_COUNT, byId, categoryKind } from '../data/catalog';
 import { POI_TYPE_META } from '../components/ZoneMap';
 import { isOpenNow } from '../components/PoiSheet';
 import { useGame } from '../engine/GameContext';
@@ -19,7 +19,7 @@ const pickNearby = (pois: Poi[]) =>
     .filter(Boolean);
 
 export function Home() {
-  const { go, profile } = useGame();
+  const { go, profile, daily, dailyAssignment, dailyOpen, pass } = useGame();
   const { world, status, request, busy } = useWorld();
   const insets = useSafeAreaInsets();
   const nearby = pickNearby(world.pois);
@@ -28,7 +28,7 @@ export function Home() {
   const title = byId(eq.title)!;
   const frame = byId(eq.frame)!;
   const pin = byId(eq.pin)!;
-  const passPct = SEASON.currentTier / 50;
+  const passPct = (pass.tier - 1) / TIER_COUNT;
 
   const slots = [
     { key: 'pin' as const, label: 'PIN', item: byId(eq.pin)! },
@@ -74,6 +74,37 @@ export function Home() {
           </View>
         </FadeIn>
 
+        {/* Solo. Sits above everything that needs other people, because on
+            day one the player does not have other people yet. */}
+        <FadeIn index={1}>
+          <PressScale onPress={() => go('solo')} style={{ marginTop: space(5) }}>
+            <Card
+              style={[
+                styles.soloCard,
+                dailyOpen && { borderColor: color.accentDim },
+              ]}
+            >
+              <View style={styles.metaRow}>
+                <Label tone={dailyOpen ? 'accent' : 'text'}>
+                  {dailyOpen ? 'Daily assignment · open' : 'Solo'}
+                </Label>
+                <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
+                  {dailyOpen ? 'TAKE IT →' : 'OPEN →'}
+                </Mono>
+              </View>
+              <Text style={styles.soloPrompt} numberOfLines={2}>
+                {dailyOpen
+                  ? dailyAssignment.text
+                  : 'Done today. Practice runs are always open.'}
+              </Text>
+              <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1.2, marginTop: space(2) }}>
+                {daily.streak > 0 ? `${daily.streak} WEEK STREAK · ` : ''}
+                NO PARTY NEEDED
+              </Mono>
+            </Card>
+          </PressScale>
+        </FadeIn>
+
         {/* season pass */}
         <FadeIn index={1}>
           <PressScale onPress={() => go('pass')} style={{ marginTop: space(5) }}>
@@ -81,7 +112,7 @@ export function Home() {
               <View style={styles.metaRow}>
                 <Label tone="text">{`Season pass · ${SEASON.name}`}</Label>
                 <Mono style={{ fontSize: 10, color: color.accent }}>
-                  TIER {SEASON.currentTier} / 50 →
+                  TIER {pass.tier} / {TIER_COUNT} →
                 </Mono>
               </View>
               <View style={styles.tierRow}>
@@ -166,6 +197,28 @@ export function Home() {
           <View style={{ marginTop: space(6), gap: space(3) }}>
             <Btn title="Host a round" onPress={() => go('lobby')} />
             <Btn title="Join with code" variant="outline" onPress={() => go('join')} />
+            {/* The map legend is reference material, not a one-time cutscene.
+                The most cited FTUE failure in this genre is a tutorial that can
+                never be seen again, so it gets a real card on the main screen
+                rather than a text link that is easy to miss. */}
+            <PressScale onPress={() => go('mapTutorial')}>
+              <Card style={styles.legendCard}>
+                <View style={styles.legendGlyphs}>
+                  {[color.accent, '#9BE8FF', '#D8B4FF'].map((tint) => (
+                    <View key={tint} style={[styles.legendDiamond, { borderColor: tint }]} />
+                  ))}
+                </View>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Label tone="text">How to read the map</Label>
+                  <Mono style={{ fontSize: 10, color: color.faint, marginTop: 3 }}>
+                    What the three pin types do
+                  </Mono>
+                </View>
+                <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
+                  OPEN →
+                </Mono>
+              </Card>
+            </PressScale>
           </View>
         </FadeIn>
 
@@ -356,6 +409,29 @@ const styles = StyleSheet.create({
     width: 11,
     height: 11,
     borderWidth: 1.6,
+    transform: [{ rotate: '45deg' }],
+  },
+  soloCard: {
+    padding: space(4),
+  },
+  soloPrompt: {
+    fontFamily: font.display,
+    fontSize: 19,
+    lineHeight: 25,
+    color: color.text,
+    marginTop: space(2.5),
+  },
+  legendCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space(3),
+    padding: space(3.5),
+  },
+  legendGlyphs: { flexDirection: 'row', gap: 5 },
+  legendDiamond: {
+    width: 11,
+    height: 11,
+    borderWidth: 2,
     transform: [{ rotate: '45deg' }],
     flexShrink: 0,
   },

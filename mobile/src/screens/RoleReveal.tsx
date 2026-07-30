@@ -3,7 +3,7 @@ import { Animated, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { color, font, space, REDUCED_MOTION } from '../theme';
 import { Label, Mono } from '../components/ui';
-import { useGame, SEEKER_BOT } from '../engine/GameContext';
+import { useGame, SEEKER_BOT, ROUND_DISPLAY_MINUTES } from '../engine/GameContext';
 
 const NAMES = ['MAYA', 'KAI', 'DEV', 'JULES', 'ARI', 'YOU'];
 
@@ -60,7 +60,7 @@ export function RoleReveal() {
       </Mono>
       {!seeking && (
         <Mono style={[styles.note, { color: color.faint, marginTop: space(4) }]}>
-          {(profile.handle || 'YOU') + ' · HIDER · ROUND 45:00'}
+          {`${profile.handle || 'YOU'} · HIDER · ROUND ${ROUND_DISPLAY_MINUTES}:00`}
         </Mono>
       )}
     </Animated.View>

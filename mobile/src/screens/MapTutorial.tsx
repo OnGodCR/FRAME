@@ -64,7 +64,9 @@ export function MapTutorial() {
         }}
       >
         <FadeIn>
-          <Label>Step 6 of 6 · Reading the map</Label>
+          {/* Reference, not a one-time cutscene. Reachable from home and from
+              the round screen's ? button, as often as anyone wants it. */}
+          <Label>Reading the map</Label>
           <Text style={styles.h1}>The diamonds are worth walking to</Text>
           <Body style={{ color: color.dim, marginTop: space(2) }}>
             Real places near you, filtered down to public ground. Three kinds, and the
@@ -148,7 +150,7 @@ export function MapTutorial() {
       </ScrollView>
 
       <View style={{ padding: space(6), paddingTop: 0, paddingBottom: insets.bottom + space(5) }}>
-        <Btn title="Got it" onPress={() => go('home')} />
+        <Btn title="Back" onPress={() => go('home')} />
       </View>
     </View>
   );

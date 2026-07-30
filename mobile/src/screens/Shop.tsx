@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { CosmeticPreview } from '../components/Cosmetics';
+import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { CountUp, FadeIn, PressScale, useFlash } from '../components/motion';
 import { Cosmetic, SHOP_ITEMS, SEASON, categoryKind, CATEGORIES } from '../data/catalog';
 import { useGame } from '../engine/GameContext';
@@ -13,6 +14,8 @@ import { Animated } from 'react-native';
 export function Shop() {
   const { go, profile, purchase, buyPass } = useGame();
   const insets = useSafeAreaInsets();
+  const frames = SHOP_ITEMS.filter((i) => i.category === 'frame');
+  const others = SHOP_ITEMS.filter((i) => i.category !== 'frame');
 
   return (
     <View style={styles.screen}>
@@ -81,14 +84,39 @@ export function Shop() {
           </Card>
         </FadeIn>
 
-        {/* cosmetics grid */}
+        {/* Frames get flagship billing rather than being one tab of five.
+            Every check-in photo a hider sends is wearing theirs, and the
+            seeker sees every one of them, so it is by a wide margin the
+            highest impression-count cosmetic in the product. It is also the
+            only one that reads as status in a game about photographs. */}
         <FadeIn index={2}>
-          <Label tone="text" style={{ marginTop: space(6), marginBottom: space(3) }}>
-            Cosmetics
-          </Label>
+          <View style={styles.sectionHead}>
+            <Label tone="text">Photo frames</Label>
+            <Label tone="faint">SEEN BY EVERYONE</Label>
+          </View>
+          <Mono style={styles.sectionNote}>
+            Wraps every capture you send. The one cosmetic other players actually look at.
+          </Mono>
+        </FadeIn>
+        {frames.map((item, i) => (
+          <FrameTile
+            key={item.id}
+            item={item}
+            index={i}
+            owned={profile.owned.includes(item.id)}
+            affordable={profile.film >= (item.cost ?? 0)}
+            onBuy={() => purchase(item.id, item.cost ?? 0)}
+          />
+        ))}
+
+        {/* everything else */}
+        <FadeIn index={3}>
+          <View style={styles.sectionHead}>
+            <Label tone="text">Everything else</Label>
+          </View>
         </FadeIn>
         <View style={styles.grid}>
-          {SHOP_ITEMS.map((item, i) => (
+          {others.map((item, i) => (
             <ShopTile
               key={item.id}
               item={item}
@@ -139,6 +167,90 @@ export function Shop() {
         </FadeIn>
       </ScrollView>
     </View>
+  );
+}
+
+/**
+ * A frame shown the way it is actually experienced: wrapped around a capture,
+ * at the size it appears in the seeker's feed. An abstract swatch tells the
+ * player nothing about the thing they would be buying.
+ */
+function FrameTile({
+  item,
+  index,
+  owned,
+  affordable,
+  onBuy,
+}: {
+  item: Cosmetic;
+  index: number;
+  owned: boolean;
+  affordable: boolean;
+  onBuy: () => boolean;
+}) {
+  const { flashOpacity, fire } = useFlash();
+  // Stable per item so the preview does not reshuffle on every render.
+  const seed = useMemo(
+    () => item.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) * 37,
+    [item.id],
+  );
+
+  return (
+    <FadeIn index={index} delay={120}>
+      <PressScale
+        disabled={owned || !affordable}
+        haptic="none"
+        onPress={() => {
+          if (onBuy()) {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            fire();
+          }
+        }}
+        style={[
+          styles.frameCard,
+          owned && { borderColor: color.accentDim },
+          !owned && !affordable && { opacity: 0.55 },
+        ]}
+      >
+        <View style={[styles.framePreview, { borderColor: item.tint }]}>
+          <ProceduralPhoto seed={seed} width={92} height={92} variant="back" />
+        </View>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Label tone="faint" style={{ fontSize: 8 }}>
+            PHOTO FRAME
+          </Label>
+          <Text style={[styles.frameName, { color: item.tint }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <View style={styles.itemPriceRow}>
+            {owned ? (
+              <Mono style={{ fontSize: 11, color: color.accent, letterSpacing: 1 }}>OWNED</Mono>
+            ) : (
+              <>
+                <CosmeticPreview
+                  kind="film"
+                  size={14}
+                  tint={affordable ? color.accent : color.faint}
+                />
+                <Mono
+                  style={{
+                    fontSize: 13,
+                    color: affordable ? color.text : color.faint,
+                    fontFamily: font.monoSemi,
+                  }}
+                >
+                  {item.cost}
+                </Mono>
+              </>
+            )}
+          </View>
+        </View>
+        <Animated.View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: color.accent, opacity: flashOpacity }]}
+        />
+      </PressScale>
+    </FadeIn>
   );
 }
 
@@ -227,6 +339,42 @@ const styles = StyleSheet.create({
     fontSize: 34,
     color: color.text,
     letterSpacing: -0.5,
+  },
+  sectionHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: space(6),
+    marginBottom: space(2),
+  },
+  sectionNote: {
+    fontSize: 10,
+    lineHeight: 15,
+    color: color.faint,
+    marginBottom: space(3),
+  },
+  frameCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space(3.5),
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    padding: space(3),
+    marginBottom: space(2.5),
+    overflow: 'hidden',
+  },
+  framePreview: {
+    borderWidth: 2,
+    borderRadius: radius.sm,
+    padding: 3,
+    overflow: 'hidden',
+  },
+  frameName: {
+    fontFamily: font.display,
+    fontSize: 20,
+    marginTop: 2,
   },
   filmChip: {
     flexDirection: 'row',

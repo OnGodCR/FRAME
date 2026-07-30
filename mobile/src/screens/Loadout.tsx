@@ -200,6 +200,9 @@ function sourceLabel(item: { source: string; cost?: number; tier?: number }) {
   if (item.source === 'shop') return `SHOP · ${item.cost}`;
   if (item.source === 'free') return `FREE · TIER ${item.tier}`;
   if (item.source === 'paid') return `PASS · TIER ${item.tier}`;
+  // Bundle-only items are deliberately not purchasable with FILM, so saying
+  // where to get one would be a dead end. Say what it is instead.
+  if (item.source === 'bundle') return 'BUNDLE ONLY';
   return 'LOCKED';
 }
 

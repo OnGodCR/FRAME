@@ -169,7 +169,7 @@ export function DobGate() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
-        <Label>Step 1 of 6</Label>
+        <Label>Step 1 of 4</Label>
         <Text style={styles.h1}>Date of birth</Text>
         <Body style={{ color: color.dim, marginTop: space(2) }}>
           Required once. Not shown to other players.
@@ -265,7 +265,7 @@ export function HandlePick() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
-        <Label>Step 4 of 6</Label>
+        <Label>Step 4 of 4</Label>
         <Text style={styles.h1}>Pick a handle</Text>
         <Body style={{ color: color.dim, marginTop: space(2) }}>
           This is what your party sees on the map and in the feed.
@@ -287,7 +287,12 @@ export function HandlePick() {
           disabled={v.length < 3}
           onPress={() => {
             setHandle(v);
-            go('permissions');
+            // Straight to the game. The permission explainer that used to sit
+            // here requested nothing, so it was pure reading in the one place
+            // a new player has the least patience for it. Each permission now
+            // explains itself at the moment it is actually asked for, which is
+            // what that screen promised and the funnel did not do.
+            go('home');
           }}
         />
       </View>
@@ -295,48 +300,44 @@ export function HandlePick() {
   );
 }
 
-const PERMS = [
-  {
+/**
+ * What each permission is for, in the player's language.
+ *
+ * This used to be its own onboarding step, which requested nothing and so was
+ * pure reading placed before the player had any reason to care. The copy was
+ * always right; the placement was wrong. It now renders next to the button
+ * that actually triggers the system prompt, via PermissionNote.
+ */
+export const PERMS = {
+  location: {
     name: 'LOCATION',
-    note: "Asked when you join your first round, never at launch. Between reveals, your position never leaves the server.",
+    note: 'Asked when you join your first round, never at launch. Between reveals, your position never leaves the server.',
   },
-  {
+  camera: {
     name: 'CAMERA',
     note: 'Live in-app capture only. FRAME never asks for gallery access.',
   },
-  {
+  notifications: {
     name: 'NOTIFICATIONS',
     note: 'Check-in ticks arrive as time-sensitive alerts. Miss one and you are out.',
   },
-  {
+  bluetooth: {
     name: 'BLUETOOTH',
     note: 'Used once per tag, to prove the seeker is actually next to you.',
   },
-];
+} as const;
 
-export function Permissions() {
-  const { go } = useGame();
-  const insets = useSafeAreaInsets();
+export type PermKey = keyof typeof PERMS;
+
+/** Drop this immediately above whatever triggers the system prompt. */
+export function PermissionNote({ perm }: { perm: PermKey }) {
+  const p = PERMS[perm];
   return (
-    <View style={styles.screen}>
-      <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
-        <Label>Step 5 of 6</Label>
-        <Text style={styles.h1}>What FRAME will ask for</Text>
-        <Body style={{ color: color.dim, marginTop: space(2), marginBottom: space(4) }}>
-          Each permission is requested in context, the first time it's needed.
-        </Body>
-        {PERMS.map((p) => (
-          <View key={p.name} style={styles.permRow}>
-            <View style={styles.permTick} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.permName}>{p.name}</Text>
-              <Mono style={{ fontSize: 12, marginTop: 2, lineHeight: 17 }}>{p.note}</Mono>
-            </View>
-          </View>
-        ))}
-      </View>
-      <View style={{ padding: space(6), paddingBottom: insets.bottom + space(6) }}>
-        <Btn title="Next" onPress={() => go('mapTutorial')} />
+    <View style={styles.permRow}>
+      <View style={styles.permTick} />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={styles.permName}>{p.name}</Text>
+        <Mono style={{ fontSize: 11, marginTop: 2, lineHeight: 16 }}>{p.note}</Mono>
       </View>
     </View>
   );

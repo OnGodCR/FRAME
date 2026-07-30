@@ -18,7 +18,7 @@ import { useWorld } from '../engine/WorldContext';
 import { useHeading } from '../engine/useHeading';
 import { ExplainerButton, InventoryDrawer, SosButton, Ticker } from '../components/RoundChrome';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
-import { FeedPhoto, fmtClock, roundClock, useGame } from '../engine/GameContext';
+import { FeedPhoto, fmtClock, roundClock, useGame, DEMO_SPEED } from '../engine/GameContext';
 
 export function SeekerRound() {
   const { round, leaveRound, tag } = useGame();
@@ -62,6 +62,7 @@ export function SeekerRound() {
             ROUND
           </Label>
           <Text style={styles.clock}>{roundClock(round)}</Text>
+          <Mono style={styles.paceTag}>DEMO PACE · {DEMO_SPEED}× REAL TIME</Mono>
         </View>
         <View style={{ alignItems: 'center' }}>
           <Label tone="danger">Seeking</Label>
@@ -215,6 +216,12 @@ const styles = StyleSheet.create({
     paddingBottom: space(2.5),
     borderBottomWidth: 1,
     borderBottomColor: color.line,
+  },
+  paceTag: {
+    fontSize: 8,
+    letterSpacing: 1,
+    color: color.faint,
+    marginTop: 1,
   },
   clock: {
     fontFamily: font.display,

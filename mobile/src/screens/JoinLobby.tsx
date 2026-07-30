@@ -18,6 +18,7 @@ import { FadeIn } from '../components/motion';
 import { ZoneMap } from '../components/ZoneMap';
 import { useWorld } from '../engine/WorldContext';
 import { useGame, SEEKER_BOT } from '../engine/GameContext';
+import { PermissionNote } from './Onboarding';
 
 // ---------- join ----------
 
@@ -133,7 +134,7 @@ const SETTING_DEFS: SettingDef[] = [
 
 const DEFAULT_SETTINGS: Record<string, number> = {
   zone: 2,
-  round: 2,
+  round: 1,
   checkin: 1,
   reveal: 1,
   visible: 1,
@@ -144,19 +145,65 @@ const DEFAULT_SETTINGS: Record<string, number> = {
   spectate: 0,
 };
 
-/** PRD 4.2: rural play is a settings problem, so it gets a one-tap preset. */
-const RURAL_PRESET: Record<string, number> = {
-  ...DEFAULT_SETTINGS,
-  zone: 4,
-  round: 4,
-  reveal: 0,
-  visible: 3,
-};
+/**
+ * Named presets.
+ *
+ * Ten settings is a lot to hand a host who has never played, and the previous
+ * version buried the only preset behind one APPLY RURAL PRESET link at the
+ * bottom of the list, where nobody found it. These are the actual answer to
+ * "what should I pick", so they go first and they say what they change.
+ *
+ * PRD 4.2: rural play is a settings problem, which is why it gets a preset
+ * rather than a separate mode.
+ */
+export interface Preset {
+  key: string;
+  name: string;
+  blurb: string;
+  detail: string;
+  settings: Record<string, number>;
+}
+
+export const PRESETS: Preset[] = [
+  {
+    key: 'city',
+    name: 'CITY',
+    blurb: 'The default. Dense streets, short walks.',
+    detail: '1 KM · 30 MIN · CHECK-IN 5 MIN',
+    settings: { ...DEFAULT_SETTINGS },
+  },
+  {
+    key: 'sprint',
+    name: 'SPRINT',
+    blurb: 'One quick game. Good for a first round.',
+    detail: '500 M · 20 MIN · CHECK-IN 3 MIN',
+    settings: { ...DEFAULT_SETTINGS, zone: 1, round: 0, checkin: 0, reveal: 0, cooldown: 0 },
+  },
+  {
+    key: 'rural',
+    name: 'RURAL',
+    blurb: 'Spread out, fewer landmarks, longer legs.',
+    detail: '5 KM · 90 MIN · REVEALS STAY UP',
+    settings: { ...DEFAULT_SETTINGS, zone: 4, round: 4, reveal: 0, visible: 3 },
+  },
+];
+
+/** FILM per bid increment, and what the bots are willing to pay. */
+const BID_STEP = 25;
+const RIVAL_BID = 75;
+
+/** Which preset the current settings match, if any. */
+function activePreset(s: Record<string, number>): string | null {
+  const found = PRESETS.find((p) =>
+    Object.keys(p.settings).every((k) => p.settings[k] === s[k]),
+  );
+  return found ? found.key : null;
+}
 
 const HOST_LEVEL_GATE = 20;
 
 export function Lobby() {
-  const { go, profile, partyCode, startRound } = useGame();
+  const { go, profile, partyCode, startRound, spendFilm } = useGame();
   const { world, status, request } = useWorld();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -199,6 +246,16 @@ export function Lobby() {
   ];
   const allBotsIn = elapsed >= 10;
   const canStart = acked && allBotsIn;
+  const preset = activePreset(settings);
+
+  // Seeker bidding. Highest bid takes the role rather than the server rolling
+  // for it. Bids are in FILM, which is earned only, never sold: see the note on
+  // Profile.film. The winner PAYS, so this is a sink, not a reward, and wanting
+  // to seek is a preference rather than an advantage.
+  const [bid, setBid] = useState(0);
+  const topRivalBid = allBotsIn ? RIVAL_BID : 0;
+  const winningBid = bid > topRivalBid;
+  const canBid = bid + BID_STEP <= profile.film;
 
   return (
     <View style={styles.screen}>
@@ -280,6 +337,51 @@ export function Lobby() {
           ))}
         </Card>
 
+        {/* presets, before the ten individual dials */}
+        <Card style={{ marginTop: space(4), padding: 0 }}>
+          <View style={styles.cardHeader}>
+            <Label tone="text">Preset</Label>
+            <Mono style={{ fontSize: 10, color: color.faint }}>
+              {preset ? 'MATCHED' : 'CUSTOM'}
+            </Mono>
+          </View>
+          <View style={{ paddingHorizontal: space(4), paddingBottom: space(4), gap: space(2) }}>
+            {PRESETS.map((p) => {
+              const on = preset === p.key;
+              return (
+                <Pressable
+                  key={p.key}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setSettings({ ...p.settings });
+                  }}
+                  style={({ pressed }) => [
+                    styles.presetCard,
+                    on && { borderColor: color.accent, backgroundColor: color.surface2 },
+                    pressed && { opacity: 0.75 },
+                  ]}
+                >
+                  <View style={styles.presetTop}>
+                    <Mono style={[styles.presetName, on && { color: color.accent }]}>
+                      {p.name}
+                    </Mono>
+                    {on && (
+                      <Mono style={{ fontSize: 9, letterSpacing: 1.2, color: color.accent }}>
+                        ACTIVE
+                      </Mono>
+                    )}
+                  </View>
+                  <Mono style={styles.presetBlurb}>{p.blurb}</Mono>
+                  <Mono style={styles.presetDetail}>{p.detail}</Mono>
+                </Pressable>
+              );
+            })}
+            <Mono style={{ fontSize: 9, color: color.faint, lineHeight: 14 }}>
+              Pick one, then change anything below. Editing a dial makes it CUSTOM.
+            </Mono>
+          </View>
+        </Card>
+
         {/* settings */}
         <Card style={{ marginTop: space(4), padding: 0 }}>
           <View style={styles.cardHeader}>
@@ -311,18 +413,6 @@ export function Lobby() {
               </Pressable>
             );
           })}
-          <Pressable
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              setSettings(RURAL_PRESET);
-            }}
-            style={({ pressed }) => [styles.presetRow, pressed && { opacity: 0.7 }]}
-          >
-            <Mono style={styles.presetText}>APPLY RURAL PRESET</Mono>
-            <Mono style={{ fontSize: 9, color: color.faint }}>
-              5 KM · 90 MIN · REVEALS STAY UP
-            </Mono>
-          </Pressable>
           {gatedNotice && (
             <View style={styles.gateNotice}>
               <Mono style={{ fontSize: 10, color: color.warn, lineHeight: 15 }}>
@@ -331,6 +421,80 @@ export function Lobby() {
               </Mono>
             </View>
           )}
+        </Card>
+
+        {/* seeker bidding */}
+        <Card style={{ marginTop: space(4), padding: 0 }}>
+          <View style={styles.cardHeader}>
+            <Label tone="text">Bid to seek</Label>
+            <Mono style={{ fontSize: 10, color: color.faint }}>OPTIONAL</Mono>
+          </View>
+          <View style={{ paddingHorizontal: space(4), paddingBottom: space(4) }}>
+            <Mono style={{ fontSize: 11, color: color.dim, lineHeight: 17 }}>
+              Nobody has to seek. If more than one of you wants it, the highest bid
+              takes the role and pays. Otherwise it is assigned at random.
+            </Mono>
+
+            <View style={styles.bidRow}>
+              <View>
+                <Label tone="faint">YOUR BID</Label>
+                <Text style={[styles.bidValue, winningBid && { color: color.accent }]}>
+                  {bid}
+                </Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Label tone="faint">TOP BID</Label>
+                <Text style={styles.bidRival}>
+                  {Math.max(topRivalBid, bid)}
+                  {winningBid ? ' · YOU' : topRivalBid > 0 ? ' · KAI' : ''}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.bidControls}>
+              <Pressable
+                disabled={bid === 0}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setBid((b) => Math.max(0, b - BID_STEP));
+                }}
+                style={({ pressed }) => [
+                  styles.bidBtn,
+                  bid === 0 && { opacity: 0.4 },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Mono style={styles.bidBtnText}>−{BID_STEP}</Mono>
+              </Pressable>
+              <Pressable
+                disabled={!canBid}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setBid((b) => b + BID_STEP);
+                }}
+                style={({ pressed }) => [
+                  styles.bidBtn,
+                  !canBid && { opacity: 0.4 },
+                  pressed && { opacity: 0.7 },
+                ]}
+              >
+                <Mono style={styles.bidBtnText}>+{BID_STEP}</Mono>
+              </Pressable>
+              <View style={{ flex: 1 }} />
+              <Mono style={{ fontSize: 10, color: color.faint }}>
+                {profile.film - bid} FILM LEFT
+              </Mono>
+            </View>
+
+            {!canBid && bid < profile.film + BID_STEP && (
+              <Mono style={{ fontSize: 10, color: color.warn, marginTop: space(2) }}>
+                Not enough FILM. Earn it from daily assignments and rounds.
+              </Mono>
+            )}
+            <Mono style={{ fontSize: 9, color: color.faint, marginTop: space(2), lineHeight: 14 }}>
+              FILM IS EARNED, NEVER SOLD. SEEKING IS A ROLE, NOT AN ADVANTAGE.
+            </Mono>
+          </View>
         </Card>
 
         {/* safety gate */}
@@ -369,17 +533,27 @@ export function Lobby() {
           borderTopColor: color.line,
         }}
       >
+        {/* Starting the round is what asks for notification permission, so
+            the explanation belongs here rather than four screens back in a
+            list the player skimmed before any of it meant anything. */}
+        {canStart && <PermissionNote perm="notifications" />}
         <Btn
           title="Start round"
           disabled={!canStart}
           sub={
             canStart
-              ? 'seeker assigned at random, server-side'
+              ? winningBid
+                ? `you win the bid at ${bid} FILM · you seek`
+                : 'seeker assigned at random, server-side'
               : !acked
                 ? 'acknowledge the safety card first'
                 : 'waiting for players…'
           }
-          onPress={() => startRound('hider')}
+          onPress={() => {
+            // Winning the bid buys the role and the FILM is spent either way.
+            if (winningBid) spendFilm(bid);
+            startRound(winningBid ? 'seeker' : 'hider');
+          }}
         />
       </View>
 
@@ -409,6 +583,7 @@ const RULES = [
 function SafetyOverlay({ onAck, onClose }: { onAck: () => void; onClose: () => void }) {
   const [reachedEnd, setReachedEnd] = useState(false);
   const [viewH, setViewH] = useState(0);
+  const [contentH, setContentH] = useState(0);
   const insets = useSafeAreaInsets();
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
@@ -416,6 +591,15 @@ function SafetyOverlay({ onAck, onClose }: { onAck: () => void; onClose: () => v
       setReachedEnd(true);
     }
   };
+
+  // Same fits-entirely case as the legal gate, and the stakes are higher: this
+  // gate is the only thing standing between a tall-screen player and never
+  // being able to start a round. onLayout and onContentSizeChange fire in an
+  // order that is not guaranteed, so the comparison belongs in an effect that
+  // re-runs when either value lands rather than inside one of the handlers.
+  useEffect(() => {
+    if (viewH > 0 && contentH > 0 && contentH <= viewH + 8) setReachedEnd(true);
+  }, [viewH, contentH]);
   return (
     <View style={[styles.safetyOverlay, { paddingTop: insets.top + space(4) }]}>
       <View style={{ paddingHorizontal: space(6) }}>
@@ -425,9 +609,7 @@ function SafetyOverlay({ onAck, onClose }: { onAck: () => void; onClose: () => v
       <ScrollView
         onScroll={onScroll}
         onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
-        onContentSizeChange={(_, h) => {
-          if (viewH > 0 && h <= viewH + 8) setReachedEnd(true);
-        }}
+        onContentSizeChange={(_, h) => setContentH(h)}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator
         style={{ flex: 1, marginTop: space(4) }}
@@ -563,6 +745,51 @@ const styles = StyleSheet.create({
   },
   settingValue: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   settingChevron: { fontSize: 14, color: color.faint, marginTop: -2 },
+  bidRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: space(3),
+  },
+  bidValue: {
+    fontFamily: font.display,
+    fontSize: 30,
+    color: color.text,
+    fontVariant: ['tabular-nums'],
+  },
+  bidRival: {
+    fontFamily: font.monoSemi,
+    fontSize: 14,
+    color: color.dim,
+  },
+  bidControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space(2),
+    marginTop: space(3),
+  },
+  bidBtn: {
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.sm,
+    paddingVertical: space(2),
+    paddingHorizontal: space(3.5),
+  },
+  bidBtnText: { fontSize: 12, letterSpacing: 1, color: color.text },
+  presetCard: {
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: radius.md,
+    padding: space(3),
+  },
+  presetTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  presetName: { fontSize: 13, letterSpacing: 2, color: color.text },
+  presetBlurb: { fontSize: 11, color: color.dim, marginTop: 3, lineHeight: 16 },
+  presetDetail: { fontSize: 9, letterSpacing: 1.2, color: color.faint, marginTop: 4 },
   presetRow: {
     paddingHorizontal: space(4),
     paddingVertical: space(3),

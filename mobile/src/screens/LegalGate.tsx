@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Modal,
   NativeScrollEvent,
@@ -44,6 +44,7 @@ export function LegalGate() {
   const insets = useSafeAreaInsets();
   const [reachedEnd, setReachedEnd] = useState(false);
   const [viewerH, setViewerH] = useState(0);
+  const [contentH, setContentH] = useState(0);
   const [open, setOpen] = useState<Doc | null>(null);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -53,19 +54,31 @@ export function LegalGate() {
     }
   };
 
+  // A gate that cannot be satisfied is worse than no gate at all. On a wide or
+  // tall viewport the four points fit without overflowing, so there is nothing
+  // to scroll and onScroll never fires: the player is locked out of the app
+  // permanently. That is reachable on a tablet, on an unfolded foldable, and in
+  // the desktop dev preview.
+  //
+  // This has to live in an effect rather than inside either handler, because
+  // onLayout and onContentSizeChange fire in an order React Native does not
+  // guarantee. Checking inside onContentSizeChange alone (the previous version)
+  // read viewerH while it was still 0, skipped the check, and never ran again.
+  useEffect(() => {
+    if (viewerH > 0 && contentH > 0 && contentH <= viewerH + 8) setReachedEnd(true);
+  }, [viewerH, contentH]);
+
   return (
     <View style={styles.screen}>
       <View style={{ paddingHorizontal: space(6), paddingTop: insets.top + space(8) }}>
-        <Label>Step 2 of 6</Label>
+        <Label>Step 2 of 4</Label>
         <Text style={styles.h1}>Before you make an account</Text>
       </View>
 
       <ScrollView
         onScroll={onScroll}
         onLayout={(e) => setViewerH(e.nativeEvent.layout.height)}
-        onContentSizeChange={(_, h) => {
-          if (viewerH > 0 && h <= viewerH + 8) setReachedEnd(true);
-        }}
+        onContentSizeChange={(_, h) => setContentH(h)}
         scrollEventThrottle={16}
         style={{ flex: 1, marginTop: space(4) }}
         contentContainerStyle={{ paddingHorizontal: space(6), paddingBottom: space(6) }}

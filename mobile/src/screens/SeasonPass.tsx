@@ -12,19 +12,19 @@ import { useGame } from '../engine/GameContext';
 const ROW_H = 92;
 
 export function SeasonPass() {
-  const { go, profile, buyPass } = useGame();
+  const { go, profile, buyPass, pass } = useGame();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
 
   // A 50-row track is useless if it opens at tier 1, so land the player on
   // where they actually are, with a couple of claimed tiers above for context.
   const onLayout = () => {
-    const y = Math.max(0, (SEASON.currentTier - 3) * ROW_H);
+    const y = Math.max(0, (pass.tier - 3) * ROW_H);
     scrollRef.current?.scrollTo({ y, animated: false });
   };
 
-  const claimedFree = TIERS.filter((t) => t.free && t.n <= SEASON.currentTier).length;
-  const claimedPaid = TIERS.filter((t) => t.paid && t.n <= SEASON.currentTier).length;
+  const claimedFree = TIERS.filter((t) => t.free && t.n <= pass.tier).length;
+  const claimedPaid = TIERS.filter((t) => t.paid && t.n <= pass.tier).length;
 
   return (
     <View style={styles.screen}>
@@ -44,7 +44,7 @@ export function SeasonPass() {
             <Label tone="faint" style={{ fontSize: 8 }}>
               TIER
             </Label>
-            <Text style={styles.tierBadgeNum}>{SEASON.currentTier}</Text>
+            <Text style={styles.tierBadgeNum}>{pass.tier}</Text>
           </View>
         </View>
         <View style={{ marginTop: space(3) }}>
@@ -53,10 +53,12 @@ export function SeasonPass() {
               {claimedFree + (profile.paidPass ? claimedPaid : 0)} REWARDS CLAIMED
             </Mono>
             <Mono style={{ fontSize: 10, color: color.faint }}>
-              {SEASON.xpInTier} / {SEASON.xpPerTier} XP → TIER {SEASON.currentTier + 1}
+              {pass.complete
+                ? 'TRACK COMPLETE'
+                : `${pass.xpInTier} / ${pass.xpPerTier} XP → TIER ${pass.tier + 1}`}
             </Mono>
           </View>
-          <Bar value={SEASON.tierProgress} height={5} />
+          <Bar value={pass.progress} height={5} />
         </View>
         <View style={styles.trackHeader}>
           <View style={{ width: 46 }} />
@@ -78,7 +80,12 @@ export function SeasonPass() {
         }}
       >
         {TIERS.map((tier) => (
-          <TierRow key={tier.n} tier={tier} paidPass={profile.paidPass} />
+          <TierRow
+            key={tier.n}
+            tier={tier}
+            paidPass={profile.paidPass}
+            currentTier={pass.tier}
+          />
         ))}
         <Mono style={styles.footnote}>
           Both tracks advance on the same XP. The paid track is cosmetics and FILM
@@ -110,9 +117,17 @@ export function SeasonPass() {
   );
 }
 
-function TierRow({ tier, paidPass }: { tier: Tier; paidPass: boolean }) {
-  const reached = tier.n <= SEASON.currentTier;
-  const current = tier.n === SEASON.currentTier;
+function TierRow({
+  tier,
+  paidPass,
+  currentTier,
+}: {
+  tier: Tier;
+  paidPass: boolean;
+  currentTier: number;
+}) {
+  const reached = tier.n <= currentTier;
+  const current = tier.n === currentTier;
 
   return (
     <View

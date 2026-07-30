@@ -17,7 +17,7 @@ import { color } from './src/theme';
 import { EASE_OUT } from './src/components/motion';
 import { GameProvider, Route, useGame } from './src/engine/GameContext';
 import { WorldProvider } from './src/engine/WorldContext';
-import { Splash, DobGate, HandlePick, Permissions } from './src/screens/Onboarding';
+import { Splash, DobGate, HandlePick } from './src/screens/Onboarding';
 import { LegalGate } from './src/screens/LegalGate';
 import { AuthGate } from './src/screens/AuthGate';
 import { Home } from './src/screens/Home';
@@ -31,6 +31,7 @@ import { HiderRound } from './src/screens/HiderRound';
 import { CheckinFlow } from './src/screens/CheckinFlow';
 import { SeekerRound } from './src/screens/SeekerRound';
 import { Blackout, Results } from './src/screens/Endings';
+import { SoloHub, SoloRun } from './src/screens/Solo';
 
 // Navigation depth drives transition direction: going deeper slides in from
 // the right, going back slides in from the left.
@@ -40,7 +41,6 @@ const DEPTH: Record<Route, number> = {
   legal: 2,
   auth: 3,
   handle: 4,
-  permissions: 5,
   mapTutorial: 6,
   home: 7,
   shop: 8,
@@ -53,6 +53,10 @@ const DEPTH: Record<Route, number> = {
   checkin: 12,
   blackout: 13,
   results: 13,
+  // Solo sits alongside the other home-level destinations, so entering it
+  // slides forward and backing out of it slides back.
+  solo: 8,
+  soloRun: 9,
 };
 
 function Router() {
@@ -91,9 +95,6 @@ function Router() {
     case 'handle':
       screen = <HandlePick />;
       break;
-    case 'permissions':
-      screen = <Permissions />;
-      break;
     case 'mapTutorial':
       screen = <MapTutorial />;
       break;
@@ -129,6 +130,12 @@ function Router() {
       break;
     case 'results':
       screen = <Results />;
+      break;
+    case 'solo':
+      screen = <SoloHub />;
+      break;
+    case 'soloRun':
+      screen = <SoloRun />;
       break;
   }
 

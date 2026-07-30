@@ -4,8 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Bar, Btn, Card, Label, Mono, Rule } from '../components/ui';
-import { FadeIn } from '../components/motion';
-import { useGame, SEEKER_BOT } from '../engine/GameContext';
+import { FadeIn, PressScale } from '../components/motion';
+import { AvatarMark } from '../components/Cosmetics';
+import { STARTER_BUNDLE, byId } from '../data/catalog';
+import { useGame, SEEKER_BOT, ROUND_DISPLAY_MINUTES } from '../engine/GameContext';
 
 // ---------- blackout (missed check-in) ----------
 
@@ -58,15 +60,17 @@ export function Blackout() {
 // ---------- results ----------
 
 export function Results() {
-  const { round, go, startRound, finishRound, addXp, profile } = useGame();
+  const { round, go, startRound, finishRound, addXp, profile, seen, markSeen } = useGame();
   const insets = useSafeAreaInsets();
   const [xpApplied, setXpApplied] = useState(false);
+  // Only after a round has actually been finished, and only once ever.
+  const showStarter = !seen.starterOffered && !profile.owned.includes(STARTER_BUNDLE.frameId);
   const barAnim = useRef(new Animated.Value(0)).current;
 
   const data = useMemo(() => {
     if (!round) return null;
     const frac = Math.min(1, round.elapsed / round.totalReal);
-    const survivedMin = Math.round(45 * frac);
+    const survivedMin = Math.round(ROUND_DISPLAY_MINUTES * frac);
     if (round.role === 'hider') {
       const survived = round.outcome === 'survived';
       const checkins = round.checkinsPassed + 3;
@@ -95,7 +99,7 @@ export function Results() {
       { k: `TAGS · ${tags} × 30`, v: tags * 30 },
       { k: `BLACKOUTS FORCED · ${blackouts} × 10`, v: blackouts * 10 },
       ...(cleared ? [{ k: 'BOARD CLEARED', v: 60 }] : []),
-      ...(cleared ? [{ k: 'TIME BONUS', v: Math.round(45 * (1 - frac)) }] : []),
+      ...(cleared ? [{ k: 'TIME BONUS', v: Math.round(ROUND_DISPLAY_MINUTES * (1 - frac)) }] : []),
     ];
     return {
       win: cleared,
@@ -179,6 +183,13 @@ export function Results() {
           </Mono>
         </Card>
 
+        {/* The appointment. For a game that needs three other people free at
+            the same time, the reason a second round never happens is almost
+            never that the player forgot. It is that nobody agreed a time. */}
+        <NextRoundCard />
+
+        {showStarter ? <StarterOffer onClose={() => markSeen({ starterOffered: true })} /> : null}
+
         <View style={styles.adSlot}>
           <Mono style={{ fontSize: 9, letterSpacing: 1.2, color: color.faint }}>
             INTERSTITIAL SLOT · POST-ROUND ONLY · CAPPED 1 PER 3 ROUNDS · SKIPPABLE
@@ -187,20 +198,143 @@ export function Results() {
       </ScrollView>
 
       <View style={{ padding: space(6), paddingTop: 0, paddingBottom: insets.bottom + space(5), gap: space(2) }}>
+        {/* Rematch is the primary action. The party already exists and the
+            roster is already known, which makes this the cheapest retention
+            surface in the product. */}
         <Btn
-          title={wasHider ? 'Next round · you seek' : 'Next round · you hide'}
-          onPress={() => startRound(wasHider ? 'seeker' : 'hider')}
+          title={wasHider ? 'Rematch · you seek' : 'Rematch · you hide'}
+          onPress={() => {
+            markSeen({ starterOffered: true });
+            startRound(wasHider ? 'seeker' : 'hider');
+          }}
         />
         <Btn
           title="Home"
           variant="outline"
           onPress={() => {
+            markSeen({ starterOffered: true });
             finishRound();
             go('home');
           }}
         />
       </View>
     </View>
+  );
+}
+
+// ---------- next round appointment ----------
+
+/** Offsets from now, in hours, for the quick-book chips. */
+const SLOTS: { label: string; at: () => Date }[] = [
+  { label: 'IN 1 HOUR', at: () => new Date(Date.now() + 60 * 60 * 1000) },
+  { label: 'TONIGHT · 19:00', at: () => atClock(0, 19) },
+  { label: 'TOMORROW · 19:00', at: () => atClock(1, 19) },
+];
+
+/** A local Date this many days out, at the given hour. */
+function atClock(daysAhead: number, hour: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  d.setHours(hour, 0, 0, 0);
+  // Asking for 19:00 when it is already 21:00 should mean tomorrow, not a
+  // reminder two hours in the past that silently never fires.
+  if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+  return d;
+}
+
+function NextRoundCard() {
+  const { scheduleNextRound } = useGame();
+  const [booked, setBooked] = useState<string | null>(null);
+
+  return (
+    <Card style={{ marginTop: space(3) }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <Label tone="text">Next round</Label>
+        {booked ? <Label tone="accent">BOOKED</Label> : null}
+      </View>
+      {booked ? (
+        <Mono style={{ fontSize: 11, color: color.dim, marginTop: space(3), lineHeight: 17 }}>
+          {booked}. We will remind you and you can tell the party.
+        </Mono>
+      ) : (
+        <>
+          <Mono style={{ fontSize: 11, color: color.dim, marginTop: space(2), lineHeight: 17 }}>
+            Book it now while everyone is still here.
+          </Mono>
+          <View style={styles.slotRow}>
+            {SLOTS.map((s) => (
+              <PressScale
+                key={s.label}
+                style={{ flex: 1 }}
+                onPress={() => {
+                  scheduleNextRound(s.at());
+                  setBooked(s.label);
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
+              >
+                <View style={styles.slotChip}>
+                  <Mono style={styles.slotChipText}>{s.label}</Mono>
+                </View>
+              </PressScale>
+            ))}
+          </View>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// ---------- first purchase ----------
+
+function StarterOffer({ onClose }: { onClose: () => void }) {
+  const { profile, redeemBundle } = useGame();
+  const owned = profile.owned.includes(STARTER_BUNDLE.frameId);
+  const frame = byId(STARTER_BUNDLE.frameId)!;
+
+  if (owned) return null;
+
+  return (
+    <Card style={[styles.offer, { marginTop: space(3) }]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Label tone="accent">One time offer</Label>
+        <PressScale onPress={onClose}>
+          <Mono style={{ fontSize: 10, color: color.faint, letterSpacing: 1.2 }}>DISMISS</Mono>
+        </PressScale>
+      </View>
+
+      <View style={styles.offerBody}>
+        <AvatarMark size={64} tint={color.accent} frameTint={frame.tint} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.offerName}>{STARTER_BUNDLE.name}</Text>
+          <Mono style={{ fontSize: 11, color: color.dim, marginTop: 3, lineHeight: 17 }}>
+            The frame every photo you send the seeker is wearing. Not sold for FILM,
+            at any price. Plus {STARTER_BUNDLE.film} FILM.
+          </Mono>
+        </View>
+      </View>
+
+      <View style={styles.offerFoot}>
+        <View>
+          <Mono style={styles.anchor}>{STARTER_BUNDLE.anchor}</Mono>
+          <Text style={styles.offerPrice}>{STARTER_BUNDLE.price}</Text>
+        </View>
+        <PressScale
+          onPress={() => {
+            // Cosmetic only. Nothing here touches whether you win.
+            redeemBundle(STARTER_BUNDLE.frameId, STARTER_BUNDLE.film);
+            onClose();
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          }}
+        >
+          <View style={styles.offerBtn}>
+            <Mono style={styles.offerBtnText}>GET IT</Mono>
+          </View>
+        </PressScale>
+      </View>
+      <Mono style={{ fontSize: 9, color: color.faint, marginTop: space(2.5), lineHeight: 14 }}>
+        COSMETIC ONLY · NO EFFECT ON PLAY · SHOWN ONCE
+      </Mono>
+    </Card>
   );
 }
 
@@ -255,6 +389,73 @@ const styles = StyleSheet.create({
     paddingVertical: space(2.5),
     borderTopWidth: 1,
     borderTopColor: color.line,
+  },
+  slotRow: {
+    flexDirection: 'row',
+    gap: space(2),
+    marginTop: space(3),
+  },
+  slotChip: {
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.sm,
+    paddingVertical: space(2.5),
+    paddingHorizontal: space(1),
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  slotChipText: {
+    fontSize: 9,
+    letterSpacing: 1,
+    color: color.text,
+    textAlign: 'center',
+    lineHeight: 13,
+  },
+  offer: {
+    borderColor: color.accentDim,
+  },
+  offerBody: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space(3),
+    marginTop: space(3),
+  },
+  offerName: {
+    fontFamily: font.display,
+    fontSize: 22,
+    color: color.text,
+    letterSpacing: 0.5,
+  },
+  offerFoot: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginTop: space(4),
+    gap: space(3),
+  },
+  anchor: {
+    fontSize: 11,
+    color: color.faint,
+    letterSpacing: 1,
+    textDecorationLine: 'line-through',
+  },
+  offerPrice: {
+    fontFamily: font.display,
+    fontSize: 26,
+    color: color.accent,
+    marginTop: 2,
+  },
+  offerBtn: {
+    backgroundColor: color.accent,
+    borderRadius: radius.sm,
+    paddingHorizontal: space(6),
+    paddingVertical: space(3),
+  },
+  offerBtnText: {
+    fontSize: 12,
+    letterSpacing: 2,
+    color: color.black,
   },
   adSlot: {
     marginTop: space(3),

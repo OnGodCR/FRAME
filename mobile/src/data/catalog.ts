@@ -21,7 +21,7 @@ export interface Cosmetic {
   category: Category;
   tint: string;
   /** Where it comes from. Drives the lock label in the loadout. */
-  source: 'default' | 'shop' | 'free' | 'paid';
+  source: 'default' | 'shop' | 'free' | 'paid' | 'bundle';
   cost?: number; // FILM, shop items only
   tier?: number; // season pass items only
 }
@@ -62,12 +62,20 @@ export const COSMETICS: Cosmetic[] = [
 
   // ---- photo frames ----
   { id: 'frame-brackets', name: 'BRACKETS', category: 'frame', tint: C.acid, source: 'default' },
+  // Frames are the flagship shop category (see Shop.tsx), so the shop needs
+  // more than one of them. Priced as a range, since the point of the section
+  // is that there is a choice worth making.
   { id: 'frame-darkroom', name: 'DARKROOM', category: 'frame', tint: C.orange, source: 'shop', cost: 400 },
+  { id: 'frame-safelight', name: 'SAFELIGHT', category: 'frame', tint: C.red, source: 'shop', cost: 550 },
+  { id: 'frame-fixer', name: 'FIXER', category: 'frame', tint: C.mint, source: 'shop', cost: 750 },
   { id: 'frame-contact', name: 'CONTACT SHEET', category: 'frame', tint: C.cyan, source: 'paid', tier: 9 },
   { id: 'frame-redscale', name: 'REDSCALE', category: 'frame', tint: C.red, source: 'paid', tier: 14 },
   { id: 'frame-sprocket', name: 'SPROCKET', category: 'frame', tint: C.silver, source: 'free', tier: 19 },
   { id: 'frame-lightleak', name: 'LIGHT LEAK', category: 'frame', tint: C.yellow, source: 'paid', tier: 30 },
   { id: 'frame-polaroid', name: 'POLAROID', category: 'frame', tint: C.white, source: 'paid', tier: 44 },
+  // Bundle-only. Not buyable with FILM at any price, which is the entire
+  // reason it converts: see STARTER_BUNDLE below.
+  { id: 'frame-firstlight', name: 'FIRST LIGHT', category: 'frame', tint: C.mint, source: 'bundle' },
 
   // ---- blackout styles ----
   { id: 'static-default', name: 'STATIC', category: 'blackout', tint: C.silver, source: 'default' },
@@ -160,13 +168,69 @@ function buildTiers(): Tier[] {
 
 export const TIERS: Tier[] = buildTiers();
 
+/**
+ * The first-purchase offer.
+ *
+ * Shown once, on the results screen of the player's first completed round,
+ * and never again. That moment is chosen deliberately: the player has just
+ * spent half an hour watching a feed of framed photographs, so they now
+ * understand what a frame is and where it is seen. Offering this at install,
+ * before any of that means anything, is the standard mistake.
+ *
+ * Priced at $2.99, inside the band that converts a first-time payer, and
+ * anchored against component value. Cosmetic only, like everything else:
+ * nothing purchasable may affect whether you win.
+ */
+export const STARTER_BUNDLE = {
+  id: 'bundle-firstlight',
+  name: 'FIRST LIGHT',
+  price: '$2.99',
+  /** What it would cost if the parts were bought separately. */
+  anchor: '$8.98',
+  frameId: 'frame-firstlight',
+  film: 600,
+};
+
+/**
+ * Facts about the season itself, which are the same for every player. Player
+ * progress through it is NOT here: it lives on the profile as `seasonXp` and is
+ * derived by passState() below.
+ *
+ * It used to live here as `currentTier: 12`, which meant every account, including
+ * a brand new one, opened the app already twelve tiers into a pass it had never
+ * played. That was demo dressing that read as a bug, because it was one.
+ */
 export const SEASON = {
   number: '01',
   name: 'EXPOSURE',
   week: 4,
   weeks: 10,
-  currentTier: 12,
-  tierProgress: 0.42,
-  xpInTier: 420,
-  xpPerTier: 1000,
 };
+
+export const TIER_COUNT = 50;
+export const XP_PER_TIER = 1000;
+
+export interface PassState {
+  /** 1-based, capped at TIER_COUNT. */
+  tier: number;
+  /** 0 to 1 through the current tier. */
+  progress: number;
+  xpInTier: number;
+  xpPerTier: number;
+  complete: boolean;
+}
+
+/** Derives pass position from season XP, so playing actually moves the bar. */
+export function passState(seasonXp: number): PassState {
+  const capped = Math.max(0, Math.min(seasonXp, TIER_COUNT * XP_PER_TIER));
+  const tier = Math.min(TIER_COUNT, Math.floor(capped / XP_PER_TIER) + 1);
+  const xpInTier = capped % XP_PER_TIER;
+  const complete = capped >= TIER_COUNT * XP_PER_TIER;
+  return {
+    tier,
+    progress: complete ? 1 : xpInTier / XP_PER_TIER,
+    xpInTier: complete ? XP_PER_TIER : xpInTier,
+    xpPerTier: XP_PER_TIER,
+    complete,
+  };
+}

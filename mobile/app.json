@@ -10,10 +10,37 @@
     "backgroundColor": "#0A0A0C",
     "ios": {
       "supportsTablet": false,
+      "bundleIdentifier": "com.frame.app",
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      },
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "FRAME uses your location to set the play zone, load the landmarks around you, and check you have not left the boundary. Between reveals your position is never shared with the seeker.",
         "NSCameraUsageDescription": "FRAME needs the camera for check-ins. Every few minutes you photograph where you are hiding to prove you are still in play. Photos are deleted 24 hours after the round ends."
       }
+    },
+    "android": {
+      "package": "com.frame.app",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": true,
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.VIBRATE"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -29,6 +56,13 @@
       ],
       "expo-web-browser",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#C8FF2E"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/splash-icon.png",
@@ -39,6 +73,7 @@
     ],
     "platforms": [
       "ios",
+      "android",
       "web"
     ]
   }

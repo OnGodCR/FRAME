@@ -75,7 +75,7 @@ export function AuthGate() {
     <View style={styles.screen}>
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(8) }}>
         <FadeIn>
-          <Label>Step 3 of 6</Label>
+          <Label>Step 3 of 4</Label>
           <Text style={styles.h1}>Save your progress</Text>
           <Body style={{ color: color.dim, marginTop: space(2) }}>
             Linking an account keeps your level, cosmetics, and stats if you change phone.
