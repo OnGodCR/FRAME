@@ -11,6 +11,8 @@ import { isOpenNow } from '../components/PoiSheet';
 import { useGame } from '../engine/GameContext';
 import { useWorld } from '../engine/WorldContext';
 import { Poi } from '../data/poiRules';
+import type { Seen } from '../engine/persist';
+import type { DailyState } from '../data/assignments';
 
 /** Closest of each type, so the row shows the whole system rather than 3 shops. */
 const pickNearby = (pois: Poi[]) =>
@@ -18,8 +20,20 @@ const pickNearby = (pois: Poi[]) =>
     .map((t) => pois.filter((p) => p.type === t).sort((a, b) => a.distM - b.distM)[0])
     .filter(Boolean);
 
+/**
+ * The first three things worth doing, in order. Deliberately ends at "play a
+ * round with friends" rather than at anything purchasable, and disappears
+ * entirely once all three are done rather than becoming a permanent chore list.
+ */
+const STEPS: { label: string; done: (s: { seen: Seen; daily: DailyState }) => boolean }[] = [
+  { label: 'Try a check-in', done: (s) => s.seen.practised },
+  { label: "Do today's assignment", done: (s) => s.daily.lastDone !== null },
+  { label: 'Play a round with friends', done: (s) => s.seen.finishedRound },
+];
+
 export function Home() {
-  const { go, profile, daily, dailyAssignment, dailyOpen, pass } = useGame();
+  const { go, profile, daily, dailyAssignment, dailyOpen, pass, seen } = useGame();
+  const allStepsDone = STEPS.every((s) => s.done({ seen, daily }));
   const { world, status, request, busy } = useWorld();
   const insets = useSafeAreaInsets();
   const nearby = pickNearby(world.pois);
@@ -74,6 +88,53 @@ export function Home() {
           </View>
         </FadeIn>
 
+        {/* First run. A brand new account otherwise lands on a screen full of
+            empty progression with nothing telling it what to do, which is the
+            classic dead-end empty state: no explanation, no call to action. It
+            names the mechanic in one line and offers exactly one next step. */}
+        {!seen.practised && (
+          <FadeIn index={1}>
+            <PressScale onPress={() => go('solo')} style={{ marginTop: space(5) }}>
+              <Card style={styles.startCard}>
+                <Label tone="accent">Start here</Label>
+                <Text style={styles.startTitle}>
+                  Every few minutes, you photograph where you are hiding.
+                </Text>
+                <Mono style={styles.startBody}>
+                  Miss the window and you are BLACKED OUT. Try one now, alone, with
+                  nothing at stake. It takes 60 seconds.
+                </Mono>
+                <View style={styles.startCta}>
+                  <Mono style={styles.startCtaText}>RUN A TEST FRAME →</Mono>
+                </View>
+              </Card>
+            </PressScale>
+          </FadeIn>
+        )}
+
+        {/* Three steps, so progress is legible before any XP exists. */}
+        {!allStepsDone && (
+          <FadeIn index={2}>
+            <View style={styles.steps}>
+              {STEPS.map((s, i) => {
+                const done = s.done({ seen, daily });
+                return (
+                  <View key={s.label} style={styles.stepRow}>
+                    <View style={[styles.stepDot, done && styles.stepDotDone]}>
+                      <Mono style={[styles.stepNum, done && { color: color.black }]}>
+                        {done ? '✓' : i + 1}
+                      </Mono>
+                    </View>
+                    <Mono style={[styles.stepLabel, done && { color: color.faint }]}>
+                      {s.label}
+                    </Mono>
+                  </View>
+                );
+              })}
+            </View>
+          </FadeIn>
+        )}
+
         {/* Solo. Sits above everything that needs other people, because on
             day one the player does not have other people yet. */}
         <FadeIn index={1}>
@@ -105,6 +166,13 @@ export function Home() {
           </PressScale>
         </FadeIn>
 
+        {/* Progressive disclosure. The pass, loadout, and shop are all empty
+            and meaningless before the first capture, and showing three dead
+            cards to a new player buries the one thing they should actually do.
+            They appear the moment there is progress to look at, which is about
+            60 seconds in. */}
+        {seen.practised && (
+          <>
         {/* season pass */}
         <FadeIn index={1}>
           <PressScale onPress={() => go('pass')} style={{ marginTop: space(5) }}>
@@ -191,6 +259,8 @@ export function Home() {
             </Card>
           </PressScale>
         </FadeIn>
+          </>
+        )}
 
         {/* play */}
         <FadeIn index={4}>
@@ -411,6 +481,44 @@ const styles = StyleSheet.create({
     borderWidth: 1.6,
     transform: [{ rotate: '45deg' }],
   },
+  startCard: {
+    padding: space(4),
+    borderColor: color.accentDim,
+  },
+  startTitle: {
+    fontFamily: font.display,
+    fontSize: 22,
+    lineHeight: 28,
+    color: color.text,
+    marginTop: space(2),
+  },
+  startBody: {
+    fontSize: 11,
+    lineHeight: 17,
+    color: color.dim,
+    marginTop: space(2.5),
+  },
+  startCta: {
+    marginTop: space(3.5),
+    borderTopWidth: 1,
+    borderTopColor: color.line,
+    paddingTop: space(3),
+  },
+  startCtaText: { fontSize: 11, letterSpacing: 1.5, color: color.accent },
+  steps: { marginTop: space(4), gap: space(2) },
+  stepRow: { flexDirection: 'row', alignItems: 'center', gap: space(2.5) },
+  stepDot: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepDotDone: { backgroundColor: color.accent, borderColor: color.accent },
+  stepNum: { fontSize: 9, color: color.dim },
+  stepLabel: { fontSize: 11, color: color.text, letterSpacing: 0.5 },
   soloCard: {
     padding: space(4),
   },

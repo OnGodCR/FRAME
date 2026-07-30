@@ -56,6 +56,13 @@
       ],
       "expo-web-browser",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "FRAME needs the camera for check-ins. Every few minutes you photograph where you are hiding to prove you are still in play. Photos are deleted 24 hours after the round ends.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/android-icon-monochrome.png",

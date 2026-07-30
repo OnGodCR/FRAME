@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -13,6 +14,15 @@ import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Brackets, Btn, Label, Mono } from '../components/ui';
 import { ProceduralPhoto } from './ProceduralPhoto';
+import {
+  CameraStage,
+  CAMERA_SUPPORTED,
+  ensureCameraPermission,
+  type CameraStageHandle,
+  type Shot,
+} from './CameraStage';
+import { checkCapture } from '../validation/decode';
+import type { FailureCode, Verdict } from '../validation/signals';
 import { fmtClock } from '../engine/GameContext';
 
 // ---------------------------------------------------------------------------
@@ -28,16 +38,24 @@ import { fmtClock } from '../engine/GameContext';
 // changes this one file and every mode gets it at once.
 // ---------------------------------------------------------------------------
 
-export type CaptureStep = 'back' | 'front' | 'validating' | 'done';
+export type CaptureStep = 'back' | 'front' | 'validating' | 'failed' | 'done';
 
-const CHECKS = [
-  { name: 'LAPLACIAN VARIANCE', desc: 'blur / smear' },
-  { name: 'MEAN LUMINANCE', desc: 'lens covered or flooded' },
-  { name: 'HISTOGRAM ENTROPY', desc: 'uniform surface' },
-  { name: 'EDGE DENSITY', desc: 'low detail' },
-  { name: 'pHASH · LAST 20', desc: 'reused image' },
-  { name: 'CAPTURE TIMESTAMP', desc: 'inside server window' },
+/**
+ * Display rows, mapped to the FailureCode each one detects. When a real
+ * capture is analysed these light up from the actual verdict rather than a
+ * timer, so a row saying PASS means that check genuinely passed.
+ */
+const CHECKS: { name: string; codes: FailureCode[] }[] = [
+  { name: 'LAPLACIAN VARIANCE', codes: ['blurred'] },
+  { name: 'MEAN LUMINANCE', codes: ['too_dark', 'too_bright'] },
+  { name: 'HISTOGRAM ENTROPY', codes: ['uniform_surface'] },
+  { name: 'EDGE DENSITY', codes: ['low_detail'] },
+  { name: 'pHASH · LAST 20', codes: ['reused_image'] },
+  { name: 'CAPTURE TIMESTAMP', codes: ['stale_capture'] },
 ];
+
+/** PRD 4.4: one retry, with a 30 second extension, then elimination. */
+const RETRY_EXTENSION = 30;
 
 export interface CaptureSequenceProps {
   /** Small label above the timer. */
@@ -54,6 +72,10 @@ export interface CaptureSequenceProps {
   onDone: () => void;
   /** Shown on the validating screen. Practice says so, plainly. */
   validatingNote?: string;
+  /** pHashes from this player's recent submissions, for the reuse check. */
+  recentHashes?: bigint[];
+  /** Called when the player takes their one retry, with the extension seconds. */
+  onRetry?: (extraSeconds: number) => void;
 }
 
 export function CaptureSequence({
@@ -66,17 +88,40 @@ export function CaptureSequence({
   doneCta,
   onDone,
   validatingNote = 'Re-validated server-side. A client-reported pass is never trusted.',
+  recentHashes,
+  onRetry,
 }: CaptureSequenceProps) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [step, setStep] = useState<CaptureStep>('back');
   const [passed, setPassed] = useState(0);
+  const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [retried, setRetried] = useState(false);
   const seeds = useMemo(
     () => ({ back: Date.now() % 100000, front: (Date.now() % 100000) + 31 }),
     [],
   );
+  const shots = useRef<{ back: Shot | null; front: Shot | null }>({ back: null, front: null });
+  const stage = useRef<CameraStageHandle>(null);
   const flash = useRef(new Animated.Value(0)).current;
   const scan = useRef(new Animated.Value(0)).current;
+
+  // Camera permission, asked here rather than at launch because this is the
+  // first moment it is genuinely needed. PRD 10.2: a cold prompt on the splash
+  // screen is the biggest drop-off in the funnel.
+  const [camAllowed, setCamAllowed] = useState<boolean | null>(
+    CAMERA_SUPPORTED ? null : true,
+  );
+  useEffect(() => {
+    if (!CAMERA_SUPPORTED) return;
+    let live = true;
+    ensureCameraPermission().then((ok) => {
+      if (live) setCamAllowed(ok);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
 
   // live viewfinder scanline
   useEffect(() => {
@@ -92,40 +137,114 @@ export function CaptureSequence({
     return () => loop.stop();
   }, []);
 
-  // validation sequence
+  // Validation. On a real capture this runs PRD 4.5 against actual pixels and
+  // the readout reflects the real verdict. On web there is no camera, so the
+  // rows advance on a timer and always pass: the web preview is for reviewing
+  // the flow, not for judging photographs.
   useEffect(() => {
     if (step !== 'validating') return;
+    let live = true;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPassed(0);
-    const timers = CHECKS.map((_, i) =>
+
+    const reveal = CHECKS.map((_, i) =>
       setTimeout(() => {
+        if (!live) return;
         setPassed(i + 1);
         Haptics.selectionAsync();
       }, 320 * (i + 1)),
     );
-    const doneT = setTimeout(
-      () => {
+
+    const settle = (v: Verdict | null) => {
+      if (!live) return;
+      setVerdict(v);
+      if (!v || v.pass) {
         setStep('done');
         onValidated();
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      },
-      320 * CHECKS.length + 500,
-    );
+      } else {
+        setStep('failed');
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      }
+    };
+
+    const minimumBeat = 320 * CHECKS.length + 400;
+    const uri = shots.current.back?.uri ?? null;
+
+    if (!CAMERA_SUPPORTED || !uri) {
+      const t = setTimeout(() => settle(null), minimumBeat);
+      return () => {
+        live = false;
+        reveal.forEach(clearTimeout);
+        clearTimeout(t);
+      };
+    }
+
+    // Analyse the back frame. It is the one that shows the hiding place; the
+    // front frame proves a person is behind the phone and is checked server
+    // side where the thresholds differ.
+    const started = Date.now();
+    checkCapture(uri, { recentHashes, capturedAt: started })
+      .then((v) => {
+        // Never finish faster than the readout can be read. A verdict that
+        // flashes past is worse than one that takes an extra beat.
+        const wait = Math.max(0, minimumBeat - (Date.now() - started));
+        setTimeout(() => settle(v), wait);
+      })
+      .catch(() =>
+        setTimeout(
+          () =>
+            settle({
+              pass: false,
+              failures: [],
+              signals: null as never,
+              message: 'That frame could not be read. Take it again.',
+            }),
+          minimumBeat,
+        ),
+      );
+
     return () => {
-      timers.forEach(clearTimeout);
-      clearTimeout(doneT);
+      live = false;
+      reveal.forEach(clearTimeout);
     };
   }, [step]);
 
-  const capture = () => {
+  const capture = async () => {
+    const which = step === 'back' ? 'back' : 'front';
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     flash.setValue(1);
     Animated.timing(flash, { toValue: 0, duration: 320, useNativeDriver: true }).start();
-    setTimeout(() => setStep(step === 'back' ? 'front' : 'validating'), 200);
+
+    const shot = stage.current
+      ? await stage.current.capture()
+      : { uri: null, seed: seeds[which] };
+    shots.current[which] = shot;
+
+    setStep(which === 'back' ? 'front' : 'validating');
+  };
+
+  /** Retry after a failed check. One only, per PRD 4.4. */
+  const retry = () => {
+    setRetried(true);
+    setVerdict(null);
+    shots.current = { back: null, front: null };
+    onRetry?.(RETRY_EXTENSION);
+    setStep('back');
   };
 
   const finderW = width - space(10);
   const finderH = finderW * 1.25;
+
+  /** Which readout rows the verdict actually failed. Empty when it passed. */
+  const failedRows = useMemo(() => {
+    const set = new Set<number>();
+    if (!verdict || verdict.pass) return set;
+    CHECKS.forEach((c, i) => {
+      if (c.codes.some((code) => verdict.failures.includes(code))) set.add(i);
+    });
+    return set;
+  }, [verdict]);
 
   if (step === 'back' || step === 'front') {
     const isBack = step === 'back';
@@ -167,11 +286,12 @@ export function CaptureSequence({
                 overflow: 'hidden',
               }}
             >
-              <ProceduralPhoto
-                seed={isBack ? seeds.back : seeds.front}
+              <CameraStage
+                ref={stage}
+                facing={isBack ? 'back' : 'front'}
                 width={finderW}
                 height={finderH}
-                variant={isBack ? 'back' : 'front'}
+                seed={isBack ? seeds.back : seeds.front}
               />
               <Animated.View
                 pointerEvents="none"
@@ -227,6 +347,68 @@ export function CaptureSequence({
     );
   }
 
+  // No camera, no check-in. Say why plainly rather than showing a black
+  // rectangle, and never offer a gallery fallback: PRD 4.4 makes live capture
+  // a hard constraint, so there is genuinely no other way through.
+  if (camAllowed === false) {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top + space(3), padding: space(6) }]}>
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Label tone="danger">Camera blocked</Label>
+          <Text style={styles.h1}>FRAME cannot check you in without the camera.</Text>
+          <Mono style={{ fontSize: 12, color: color.dim, marginTop: space(4), lineHeight: 19 }}>
+            Check-ins are live capture only. There is no gallery option, by design:
+            a photo you already had proves nothing about where you are now.
+          </Mono>
+          <Mono style={{ fontSize: 11, color: color.faint, marginTop: space(4), lineHeight: 17 }}>
+            Enable the camera for FRAME in your phone settings, then come back.
+          </Mono>
+        </View>
+        <View style={{ paddingBottom: insets.bottom + space(4) }}>
+          <Btn title="Back" variant="outline" onPress={onDone} />
+        </View>
+      </View>
+    );
+  }
+
+  // PRD 4.4: name the failed check in plain language and offer exactly one
+  // retry with an extension. A second failure, or the window closing, is a
+  // blackout. Telling someone only "invalid" is how you lose a player who
+  // did nothing wrong except point at a dark wall.
+  if (step === 'failed') {
+    return (
+      <View style={[styles.screen, { paddingTop: insets.top + space(3), padding: space(6) }]}>
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <Label tone="danger">Not accepted</Label>
+          <Text style={styles.h1}>{verdict?.message ?? 'That frame did not pass.'}</Text>
+          <View style={{ marginTop: space(5) }}>
+            {CHECKS.filter((_, i) => failedRows.has(i)).map((c) => (
+              <View key={c.name} style={styles.checkRow}>
+                <Mono style={{ fontSize: 12, color: color.text, letterSpacing: 1, flex: 1 }}>
+                  {c.name}
+                </Mono>
+                <Mono style={{ fontSize: 11, color: color.danger }}>FAIL</Mono>
+              </View>
+            ))}
+          </View>
+          <Mono style={{ fontSize: 11, color: color.dim, marginTop: space(5), lineHeight: 17 }}>
+            {retried
+              ? 'No retries left. The window is still open until the timer runs out.'
+              : `One retry, plus ${RETRY_EXTENSION} seconds. Point somewhere with more light and detail.`}
+          </Mono>
+        </View>
+        <View style={{ paddingBottom: insets.bottom + space(4), gap: space(2) }}>
+          {!retried && <Btn title="Retake" onPress={retry} />}
+          <Btn
+            title={retried ? 'Back to the round' : 'Give up on this one'}
+            variant="outline"
+            onPress={onDone}
+          />
+        </View>
+      </View>
+    );
+  }
+
   if (step === 'validating') {
     return (
       <View style={[styles.screen, { paddingTop: insets.top + space(3), padding: space(6) }]}>
@@ -246,8 +428,18 @@ export function CaptureSequence({
                 >
                   {c.name}
                 </Mono>
-                <Mono style={{ fontSize: 11, color: i < passed ? color.accent : color.faint }}>
-                  {i < passed ? 'PASS' : '····'}
+                <Mono
+                  style={{
+                    fontSize: 11,
+                    color:
+                      i < passed
+                        ? failedRows.has(i)
+                          ? color.danger
+                          : color.accent
+                        : color.faint,
+                  }}
+                >
+                  {i < passed ? (failedRows.has(i) ? 'FAIL' : 'PASS') : '····'}
                 </Mono>
               </View>
             ))}
@@ -267,19 +459,28 @@ export function CaptureSequence({
         <Label tone="accent">Submitted</Label>
         <Text style={styles.h1}>{doneTitle}</Text>
         <View style={{ flexDirection: 'row', gap: space(2), marginTop: space(6) }}>
-          <View style={styles.thumbWrap}>
-            <ProceduralPhoto seed={seeds.back} width={thumbW} height={thumbW * 1.2} variant="back" />
-            <Mono style={styles.thumbCaption}>BACK</Mono>
-          </View>
-          <View style={styles.thumbWrap}>
-            <ProceduralPhoto
-              seed={seeds.front}
-              width={thumbW}
-              height={thumbW * 1.2}
-              variant="front"
-            />
-            <Mono style={styles.thumbCaption}>FRONT</Mono>
-          </View>
+          {(['back', 'front'] as const).map((which) => {
+            const shot = shots.current[which];
+            return (
+              <View key={which} style={styles.thumbWrap}>
+                {shot?.uri ? (
+                  <Image
+                    source={{ uri: shot.uri }}
+                    style={{ width: thumbW, height: thumbW * 1.2 }}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <ProceduralPhoto
+                    seed={seeds[which]}
+                    width={thumbW}
+                    height={thumbW * 1.2}
+                    variant={which}
+                  />
+                )}
+                <Mono style={styles.thumbCaption}>{which.toUpperCase()}</Mono>
+              </View>
+            );
+          })}
         </View>
         <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(4), lineHeight: 16 }}>
           {doneNote}

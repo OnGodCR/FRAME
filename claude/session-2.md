@@ -446,7 +446,93 @@ prompts must respect it** rather than going to every account; and a paid prompt
 needs **disclosure**, since an undisclosed sponsored task aimed partly at minors
 is an FTC problem rather than a taste problem.
 
-## 9. Bug found and fixed: the scroll gates could lock a player out
+## 9. The camera is real, and so is the validator
+
+`expo-camera`, `expo-image-manipulator`, and `jpeg-js` are installed and wired.
+This closes session 1's items 4 and 5 in one pass.
+
+**`components/CameraStage.tsx`** is the viewfinder. Native gets a real
+`CameraView`; web falls back to `ProceduralPhoto` so the browser preview, which
+is where most review happens, keeps working. Loaded lazily on native for the
+same reason `notify.ts` is: keeping the native module out of the web bundle
+entirely beats importing it and guarding every call site. There is no gallery
+path in the component and no media permission is requested, because PRD 4.4 is
+a hard constraint and the onboarding copy promises it explicitly.
+
+**`validation/decode.ts`** is the part that matters. The pipeline is
+capture, downscale to 256 px, JPEG decode to RGBA, flatten to grayscale, then
+straight into the existing `validate()`. **The validator now runs on real
+pixels**, which it never has before.
+
+Three decisions worth knowing:
+
+- **256 px analysis edge.** A full 12 MP frame is roughly 36 MB of RGBA and
+  takes seconds to decode in JS, which is unusable inside a 60 second window.
+  Every signal being measured (blur, exposure, entropy, edge density) is
+  scale-tolerant, and the pHash runs on a 32x32 DCT regardless, so the
+  downscale costs accuracy nothing and buys an order of magnitude in speed.
+- **Base64 is decoded by hand.** `Buffer` and `atob` are not reliably present
+  in React Native, so `base64ToBytes` is 20 lines with no dependency rather
+  than a polyfill.
+- **A frame that cannot be decoded fails.** The safe default when we cannot see
+  the image is not to accept it.
+
+**PRD 4.4's retry flow now exists**, and did not before. A failed capture names
+the failing check in plain language from the real `Verdict.message`, shows which
+rows failed, and offers exactly one retry with a 30 second extension. The
+validating readout is driven by the actual verdict, so a row saying PASS means
+that check genuinely passed rather than that a timer elapsed.
+
+**All of this is unverified on a device.** It typechecks, the web fallback is
+confirmed working, and the Android bundle compiles, but no real photograph has
+been through it. Expect the thresholds to be wrong: they are still the
+placeholder values, which is exactly what the calibration photos are for. The
+first real test will probably reject valid captures.
+
+### eas.json
+
+Added, with development, preview, and production profiles. The development and
+preview profiles produce an APK with `distribution: internal`, which is what
+makes `npx eas-cli build --profile development --platform android` work first
+try instead of erroring on a missing config.
+
+### Expo Go on Android does not come from the Play Store
+
+Worth writing down because it cost time and looks like a broken phone. Expo Go
+for SDK 57 on Android is **not** distributed through the Play Store; the store
+build tracks an older SDK, so "update to the latest version" does not fix
+"unsupported SDK". The matching client is Expo Go 57.0.2, published as an APK
+on Expo's own `expo/expo-go-releases` GitHub repo. The URL comes from
+`https://api.expo.dev/v2/versions/latest` under `sdkVersions['57.0.0']
+.androidClientUrl`, which is the reliable way to find it rather than guessing.
+
+Uninstall the Play Store copy first: signatures differ and installing over it
+fails with a confusing "App not installed".
+
+## 10. First-run experience, second pass
+
+Research on empty states says the common failure is a **dead end**: a screen
+with no explanation and no call to action. FRAME had exactly that. A brand new
+level 1 account with zero FILM landed on a home screen showing an empty season
+pass, a default loadout, a shop it could not afford, and two buttons that both
+need friends it does not have yet.
+
+Two changes, both straight out of the research:
+
+- **A START HERE card**, shown until the player has practised once. It names
+  the mechanic in one sentence and offers exactly one next step, the 60 second
+  test frame. One action, not a menu.
+- **Progressive disclosure.** The pass, loadout, and shop are hidden until the
+  first capture. They are meaningless before there is any progress in them, and
+  three dead cards buried the one thing a new player should actually do. They
+  appear about 60 seconds in.
+
+Plus a three step checklist (try a check-in, do today's assignment, play a
+round with friends) that disappears once complete rather than becoming a
+permanent chore list. It deliberately ends at playing with friends and not at
+anything purchasable.
+
+## 11. Bug found and fixed: the scroll gates could lock a player out
 
 Angad hit this on a wide viewport: the legal gate's button stayed on
 SCROLL TO THE END forever and the app could not be entered.
@@ -496,7 +582,7 @@ or an Android tablet has the room to fit it, and there was no iOS equivalent
 because `supportsTablet` is false. Shipping Android without this fix would have
 meant a permanently unusable app on those devices.
 
-## 10. New gotchas
+## 12. New gotchas
 
 - **Browser pane coordinates are NOT 2x, contrary to session 1 gotcha 2.** The
   tool reports `Screenshot size: 375x812` while the returned image is 750x1624.
