@@ -82,14 +82,31 @@ interface RosterRow {
   ready: boolean;
   you?: boolean;
   host?: boolean;
+  /** A simulated player, added on purpose for review. Never a real person. */
+  sim?: boolean;
 }
 
-const JOIN_SCHEDULE: { t: number; name: string }[] = [
-  { t: 1, name: SEEKER_BOT.name },
-  { t: 2, name: 'MAYA' },
-  { t: 4, name: 'DEV' },
-  { t: 5, name: 'JULES' },
-  { t: 7, name: 'ARI' },
+/** PRD 4.1: a round needs at least three players. */
+const MIN_PARTY = 3;
+const MAX_PARTY = 6;
+
+/**
+ * Simulated players, for reviewing the round screens without four friends on
+ * hand. Offsets are seconds after the host asks for them.
+ *
+ * These used to arrive on a timer the moment the lobby opened, whether anyone
+ * wanted them or not. That was demo dressing that read as a real behaviour, and
+ * a bad one: the splash screen promises PRIVATE PARTIES ONLY and the marketing
+ * brief forbids implying stranger play, so a host watching unknown names appear
+ * unbidden is the app contradicting its own core promise. Filling the lobby is
+ * now something the host does deliberately, and the roster labels them.
+ */
+const SIM_SCHEDULE: { t: number; name: string }[] = [
+  { t: 0, name: SEEKER_BOT.name },
+  { t: 1, name: 'MAYA' },
+  { t: 2, name: 'DEV' },
+  { t: 3, name: 'JULES' },
+  { t: 4, name: 'ARI' },
 ];
 
 /**
@@ -237,15 +254,25 @@ export function Lobby() {
     return () => clearInterval(id);
   }, []);
 
+  // null until the host explicitly asks for simulated players. Holds the
+  // `elapsed` value at that moment so arrivals still stagger from the tap
+  // rather than from when the lobby opened.
+  const [simFrom, setSimFrom] = useState<number | null>(null);
+  const simElapsed = simFrom == null ? -1 : elapsed - simFrom;
+
   const roster: RosterRow[] = [
     { name: profile.handle || 'YOU', ready: acked, you: true, host: true },
-    ...JOIN_SCHEDULE.filter((j) => elapsed >= j.t).map((j) => ({
-      name: j.name,
-      ready: elapsed >= j.t + 3,
-    })),
+    ...(simFrom == null
+      ? []
+      : SIM_SCHEDULE.filter((j) => simElapsed >= j.t).map((j) => ({
+          name: j.name,
+          ready: simElapsed >= j.t + 2,
+          sim: true,
+        }))),
   ];
-  const allBotsIn = elapsed >= 10;
-  const canStart = acked && allBotsIn;
+
+  const allIn = roster.length >= MIN_PARTY && roster.every((r) => r.ready);
+  const canStart = acked && allIn;
   const preset = activePreset(settings);
 
   // Seeker bidding. Highest bid takes the role rather than the server rolling
@@ -253,7 +280,8 @@ export function Lobby() {
   // Profile.film. The winner PAYS, so this is a sink, not a reward, and wanting
   // to seek is a preference rather than an advantage.
   const [bid, setBid] = useState(0);
-  const topRivalBid = allBotsIn ? RIVAL_BID : 0;
+  // Nobody to outbid until there is somebody in the lobby to outbid.
+  const topRivalBid = roster.some((r) => r.sim) ? RIVAL_BID : 0;
   const winningBid = bid > topRivalBid;
   const canBid = bid + BID_STEP <= profile.film;
 
@@ -315,7 +343,9 @@ export function Lobby() {
         <Card style={{ marginTop: space(4), padding: 0 }}>
           <View style={styles.cardHeader}>
             <Label tone="text">Party</Label>
-            <Mono style={{ fontSize: 10, color: color.dim }}>{roster.length}/6 · MIN 3</Mono>
+            <Mono style={{ fontSize: 10, color: color.dim }}>
+              {roster.length}/{MAX_PARTY} · MIN {MIN_PARTY}
+            </Mono>
           </View>
           {/* keyed by name so each arrival animates in as it joins */}
           {roster.map((r) => (
@@ -329,12 +359,43 @@ export function Lobby() {
                 />
                 <Text style={styles.rosterName}>{r.name}</Text>
                 {r.host && <Text style={styles.hostTag}>HOST</Text>}
+                {/* Never let a simulated name pass for a person. */}
+                {r.sim && <Text style={styles.simTag}>TEST</Text>}
                 <Mono style={{ fontSize: 10, color: r.ready ? color.accent : color.faint }}>
                   {r.ready ? 'READY' : 'JOINED'}
                 </Mono>
               </View>
             </FadeIn>
           ))}
+
+          {/* Empty state. The invite code is the only way anyone joins. */}
+          {roster.length < MIN_PARTY && (
+            <View style={styles.waitingRow}>
+              <Mono style={{ fontSize: 11, color: color.dim, lineHeight: 17 }}>
+                Waiting for {MIN_PARTY - roster.length} more.{' '}
+                {simFrom == null
+                  ? 'Send them the invite code above.'
+                  : 'Test players are arriving.'}
+              </Mono>
+              <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1, marginTop: 4 }}>
+                NOBODY CAN JOIN WITHOUT THE CODE. FRAME NEVER MATCHES YOU WITH STRANGERS.
+              </Mono>
+              {simFrom == null && (
+                <Pressable
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                    setSimFrom(elapsed);
+                  }}
+                  style={({ pressed }) => [styles.simBtn, pressed && { opacity: 0.7 }]}
+                >
+                  <Mono style={styles.simBtnText}>ADD TEST PLAYERS</Mono>
+                  <Mono style={{ fontSize: 9, color: color.faint, marginTop: 2 }}>
+                    simulated, for trying the round out alone
+                  </Mono>
+                </Pressable>
+              )}
+            </View>
+          )}
         </Card>
 
         {/* presets, before the ten individual dials */}
@@ -545,9 +606,11 @@ export function Lobby() {
               ? winningBid
                 ? `you win the bid at ${bid} FILM · you seek`
                 : 'seeker assigned at random, server-side'
-              : !acked
-                ? 'acknowledge the safety card first'
-                : 'waiting for players…'
+              : roster.length < MIN_PARTY
+                ? `needs ${MIN_PARTY} players, you have ${roster.length}`
+                : !acked
+                  ? 'acknowledge the safety card first'
+                  : 'waiting for everyone to be ready…'
           }
           onPress={() => {
             // Winning the bid buys the role and the FILM is spent either way.
@@ -745,6 +808,34 @@ const styles = StyleSheet.create({
   },
   settingValue: { flexDirection: 'row', alignItems: 'center', gap: space(2) },
   settingChevron: { fontSize: 14, color: color.faint, marginTop: -2 },
+  simTag: {
+    fontFamily: font.monoSemi,
+    fontSize: 8,
+    letterSpacing: 1.2,
+    color: color.warn,
+    borderWidth: 1,
+    borderColor: color.warn,
+    borderRadius: 3,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    marginRight: space(2),
+  },
+  waitingRow: {
+    paddingHorizontal: space(4),
+    paddingVertical: space(3.5),
+    borderTopWidth: 1,
+    borderTopColor: color.line,
+  },
+  simBtn: {
+    marginTop: space(3),
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: color.lineBright,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    paddingVertical: space(2.5),
+  },
+  simBtnText: { fontSize: 10, letterSpacing: 1.4, color: color.text },
   bidRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
