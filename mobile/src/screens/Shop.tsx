@@ -49,42 +49,13 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
         </FadeIn>
 
         {/* season pass product */}
-        <FadeIn index={1}>
-          <Card
-            style={{
-              marginTop: space(5),
-              borderColor: profile.paidPass ? color.line : color.accent,
-            }}
-          >
-            <View style={styles.passTop}>
-              <View style={styles.passTopLeft}>
-                <Label tone="accent">
-                  Season {SEASON.number} · {SEASON.name}
-                </Label>
-                <Text style={styles.passName}>PAID TRACK</Text>
-              </View>
-              <Text style={styles.price}>{profile.paidPass ? 'OWNED' : '$4.99'}</Text>
-            </View>
-            <Mono style={{ fontSize: 11, color: color.dim, marginTop: space(2) }}>
-              {TIER_COUNT} tiers of cosmetics and FILM.{'\n'}
-              {SEASON.weeks - SEASON.week} weeks left in the season.
-            </Mono>
-            {!profile.paidPass && (
-              <Btn
-                title="Unlock paid track"
-                style={{ marginTop: space(3) }}
-                sub="one purchase kills ads on this account, forever"
-                onPress={() => {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  buyPass();
-                }}
-              />
-            )}
-            <Pressable onPress={() => go('pass')} hitSlop={8} style={{ marginTop: space(3) }}>
-              <Mono style={styles.viewTiers}>{`VIEW ALL ${TIER_COUNT} TIERS →`}</Mono>
-            </Pressable>
-          </Card>
-        </FadeIn>
+        {/* The paid season-pass track was removed with the rest of the paid
+            SKUs. The pass itself is unchanged and still runs: what is gone is
+            the ability to buy the second track. See monetization/LOOT-BOXES.md.
+
+            **This strands fifteen paid-track cosmetics** that no longer have a
+            route to a player. They are the obvious pool for the loot boxes,
+            which currently contain utility items and no cosmetics at all. */}
 
         {/* Real money products. Cosmetics and pass tiers only: FILM is never
             sold, because seeker bidding spends it and that would make a role

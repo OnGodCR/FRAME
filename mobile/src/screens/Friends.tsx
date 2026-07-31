@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
@@ -111,7 +111,7 @@ export function Friends({ embedded = false }: { embedded?: boolean } = {}) {
             <Text style={styles.myCode}>{friends.myCode}</Text>
             {showQr && (
               <View style={{ alignItems: 'center', marginTop: space(3) }}>
-                <QrBlock value={`frame://friend/${friends.myCode}`} />
+                <QrBlock value={`hidewire://friend/${friends.myCode}`} />
               </View>
             )}
           </Card>
@@ -271,9 +271,50 @@ export function Friends({ embedded = false }: { embedded?: boolean } = {}) {
               </Mono>
             </View>
 
+            {/* ---------------------------------------------------------------
+                Your own code, which is the thing that was missing.
+
+                The referral card only ever offered a box to type somebody
+                else's code into, so a player could be the referee and never
+                the referrer: half the feature had no entry point at all and
+                the loop could not close. The code itself already existed, as
+                the friend code, because `redeem_referral` resolves through
+                `lookup_friend_code`. One code, two uses, and the app never
+                said so.
+            ---------------------------------------------------------------- */}
+            <View style={styles.refMine}>
+              <View style={styles.rowBetween}>
+                <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1.4 }}>
+                  YOUR REFERRAL CODE
+                </Mono>
+                <PressScale
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    Share.share({
+                      message:
+                        `Play Hidewire with me. Use my code ${friends.myCode} and we both get ` +
+                        `${ECONOMY.referralFilm} FILM.`,
+                    }).catch(() => {
+                      // Share can be dismissed or unavailable on web. Nothing
+                      // to recover from and nothing worth interrupting for.
+                    });
+                  }}
+                >
+                  <Mono style={{ fontSize: 10, color: color.accent, letterSpacing: 1.2 }}>
+                    SHARE →
+                  </Mono>
+                </PressScale>
+              </View>
+              <Text style={styles.refCodeMine}>{friends.myCode}</Text>
+              <Mono style={{ fontSize: 9, color: color.faint, lineHeight: 14 }}>
+                THE SAME CODE AS YOUR FRIEND CODE. REACH LEVEL 2 BEFORE IT PAYS,
+                WHICH STOPS PEOPLE FARMING THEMSELVES WITH NEW ACCOUNTS.
+              </Mono>
+            </View>
+
             {friends.referredBy ? (
               <>
-                <Mono style={{ fontSize: 11, color: color.accent, marginTop: space(2) }}>
+                <Mono style={{ fontSize: 11, color: color.accent, marginTop: space(3) }}>
                   Referred by {friends.referredBy}. Both of you were paid.
                 </Mono>
                 <Mono style={styles.hint}>
@@ -361,6 +402,22 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  refMine: {
+    marginTop: space(3),
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.sm,
+    backgroundColor: color.surface2,
+    padding: space(3),
+    gap: space(1),
+  },
+  refCodeMine: {
+    fontFamily: font.numeral,
+    fontSize: 26,
+    letterSpacing: 4,
+    color: color.text,
+    marginVertical: space(1),
+  },
   myCode: {
     fontFamily: font.display,
     fontSize: 34,

@@ -105,14 +105,6 @@ export function SeasonPass({ embedded = false }: { embedded?: boolean } = {}) {
             backgroundColor: color.bg,
           }}
         >
-          <Btn
-            title="Unlock paid track · $4.99"
-            sub="kills ads on this account permanently"
-            onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              buyPass();
-            }}
-          />
         </View>
       )}
     </View>

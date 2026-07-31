@@ -6,7 +6,6 @@ import { color, font, radius, space } from '../theme';
 import { Bar, Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { FadeIn, PressScale } from '../components/motion';
 import { AvatarMark } from '../components/Cosmetics';
-import { STARTER_BUNDLE, byId } from '../data/catalog';
 import { useGame, SEEKER_BOT, ROUND_DISPLAY_MINUTES } from '../engine/GameContext';
 
 // ---------- blackout (missed check-in) ----------
@@ -63,8 +62,6 @@ export function Results() {
   const { round, go, startRound, finishRound, addXp, profile, seen, markSeen } = useGame();
   const insets = useSafeAreaInsets();
   const [xpApplied, setXpApplied] = useState(false);
-  // Only after a round has actually been finished, and only once ever.
-  const showStarter = !seen.starterOffered && !profile.owned.includes(STARTER_BUNDLE.frameId);
   const barAnim = useRef(new Animated.Value(0)).current;
 
   const data = useMemo(() => {
@@ -188,7 +185,6 @@ export function Results() {
             never that the player forgot. It is that nobody agreed a time. */}
         <NextRoundCard />
 
-        {showStarter ? <StarterOffer onClose={() => markSeen({ starterOffered: true })} /> : null}
 
         <View style={styles.adSlot}>
           <Mono style={{ fontSize: 9, letterSpacing: 1.2, color: color.faint }}>
@@ -284,59 +280,6 @@ function NextRoundCard() {
   );
 }
 
-// ---------- first purchase ----------
-
-function StarterOffer({ onClose }: { onClose: () => void }) {
-  const { profile, redeemBundle } = useGame();
-  const owned = profile.owned.includes(STARTER_BUNDLE.frameId);
-  const frame = byId(STARTER_BUNDLE.frameId)!;
-
-  if (owned) return null;
-
-  return (
-    <Card style={[styles.offer, { marginTop: space(3) }]}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Label tone="accent">One time offer</Label>
-        <PressScale onPress={onClose}>
-          <Mono style={{ fontSize: 10, color: color.faint, letterSpacing: 1.2 }}>DISMISS</Mono>
-        </PressScale>
-      </View>
-
-      <View style={styles.offerBody}>
-        <AvatarMark size={64} tint={color.accent} frameTint={frame.tint} />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.offerName}>{STARTER_BUNDLE.name}</Text>
-          <Mono style={{ fontSize: 11, color: color.dim, marginTop: 3, lineHeight: 17 }}>
-            The frame every photo you send the seeker is wearing. Not sold for FILM,
-            at any price. Plus {STARTER_BUNDLE.film} FILM.
-          </Mono>
-        </View>
-      </View>
-
-      <View style={styles.offerFoot}>
-        <View>
-          <Mono style={styles.anchor}>{STARTER_BUNDLE.anchor}</Mono>
-          <Text style={styles.offerPrice}>{STARTER_BUNDLE.price}</Text>
-        </View>
-        <PressScale
-          onPress={() => {
-            // Cosmetic only. Nothing here touches whether you win.
-            redeemBundle(STARTER_BUNDLE.frameId, STARTER_BUNDLE.film);
-            onClose();
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          }}
-        >
-          <View style={styles.offerBtn}>
-            <Mono style={styles.offerBtnText}>GET IT</Mono>
-          </View>
-        </PressScale>
-      </View>
-      <Mono style={{ fontSize: 9, color: color.faint, marginTop: space(2.5), lineHeight: 14 }}>
-        COSMETIC ONLY · NO EFFECT ON PLAY · SHOWN ONCE
-      </Mono>
-    </Card>
-  );
-}
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },

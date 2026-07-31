@@ -74,7 +74,7 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'frame-lightleak', name: 'LIGHT LEAK', category: 'frame', tint: C.yellow, source: 'paid', tier: 18 },
   { id: 'frame-polaroid', name: 'POLAROID', category: 'frame', tint: C.white, source: 'paid', tier: 27 },
   // Bundle-only. Not buyable with FILM at any price, which is the entire
-  // reason it converts: see STARTER_BUNDLE below.
+  // reason it converts: see the retired STARTER_BUNDLE note below.
   { id: 'frame-firstlight', name: 'FIRST LIGHT', category: 'frame', tint: C.mint, source: 'bundle' },
 
   // ---- blackout styles ----
@@ -193,15 +193,16 @@ export const TIERS: Tier[] = buildTiers();
  * anchored against component value. Cosmetic only, like everything else:
  * nothing purchasable may affect whether you win.
  */
-export const STARTER_BUNDLE = {
-  id: 'bundle-firstlight',
-  name: 'FIRST LIGHT',
-  price: '$2.99',
-  /** What it would cost if the parts were bought separately. */
-  anchor: '$8.98',
-  frameId: 'frame-firstlight',
-  film: 600,
-};
+/**
+ * Retired. The one-time first-purchase offer on the results screen is gone
+ * with the rest of the paid SKUs. Kept as a comment rather than deleted
+ * silently, because the *timing* argument behind it was the good part and is
+ * worth reusing: it appeared after a completed round, when a player had just
+ * spent half an hour watching a feed of framed photographs and finally
+ * understood what a frame was and where it was seen. If a paid offer ever
+ * returns, that is the moment for it, not install.
+ */
+
 
 /**
  * Facts about the season itself, which are the same for every player. Player
@@ -238,59 +239,27 @@ export interface StoreProduct {
   tag?: string;
 }
 
-export const STORE: StoreProduct[] = [
-  {
-    id: 'store-pass',
-    name: 'SEASON PASS',
-    blurb: 'The paid track for the whole season, plus no ads on this account forever.',
-    price: '$4.99',
-    grants: [],
-    tag: 'BEST VALUE',
-  },
-  {
-    id: 'store-darkroom-set',
-    name: 'DARKROOM SET',
-    blurb: 'Three frames, the category everyone else actually sees.',
-    price: '$3.99',
-    anchor: '$8.97',
-    grants: ['frame-darkroom', 'frame-safelight', 'frame-fixer'],
-  },
-  {
-    id: 'store-tier-5',
-    name: '5 TIER SKIP',
-    blurb: 'Jump five pass tiers. Cosmetic rewards only.',
-    price: '$2.99',
-    grants: [],
-    tiers: 5,
-  },
-  {
-    id: 'store-tier-10',
-    name: '10 TIER SKIP',
-    blurb: 'Jump ten pass tiers. Cosmetic rewards only.',
-    price: '$4.99',
-    anchor: '$5.98',
-    grants: [],
-    tiers: 10,
-  },
-  {
-    id: 'store-founder',
-    name: 'FOUNDER BUNDLE',
-    blurb: 'Every shop cosmetic currently in rotation, plus the pass.',
-    price: '$12.99',
-    anchor: '$24.94',
-    grants: [
-      'frame-darkroom',
-      'frame-safelight',
-      'frame-fixer',
-      'pin-negative',
-      'pin-ghost',
-      'static-signal',
-      'tag-prism',
-      'title-developed',
-    ],
-    tag: 'EVERYTHING',
-  },
-];
+/**
+ * Real-money products, now empty.
+ *
+ * Every paid SKU that used to live here (the season pass, the darkroom set,
+ * two tier skips, and the founder bundle) was removed at Angad's direction:
+ * the shop is moving to loot boxes, and the old grid read as a list of things
+ * to scroll past rather than anything anyone wanted.
+ *
+ * **Monetization is now exactly two things**, and the list is deliberately
+ * short so that adding a third is a decision rather than a drift:
+ *
+ *   1. FIRST LIGHT CASE, $4.99, in data/lootboxes.ts.
+ *   2. Buying FILM, which is NOT built and is gated behind
+ *      `FILM_IS_PURCHASABLE` in the same file, because switching it on turns
+ *      every FILM box into a paid random item and changes the product's
+ *      regulatory position in several countries at once.
+ *
+ * See monetization/LOOT-BOXES.md before putting anything back here.
+ */
+export const STORE: StoreProduct[] = [];
+
 
 export const SEASON = {
   number: '01',
