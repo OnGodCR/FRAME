@@ -122,7 +122,21 @@ export function DobGate() {
    */
   const complete = mm.length >= 1 && dd.length >= 1 && yyyy.length === 4;
 
-  /** 1 becomes 01, so the fields read back the way a date is written. */
+  /**
+   * 1 becomes 01, applied only when the field is finished by a separator.
+   *
+   * **There is deliberately no padding on blur.** The first version of this did
+   * pad on blur, via `setMm(pad(mm))`, and that reads `mm` from the render that
+   * installed the handler. Typing the second digit moves focus, so the blur
+   * fired holding the stale one-character value and overwrote the real one:
+   * typing 05 left 00 in the field, and 12 left 01.
+   *
+   * A functional update fixes the staleness, but the padding is cosmetic and it
+   * could not be shown to fire reliably, so it is gone instead. A one-character
+   * month is valid input, `validateDob` reads it correctly, and 1/7/1998 is not
+   * ambiguous. Fewer handlers on the gate that blocks the entire app is worth
+   * more than a leading zero.
+   */
   const pad = (v: string) => (v.length === 1 ? '0' + v : v);
 
   const submit = () => {
@@ -197,16 +211,13 @@ export function DobGate() {
             value={mm}
             placeholder="MM"
             maxLength={2}
-            onBlur={() => setMm(pad(mm))}
             onChange={(v, separator) => {
-              setMm(v);
               setError(null);
               // Two digits, or a typed separator. Somebody entering "1/" means
               // January as clearly as "01" does.
-              if (v.length === 2 || (separator && v.length >= 1)) {
-                setMm(pad(v));
-                ddRef.current?.focus();
-              }
+              const advance = v.length === 2 || (separator && v.length >= 1);
+              setMm(advance ? pad(v) : v);
+              if (advance) ddRef.current?.focus();
             }}
             autoFocus
           />
@@ -215,14 +226,11 @@ export function DobGate() {
             value={dd}
             placeholder="DD"
             maxLength={2}
-            onBlur={() => setDd(pad(dd))}
             onChange={(v, separator) => {
-              setDd(v);
               setError(null);
-              if (v.length === 2 || (separator && v.length >= 1)) {
-                setDd(pad(v));
-                yyRef.current?.focus();
-              }
+              const advance = v.length === 2 || (separator && v.length >= 1);
+              setDd(advance ? pad(v) : v);
+              if (advance) yyRef.current?.focus();
             }}
           />
           <DateCell
@@ -259,7 +267,6 @@ function DateCell({
   wide,
   autoFocus,
   inputRef,
-  onBlur,
 }: {
   value: string;
   /** Receives the digits, plus whether the raw input carried a separator. */
@@ -269,13 +276,11 @@ function DateCell({
   wide?: boolean;
   autoFocus?: boolean;
   inputRef?: React.RefObject<TextInput | null>;
-  onBlur?: () => void;
 }) {
   return (
     <TextInput
       ref={inputRef}
       value={value}
-      onBlur={onBlur}
       onChangeText={(v) =>
         // The separator is detected before it is stripped, so the caller can
         // treat "1/" as a finished month.

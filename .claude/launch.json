@@ -11,9 +11,10 @@
         "start",
         "--",
         "--port",
-        "8090"
+        "8091"
       ],
-      "port": 8090
+      "port": 8091,
+      "autoPort": false
     },
     {
       "name": "hidewire-web",
