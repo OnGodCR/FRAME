@@ -110,7 +110,20 @@ export function DobGate() {
   const yyRef = useRef<TextInput>(null);
   const insets = useSafeAreaInsets();
 
-  const complete = mm.length === 2 && dd.length === 2 && yyyy.length === 4;
+  /**
+   * Month and day are accepted as one digit or two.
+   *
+   * This used to require exactly two, and the failure was silent: somebody born
+   * on the 1st of January typed 1 / 1 / 1998, got a Continue button that was
+   * disabled with no message next to it, and had no way to find out why. The
+   * app looked broken on the second screen of the funnel, which is the worst
+   * possible place for it. A gate is allowed to reject a date. It is not
+   * allowed to reject one without saying so.
+   */
+  const complete = mm.length >= 1 && dd.length >= 1 && yyyy.length === 4;
+
+  /** 1 becomes 01, so the fields read back the way a date is written. */
+  const pad = (v: string) => (v.length === 1 ? '0' + v : v);
 
   const submit = () => {
     const invalid = validateDob(mm, dd, yyyy);
@@ -184,10 +197,16 @@ export function DobGate() {
             value={mm}
             placeholder="MM"
             maxLength={2}
-            onChange={(v) => {
+            onBlur={() => setMm(pad(mm))}
+            onChange={(v, separator) => {
               setMm(v);
               setError(null);
-              if (v.length === 2) ddRef.current?.focus();
+              // Two digits, or a typed separator. Somebody entering "1/" means
+              // January as clearly as "01" does.
+              if (v.length === 2 || (separator && v.length >= 1)) {
+                setMm(pad(v));
+                ddRef.current?.focus();
+              }
             }}
             autoFocus
           />
@@ -196,10 +215,14 @@ export function DobGate() {
             value={dd}
             placeholder="DD"
             maxLength={2}
-            onChange={(v) => {
+            onBlur={() => setDd(pad(dd))}
+            onChange={(v, separator) => {
               setDd(v);
               setError(null);
-              if (v.length === 2) yyRef.current?.focus();
+              if (v.length === 2 || (separator && v.length >= 1)) {
+                setDd(pad(v));
+                yyRef.current?.focus();
+              }
             }}
           />
           <DateCell
@@ -236,20 +259,28 @@ function DateCell({
   wide,
   autoFocus,
   inputRef,
+  onBlur,
 }: {
   value: string;
-  onChange: (v: string) => void;
+  /** Receives the digits, plus whether the raw input carried a separator. */
+  onChange: (v: string, separator: boolean) => void;
   placeholder: string;
   maxLength: number;
   wide?: boolean;
   autoFocus?: boolean;
   inputRef?: React.RefObject<TextInput | null>;
+  onBlur?: () => void;
 }) {
   return (
     <TextInput
       ref={inputRef}
       value={value}
-      onChangeText={(v) => onChange(v.replace(/[^0-9]/g, ''))}
+      onBlur={onBlur}
+      onChangeText={(v) =>
+        // The separator is detected before it is stripped, so the caller can
+        // treat "1/" as a finished month.
+        onChange(v.replace(/[^0-9]/g, ''), /[^0-9]/.test(v))
+      }
       placeholder={placeholder}
       placeholderTextColor={color.faint}
       keyboardType="number-pad"

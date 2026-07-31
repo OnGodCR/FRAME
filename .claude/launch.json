@@ -14,6 +14,18 @@
         "8090"
       ],
       "port": 8090
+    },
+    {
+      "name": "hidewire-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "/Users/vintibangkochar/Documents/GitHub/Hidewire-web",
+        "run",
+        "dev"
+      ],
+      "port": 4321,
+      "autoPort": true
     }
   ]
 }
