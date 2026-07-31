@@ -62,6 +62,7 @@ Two conventions, both deliberate:
 | Rival seeker bid | `RIVAL_BID`, `screens/JoinLobby.tsx` | Real bids from the party |
 | Baked Seattle world | `data/world.json` | Live Overpass fetch, already works |
 | CONTINUE AS TEST ACCOUNT on the auth screen | `screens/AuthGate.tsx` | Real Google or Apple sign-in |
+| Games near you | `NEARBY_GAMES`, `screens/tabs/LocationTab.tsx` | Geo query on open parties |
 
 ---
 
@@ -178,7 +179,45 @@ those photos exist, expect the validator to reject valid captures.
 
 ---
 
-## 10. The account boundary is not a fixture
+## 10. Nearby games
+
+`NEARBY_GAMES` in `screens/tabs/LocationTab.tsx`. Three invented open lobbies,
+gated behind TEST_MODE like everything else.
+
+| Host | Players | Distance shown | Starts in |
+|---|---|---|---|
+| VESPER | 4/6 | UNDER 500 M | 6 MIN |
+| HALFLIGHT | 3/8 | UNDER 3 KM | 18 MIN |
+| GRAIN | 5/6 | UNDER 3 KM | 31 MIN |
+
+**ASK TO JOIN does nothing but flip the button.** There is no request, because
+there is nobody to send one to.
+
+Two things about this tab are **not** fixtures and must survive:
+
+- **The 18+ gate is real**, driven by the age bracket from the DOB gate. A
+  13-17 account sees the refusal screen, not an empty list.
+- **Distances are coarse buckets by design**, not a rounding of a real number
+  that a server will later make precise. Exact positions must never appear
+  here. See the supersession note in CLAUDE.md 3.
+
+The visibility toggle defaults off and is local only; it does not yet publish
+anything anywhere, because there is nowhere to publish to.
+
+---
+
+## 11. Missions
+
+`data/missions.ts`. The missions themselves are **not** fixtures: they are
+derived from real state (practised, daily done, rounds today) and the 100 FILM
+sweep bonus really is paid and really is guarded against double payment.
+
+What is worth knowing is that `roundsToday` counts **scripted** rounds, since
+every round is scripted. It becomes real the moment rounds do.
+
+---
+
+## 12. The account boundary is not a fixture
 
 Guests genuinely cannot use the shop, FILM, friends, the leaderboard, or
 referrals, and that is **not** enforced by the client. Every social table keys
@@ -194,7 +233,7 @@ that boundary is faked. It exists because the Supabase OAuth redirect for Expo
 Go is still unconfigured, so there is otherwise no way to review account-only
 screens. It disappears with TEST_MODE.
 
-## 11. Before any public build
+## 13. Before any public build
 
 - [ ] `TEST_MODE` is false in `src/config.ts`
 - [ ] `DEMO_SEED` is false
@@ -203,6 +242,11 @@ screens. It disappears with TEST_MODE.
 - [ ] `DIRECTORY` is replaced by a real profile lookup
 - [ ] `GLOBAL_LADDER` is replaced by a real ranked query
 - [ ] `RIVAL_BID` is replaced by real bids
+- [ ] `NEARBY_GAMES` is replaced by a real geo query, and ASK TO JOIN sends a
+      real request
+- [ ] CONTINUE AS TEST ACCOUNT is gone and OAuth works end to end
+- [ ] The 18+ gate on NEARBY is tested with a 13-17 account, not just an adult
+      one
 - [ ] Store buttons are wired to a real payment provider
 - [ ] Validator thresholds are calibrated against real photos
 - [ ] `ios.bundleIdentifier` and `android.package` are changed off the

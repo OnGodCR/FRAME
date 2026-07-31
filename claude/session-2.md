@@ -1,26 +1,51 @@
 # FRAME: session 2 handoff
 
-Written 2026-07-29. Read [session-1.md](session-1.md) first: it still describes
+Written 2026-07-30. Read [session-1.md](session-1.md) first: it still describes
 the architecture accurately and nothing in it has been invalidated. This file
 covers only what changed.
 
-Everything below is **uncommitted** at time of writing. 15 commits in the repo,
-23 changed or new files in the working tree.
+Committed and pushed. Sections are in the order the work happened, which is also
+roughly the order a cold reader will care about them.
 
 ---
 
 ## 1. What this session was
 
-Two things, in order:
+Long, and it moved through several rounds of review. In order:
 
-1. **Push notifications**, which session 1 listed as item 7 of the core loop.
-2. **A research pass on competitor UX, retention, and monetization**, then
-   implementing the result. This was the larger half.
+1. **Push notifications** (2), which session 1 listed as item 7 of the core loop.
+2. **Android became a v1 target** (3), reversing session 1's iOS-only call.
+3. **A research pass on competitor UX, retention, and monetization** (4), then
+   implementing the result.
+4. **Three rounds of Angad's review** (8, 11, 14), each finding real bugs.
+5. **The real camera and validator on real pixels** (9), closing session 1's
+   items 4 and 5.
+6. **First-run experience** (10), then a **five-tab restructure** (14) when the
+   first attempt still put too much on one screen.
+7. **Social systems and the FILM economy** (12): friends, leaderboard, applause,
+   referrals, shop expansion.
+8. **The social backend design and the guest boundary** (13), plus one
+   TEST_MODE kill switch.
 
-The research is written up in [RETENTION.md](../RETENTION.md), which is a
-standalone document with sources. Section 8 of it is a shipped/not-shipped
-table. This handoff does not repeat it; read that file for the reasoning behind
-the product changes summarised here.
+Companion documents, all current:
+
+- [RETENTION.md](../RETENTION.md), the research and what shipped from it.
+- [TEST-FIXTURES.md](../TEST-FIXTURES.md), everything fake and how to switch it
+  off with one flag.
+- [CLAUDE.md](../CLAUDE.md), standing instructions and the live backlog.
+- [README.md](../README.md), current scope and the open blockers.
+
+### The short version for someone picking this up cold
+
+The app is a **complete single-player mock of a multiplayer game**. Every screen
+works, the camera and validator are real on a device, and none of it talks to a
+server. Two phones share nothing. That is the single most important thing to
+understand before reading anything else, and it is why so much of this document
+is about fixtures.
+
+**The three things that block everything else** are unchanged: apply the
+migrations, get calibration photos, and test a check-in notification from a
+pocket on a real phone.
 
 ---
 
@@ -246,84 +271,139 @@ BUNDLE ONLY rather than pointing at a shop page that will never sell it.
 
 ## 5. Verified versus written
 
-**Verified by clicking through the preview**, with no console or server errors:
+Kept current to the end of the session, because a stale version of this section
+is worse than none.
 
-- The 4-step funnel, landing on home directly from the handle screen.
-- The daily assignment end to end. XP moved 58% to 64%, FILM 1,250 to 1,325,
-  streak started, card flipped to a done state.
-- The 30-minute round. Clock read 26:24 of 30:00; lobby default reads 30 MIN;
-  results scored survival against the new length.
-- The `PermissionNote` appearing above START ROUND.
-- Blackout into results, the three booking chips (booked TONIGHT · 19:00), and
-  the FIRST LIGHT offer rendering with its anchor price.
-- The frames section with in-context previews.
-- Check-in 04 still opening at the identical tick after the refactor.
+### Verified by clicking through the preview, no console or server errors
 
-**Written but not proven on a device:** everything notification-related. The
-web preview exercises the no-op path only. Nothing has confirmed that a real
-tick fires from a suspended iPhone, and that is the single claim the entire
-mechanic rests on. **Test this first on a real device.**
+- The **4-step funnel**, landing on home directly from the handle screen, and
+  skipping the handle step on a second visit.
+- The **five-tab shell**: Game shows identity, missions 0/3, host, join, ad, and
+  nothing else. Nearby, Social, Store, Profile all render.
+- **Missions** derive correctly on a fresh account and the sweep line reads
+  FINISH ALL 3 FOR 100 FILM.
+- **Nearby** passes the 18+ gate for an adult account, opt-in defaults off,
+  distances render as coarse buckets.
+- The **daily assignment** end to end, including the payout landing and the card
+  flipping to a done state.
+- The **30-minute round** counting down one second at a time.
+- **Friends**: added KAI by code, applause paid and the counter moved to
+  20/100, button flipped to APPLAUDED.
+- **Leaderboard**: a level 1 account ranked 15 of 15 globally, and second of two
+  against one friend.
+- The **QR** rendering in acid on black inside the wordmark brackets.
+- The **guest wall** blocking Friends with a real reason.
+- Both **scroll gates** in both directions: auto-satisfied when content fits,
+  still requiring a real scroll when it overflows.
 
-Typecheck clean. Validator still 26/26.
+Typecheck clean throughout. Validator 26/26.
+
+### Written but never run on a device
+
+**Everything that needs hardware.** This is the honest gap and it is large:
+
+- **No notification has ever fired.** The web preview exercises the no-op path
+  only. Nothing has confirmed a tick reaches a suspended phone in a pocket,
+  which is the single claim the entire mechanic rests on.
+- **No photograph has been through the validator.** The camera, the JPEG
+  decode, and the thresholds are all unexercised on real pixels. Expect the
+  first real test to reject valid captures, because the thresholds are still
+  placeholders.
+- **No migration has been applied**, so no RLS policy has ever been enforced.
+
+### One thing I could not resolve
+
+The round clock counts one second at a time, confirmed with no skips. But in
+the headless preview pane it advances at roughly **half** wall time, while a
+raw `setInterval(1000)` in the same page runs at a true 1 Hz. Attempts to
+instrument it were defeated by bundle caching and the pane cannot be
+foregrounded. **Check the clock against a watch on a real phone.** If it is
+half speed there too, the suspect is the round interval effect being torn down
+and recreated.
 
 ---
 
 ## 6. Still outstanding
 
-In rough dependency order. Session 1's list still stands; these are additions
-and changes to it.
+In dependency order. Items completed during this session have been removed
+rather than left ticked, so this list is only what remains.
 
-1. **Test notifications on a real device.** See above.
-2. **Real camera** (`expo-camera`), into `CaptureSequence`. Still the highest
-   value engineering item, and now it lands in three modes at once.
-3. **Wire `PermissionNote` to the location and camera prompts.** Only
+### Blocking everything
+
+1. **Apply the migrations.** `0001_core.sql` then `0002_social.sql`. Nothing is
+   genuinely multiplayer until then, and no RLS policy has ever run.
+2. **Replace the demo engine with server state.** `GameContext.tsx` is the
+   seam. Party creation, roster, and round lifecycle move to Supabase with
+   Realtime.
+3. **Photo upload to R2**, presigned PUT direct from the client, plus the
+   24-hour deletion job. `purge_expired_posts()` is written and unscheduled.
+
+### The core loop
+
+4. **Tick scheduling server side.** Exact `window_open` and `window_close`
+   written at round start, evaluated by a `pg_cron` job. See INFRASTRUCTURE 4.
+5. **Server-side revalidation.** The client verdict is a preview; PRD 9 says
+   never trust a client-reported pass.
+6. **Remote push** for the non-deterministic events. `registerForPushToken` is
+   written and inert until an EAS project exists.
+7. **Wire `PermissionNote` to the location and camera prompts.** Only
    notifications is done.
-4. **Live Activity / Dynamic Island** for the round timer. Needs a native
-   widget extension and the Apple program. PRD 10.2 calls this the single
-   highest-value platform feature, and it is a safety feature as much as a UX
-   one because it keeps players from walking while staring at a screen.
-5. **Shareable round artifact.** Needs a view-capture dependency and a decision
-   about what the image contains. This is the acquisition loop, not just
-   retention: growth is necessarily word of mouth inside existing friend groups.
-6. **Contextual first-sight POI callouts.** The legend being permanently
-   reachable was the more important half and is done. Teaching each pin type
-   the first time one appears on the map is still worth doing.
-7. **Streak freeze.** The weekly streak is tracked and displayed but there is no
-   freeze. RETENTION.md 5.2 is explicit that a streak a player cannot protect is
-   a churn trigger, not a retention mechanic. Do not leave this half-built.
-8. **Season pass pacing.** 50 tiers is Fortnite-shaped and Fortnite is played
-   daily by a solo player. If a real engaged FRAME player manages one or two
-   rounds a week they will finish nowhere near 50, and someone who cannot
-   complete a pass does not buy the next one. Needs playtest data.
-9. **LONG EXPOSURE**, designed and not built. Solo endurance: unpredictable
-   pings, dual capture each time, enforced relocation between captures via pHash
-   plus GPS displacement, streak leaderboard, zero contact with any other
-   player. It is the strongest remaining use of the validator, and it is
-   **blocked on calibration photos** in a way nothing else is, because the mode
-   *is* the reuse threshold. Building it before those photos exist means
-   inventing the number the whole mode is made of.
 
-Everything in session 1 section 7 that was not touched this session is still
-open, notably the schema, the second migration, replacing the demo engine with
-server state, and all four PRD 7 safety systems.
+### Safety systems, all PRD 7 hard constraints, none built
+
+8. Speed lock above 10 mph sustained for 30 seconds.
+9. Geofenced exclusion zones, updatable without an app release.
+10. Battery warning below 40% at round start.
+11. POI complaint form plus a public web page, 15-day removal SLA.
+12. **Moderation queue.** Reports are recorded and nothing consumes them. The
+    Nearby tab makes this non-optional rather than a later item.
+
+### Product
+
+13. **Daily assignment redesign.** Angad is right that the prompts are too
+    menial. Needs a design pass on stakes and variety, not more nouns in the
+    same shape. The only unticked item on the CLAUDE.md backlog.
+14. **Streak freeze.** The weekly streak is tracked and shown but cannot be
+    protected, and RETENTION.md 5.2 is explicit that such a streak is a churn
+    trigger rather than a retention mechanic. Do not leave this half-built.
+15. **Live Activity / Dynamic Island.** PRD 10.2 calls it the highest-value
+    platform feature, and it is a safety feature too: it keeps players from
+    walking while staring at a screen.
+16. **Shareable round artifact.** This is the acquisition loop, not just
+    retention.
+17. **LONG EXPOSURE**, designed and not built. Solo endurance with enforced
+    relocation between captures via pHash plus GPS displacement. **Blocked on
+    calibration photos** in a way nothing else is, because the mode *is* the
+    reuse threshold.
+18. Contextual first-sight POI callouts on the map.
+19. BLE tagging with PIN fallback, anti-cheat, buffs doing something, ads, IAP,
+    analytics, errors.
 
 ---
 
 ## 7. What is blocked on Angad
 
-Unchanged from session 1, and **calibration photos are now blocking more than
-they were**. They gate the validator thresholds, and they additionally gate
-LONG EXPOSURE entirely. The `repeat/` series is the one that matters most: it
-decides whether honest players who stand still get eliminated, and that number
-cannot be derived synthetically.
+Nothing here is engineering work. In order of how much it holds up:
 
-Also still open: applying the schema, the Expo Go redirect, the Apple Developer
-Program (now also needed for the time-sensitive entitlement), a domain, an
-attorney, and the 3 / 5 / 10 minute interval playtest.
-
-Angad was walked through the calibration shooting process at the end of this
-session. `calibration/pass/`, `calibration/fail/`, and `calibration/repeat/`
-now exist as empty directories so there is somewhere to drop them.
+1. **Apply the two migrations** in the Supabase SQL editor. The anon key cannot
+   run DDL.
+2. **Calibration photos** into `calibration/`. They gate the validator
+   thresholds and they gate LONG EXPOSURE entirely. The `repeat/` series matters
+   most: it decides whether honest players who stand still get eliminated, and
+   that number cannot be derived synthetically. The directories exist and are
+   empty.
+3. **Test a check-in notification from a pocket** on the Android phone. Expo Go
+   for SDK 57 is not on the Play Store; the APK link is in section 9.
+4. **Add the Expo Go redirect** to Supabase Auth URL Configuration, so real
+   sign-in works and CONTINUE AS TEST ACCOUNT can be deleted.
+5. **Apple Developer Program**, $99/yr. Needed for TestFlight, Sign in with
+   Apple (mandatory alongside Google under Guideline 4.8), and the
+   time-sensitive entitlement.
+6. **A domain**, then change `com.frame.app` before the first store upload.
+   Both identifiers are permanent once published.
+7. **An attorney** for the liability language.
+8. **The 3 / 5 / 10 minute interval playtest**, which PRD 14 names as the top
+   product risk and which no amount of engineering answers.
 
 ---
 

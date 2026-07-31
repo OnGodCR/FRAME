@@ -307,19 +307,10 @@ export const ROUND_DISPLAY_SECONDS = ROUND_DISPLAY_MINUTES * 60;
  * scaled-down stand-ins.
  *
  * The cost is that watching a whole round takes 30 minutes, which is correct
- * for a player and slow for a reviewer. That is what DEV_TIME_SCALE is for.
+ * for a player and slow for a reviewer. TIME_SCALE in config.ts exists for
+ * that, and ships at 1.
  */
 const ROUND_REAL_SECONDS = ROUND_DISPLAY_SECONDS;
-
-/**
- * Development-only clock multiplier. 1 is real time and is what ships.
- *
- * Raise it to skim a full round quickly while working on the round screens.
- * It scales the tick interval, not the timeline, so the clock still counts
- * down one displayed second at a time and the check-in window keeps its real
- * duration relative to everything else.
- */
-export const DEV_TIME_SCALE = TIME_SCALE;
 
 let tickerId = 0;
 const ev = (text: string, tone: TickerEvent['tone'] = 'info'): TickerEvent => ({
