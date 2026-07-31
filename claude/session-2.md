@@ -804,7 +804,94 @@ New, TEST_MODE only, on the auth screen. The Supabase OAuth redirect for Expo Go
 is still unconfigured, so there was otherwise no way to reach account-only
 screens at all. It is a fixture and it is registered as one.
 
-## 14. Bug found and fixed: the scroll gates could lock a player out
+## 14. The home screen became five tabs
+
+Angad's diagnosis, with a Clash Royale screenshot attached: everything is thrown
+at you at once and a first-time player has no idea what to do. That was fair.
+Home was one scrolling column holding identity, a start-here card, a checklist,
+the daily assignment, host and join, a map legend, friends, leaderboard, season
+pass, loadout, shop, a reset link, nearby POIs, and an ad.
+
+### Five buckets
+
+| Tab | Holds |
+|---|---|
+| NEARBY | Games near you, POI list. 18+ only. |
+| SOCIAL | Friends, codes and QR, referrals, leaderboard. |
+| GAME | Missions, host, join. Nothing else. |
+| STORE | Season pass, shop. |
+| PROFILE | Level, XP, cosmetics owned, settings. |
+
+`screens/Home.tsx` is now a shell: a pinned `IdentityBar`, one bucket's content,
+a pinned `TabBar`. Identity never moves, so nobody hunts for their own level or
+balance, and only the bucket scrolls.
+
+GAME sits in the middle and is drawn largest. That is not decoration: the middle
+slot is the easiest target on a one-handed phone and should be hittable without
+looking.
+
+Sub-navigation inside a bucket uses `Segmented` rather than more bottom tabs,
+which is what kept the bar at five. Referrals live inside Friends rather than
+getting their own segment, because a referral is a friend you brought and two
+screens that both say "enter a code" would be worse.
+
+Existing screens take an `embedded` prop that hides their own back link and
+title when hosted in a tab, so they are reused rather than rewritten.
+
+### Missions
+
+`data/missions.ts`. Three a day, and **finishing all three pays 100 FILM**.
+That bonus is the only reason to do the third one after the first two have
+already paid, which is what turns three separate asks into one thing worth
+finishing.
+
+Missions are **derived, not stored**. Each reads existing state (practised,
+daily done, rounds today) rather than keeping a parallel copy that can drift.
+Only what is not derivable elsewhere is persisted: rounds today, and whether
+the sweep bonus has been paid. The sweep is guarded on `sweepPaid` rather than
+on the mission states, so finishing, spending, and finishing again cannot pay
+twice.
+
+Deliberately three, not eight. A list long enough to scroll stops being a
+direction and becomes the chore list the home screen was already guilty of.
+
+### Nearby, and the constraint it crosses
+
+**This is a deliberate supersession of "never imply stranger play"**, which
+marketing/BRIEF.md 9 calls a legal line. Recorded here and in CLAUDE.md rather
+than buried in a component, because a decision to cross a legal line should be
+visible.
+
+Built to the most conservative reading that still delivers it:
+
+- **18+ only**, from the age bracket captured at the DOB gate. The date of
+  birth itself is still never stored.
+- **Opt in, off by default.** Nobody is listed until they choose to be.
+- **Coarse buckets, never positions.** "UNDER 1 KM", not a pin on a map.
+  Knowing someone is nearby is enough to decide whether to ask them to play;
+  knowing where they are standing is not something a stranger needs.
+- **Requests, not contact.** No messaging.
+- **Report and block on every row.**
+
+The age bracket now persists (`AgeBracket` in persist.ts). It was computed at
+the DOB gate and thrown away, so the gate had nothing to check.
+
+### Contrast
+
+Every section used to sit on the same near-black, so nothing read as a
+boundary. Sections now sit on `surface` with a real `lineBright` border, the
+tab bar and identity bar are on a lifted surface with borders top and bottom,
+and mission rows sit on `surface2` inside the mission card. The hierarchy is
+three surface levels rather than one.
+
+### Map zoom, corrected
+
+I read "more zoomed out" and pulled the default from 2 to 1.15. Angad meant the
+opposite. It is now 2.6, closer than it originally was. What you need while
+walking is the street you are on and the nearest few POIs; the zone ring is
+already legible from the scale badge, and zooming out is one tap.
+
+## 15. Bug found and fixed: the scroll gates could lock a player out
 
 Angad hit this on a wide viewport: the legal gate's button stayed on
 SCROLL TO THE END forever and the app could not be entered.
@@ -854,7 +941,7 @@ or an Android tablet has the room to fit it, and there was no iOS equivalent
 because `supportsTablet` is false. Shipping Android without this fix would have
 meant a permanently unusable app on those devices.
 
-## 15. New gotchas
+## 16. New gotchas
 
 - **Browser pane coordinates are NOT 2x, contrary to session 1 gotcha 2.** The
   tool reports `Screenshot size: 375x812` while the returned image is 750x1624.

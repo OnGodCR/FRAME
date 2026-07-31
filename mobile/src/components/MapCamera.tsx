@@ -16,12 +16,13 @@ const clamp = (v: number) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, v));
 /**
  * Default zoom. 1 shows the whole zone; higher numbers move in.
  *
- * This opened at 2, which framed the player so tightly that most of the zone
- * and most of the POIs were off screen. A hider needs to see where they can
- * run to more than they need detail underfoot, so the map now opens wide and
- * the player zooms in when they want to.
+ * Opens close to the player. A previous change pulled this out to 1.15 on the
+ * theory that a hider wants to see the whole zone, which was the wrong call:
+ * what you actually need while walking is the street you are on and the
+ * nearest few POIs, and the zone ring is already legible from the scale badge.
+ * Zooming out is one tap; squinting at a wide map while moving is not.
  */
-export const DEFAULT_ZOOM = 1.15;
+export const DEFAULT_ZOOM = 2.6;
 
 export function useMapCamera(initial = DEFAULT_ZOOM) {
   const [zoom, setZoomState] = useState(initial);

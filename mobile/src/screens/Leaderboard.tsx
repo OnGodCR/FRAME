@@ -22,7 +22,7 @@ const SCOPES: { key: Scope; label: string }[] = [
   { key: 'friends', label: 'FRIENDS' },
 ];
 
-export function Leaderboard() {
+export function Leaderboard({ embedded = false }: { embedded?: boolean } = {}) {
   const { go, profile, friends } = useGame();
   const insets = useSafeAreaInsets();
   const [scope, setScope] = useState<Scope>('global');
@@ -41,14 +41,16 @@ export function Leaderboard() {
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.header, { paddingTop: insets.top + space(4) }]}>
-        <PressScale onPress={() => go('home')}>
-          <Mono style={{ fontSize: 11, color: color.dim, letterSpacing: 1.5 }}>← HOME</Mono>
-        </PressScale>
-        <Text style={styles.h1}>Leaderboard</Text>
+      <View style={[styles.header, { paddingTop: embedded ? space(3) : insets.top + space(4) }]}>
+        {!embedded && (
+          <PressScale onPress={() => go('home')}>
+            <Mono style={{ fontSize: 11, color: color.dim, letterSpacing: 1.5 }}>← HOME</Mono>
+          </PressScale>
+        )}
+        {!embedded && <Text style={styles.h1}>Leaderboard</Text>}
         <Body style={{ color: color.dim, marginTop: space(1) }}>Ranked on XP.</Body>
 
-        <View style={styles.tabs}>
+        <View style={[styles.tabs, embedded && { marginTop: space(2) }]}>
           {SCOPES.map((s) => {
             const on = scope === s.key;
             return (

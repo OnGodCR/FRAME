@@ -99,7 +99,7 @@ function ageFrom(mm: string, dd: string, yyyy: string) {
 }
 
 export function DobGate() {
-  const { go } = useGame();
+  const { go, setAgeBracket } = useGame();
   const [mm, setMm] = useState('');
   const [dd, setDd] = useState('');
   const [yyyy, setYyyy] = useState('');
@@ -119,10 +119,15 @@ export function DobGate() {
       return;
     }
     setError(null);
-    if (ageFrom(mm, dd, yyyy) < 13) {
+    const age = ageFrom(mm, dd, yyyy);
+    if (age < 13) {
       setRefused(true);
       return;
     }
+    // Only the bracket is kept. The date of birth itself is never stored
+    // (PRD 3): the bracket drives the ads rule and the 18+ Nearby gate, and
+    // holding a birthdate would add real risk for no benefit.
+    setAgeBracket(age >= 18 ? '18_plus' : '13_17');
     go('legal');
   };
 

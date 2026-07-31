@@ -11,7 +11,7 @@ import { useGame } from '../engine/GameContext';
 
 const ROW_H = 92;
 
-export function SeasonPass() {
+export function SeasonPass({ embedded = false }: { embedded?: boolean } = {}) {
   const { go, profile, buyPass, pass } = useGame();
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
@@ -29,10 +29,12 @@ export function SeasonPass() {
   return (
     <View style={styles.screen}>
       {/* fixed header so the progress stays visible across a long scroll */}
-      <View style={[styles.header, { paddingTop: insets.top + space(4) }]}>
-        <Pressable onPress={() => go('home')} hitSlop={10}>
-          <Label tone="faint">← Home</Label>
-        </Pressable>
+      <View style={[styles.header, { paddingTop: embedded ? space(3) : insets.top + space(4) }]}>
+        {!embedded && (
+          <Pressable onPress={() => go('home')} hitSlop={10}>
+            <Label tone="faint">← Home</Label>
+          </Pressable>
+        )}
         <View style={styles.titleRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
             <Label tone="accent">

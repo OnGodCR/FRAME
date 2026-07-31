@@ -14,7 +14,10 @@ import {
   loadReferral,
   saveReferral,
   clearAll,
+  loadAgeGate,
+  saveAgeGate,
   FRESH_SEEN,
+  type AgeBracket,
   type Seen,
 } from './persist';
 import * as notify from './notify';
@@ -37,6 +40,15 @@ import {
   creditApplause,
   type ApplauseWallet,
 } from '../data/economy';
+import {
+  FRESH_MISSIONS,
+  MISSION_SWEEP_BONUS,
+  allDone,
+  forToday,
+  missionsFor,
+  type Mission,
+  type MissionState,
+} from '../data/missions';
 import {
   FRESH_FRIENDS,
   FRESH_REFERRAL_PROGRESS,
@@ -628,6 +640,18 @@ interface Game {
   referralProgress: ReferralProgress;
   /** Season pass position, derived from profile.seasonXp. */
   pass: PassState;
+  /** Today's missions, derived from existing state rather than duplicated. */
+  missions: Mission[];
+  /** Whether every mission is done and the sweep bonus is claimable. */
+  missionsComplete: boolean;
+  missionSweepPaid: boolean;
+  claimMissionSweep: () => number;
+  /**
+   * 18_plus unlocks the Location tab. The date of birth itself is never
+   * stored, only which side of 18 the player is on. See persist.ts.
+   */
+  ageBracket: AgeBracket | null;
+  setAgeBracket: (b: AgeBracket) => void;
   /** Books a local reminder for the next round with this party. */
   scheduleNextRound: (when: Date) => void;
 }
@@ -649,6 +673,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     myCode: makeFriendCode(),
   }));
   const [applause, setApplause] = useState<ApplauseWallet>(FRESH_APPLAUSE);
+  const [missionState, setMissionState] = useState<MissionState>(FRESH_MISSIONS);
+  const [ageBracket, setAgeBracket] = useState<AgeBracket | null>(null);
   const [referralProgress, setReferralProgress] =
     useState<ReferralProgress>(FRESH_REFERRAL_PROGRESS);
 
@@ -656,7 +682,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let live = true;
     (async () => {
-      const [savedProfile, savedAuth, savedDaily, savedSeen, savedFriends, savedApplause, savedReferral] =
+      const [savedProfile, savedAuth, savedDaily, savedSeen, savedFriends, savedApplause, savedReferral, savedAge] =
         await Promise.all([
           loadProfile(),
           loadAuth(),
@@ -665,6 +691,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           loadFriends(),
           loadApplause(),
           loadReferral(),
+          loadAgeGate(),
         ]);
       if (!live) return;
       if (savedProfile) setProfile((p) => ({ ...p, ...savedProfile }));
@@ -676,6 +703,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         setFriends((f) => ({ ...savedFriends, myCode: savedFriends.myCode || f.myCode }));
       }
       if (savedApplause) setApplause(savedApplause);
+      if (savedAge?.bracket) setAgeBracket(savedAge.bracket);
       if (savedReferral) setReferralProgress(savedReferral);
       setHydrated(true);
     })();
@@ -700,6 +728,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (hydrated) saveSeen(seen);
   }, [seen, hydrated]);
+
+  useEffect(() => {
+    if (hydrated && ageBracket) saveAgeGate(0, ageBracket);
+  }, [ageBracket, hydrated]);
 
   useEffect(() => {
     if (hydrated) saveFriends(friends);
@@ -922,8 +954,43 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setRound(null);
     setSolo(null);
     setAuth(null);
+    setMissionState(FRESH_MISSIONS);
     go('splash');
   }, [go]);
+
+  // Missions are derived from existing state rather than duplicated, so they
+  // cannot drift out of sync with the things they describe.
+  const today = forToday(missionState);
+  const missions = missionsFor({
+    practised: seen.practised,
+    dailyDone: !isDailyOpen(daily),
+    finishedRound: seen.finishedRound,
+    roundsToday: today.roundsToday,
+    applaudedToday: today.applaudedToday,
+  });
+
+  /**
+   * Pays the all-missions bonus. Returns the FILM paid, or 0 if it was already
+   * claimed today or the set is not finished.
+   *
+   * Guarded on `sweepPaid` rather than on the mission states themselves, so
+   * finishing, spending, and finishing again cannot pay twice.
+   */
+  const claimMissionSweep = useCallback((): number => {
+    const t = forToday(missionState);
+    if (t.sweepPaid) return 0;
+    const set = missionsFor({
+      practised: seen.practised,
+      dailyDone: !isDailyOpen(daily),
+      finishedRound: seen.finishedRound,
+      roundsToday: t.roundsToday,
+      applaudedToday: t.applaudedToday,
+    });
+    if (!allDone(set)) return 0;
+    setMissionState({ ...t, sweepPaid: true });
+    setProfile((p) => ({ ...p, film: p.film + MISSION_SWEEP_BONUS }));
+    return MISSION_SWEEP_BONUS;
+  }, [missionState, seen, daily]);
 
   const markSeen = useCallback(
     (patch: Partial<Seen>) => setSeen((s) => ({ ...s, ...patch })),
@@ -1022,6 +1089,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setNextRole((prev) => (round?.role === 'hider' ? 'seeker' : 'hider'));
     setRound(null);
     setSeen((s) => (s.finishedRound ? s : { ...s, finishedRound: true }));
+    setMissionState((m) => {
+      const t = forToday(m);
+      return { ...t, roundsToday: t.roundsToday + 1 };
+    });
   }, [round?.role]);
 
   const addXp = useCallback((n: number) => setProfile((p) => withXp(p, n)), []);
@@ -1144,6 +1215,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         redeemReferral,
         referralProgress,
         pass: passState(profile.seasonXp),
+        missions,
+        missionsComplete: allDone(missions),
+        missionSweepPaid: today.sweepPaid,
+        claimMissionSweep,
+        ageBracket,
+        setAgeBracket,
         scheduleNextRound,
       }}
     >

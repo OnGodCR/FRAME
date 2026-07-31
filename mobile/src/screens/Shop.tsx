@@ -11,7 +11,7 @@ import { Cosmetic, SHOP_ITEMS, SEASON, TIER_COUNT, categoryKind, CATEGORIES, STO
 import { useGame } from '../engine/GameContext';
 import { Animated } from 'react-native';
 
-export function Shop() {
+export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
   const { go, profile, purchase, buyPass, buyProduct } = useGame();
   const insets = useSafeAreaInsets();
   const frames = SHOP_ITEMS.filter((i) => i.category === 'frame');
@@ -22,13 +22,15 @@ export function Shop() {
       <ScrollView
         contentContainerStyle={{
           padding: space(5),
-          paddingTop: insets.top + space(4),
+          paddingTop: embedded ? space(4) : insets.top + space(4),
           paddingBottom: space(10),
         }}
       >
-        <Pressable onPress={() => go('home')} hitSlop={10}>
-          <Label tone="faint">← Home</Label>
-        </Pressable>
+        {!embedded && (
+          <Pressable onPress={() => go('home')} hitSlop={10}>
+            <Label tone="faint">← Home</Label>
+          </Pressable>
+        )}
 
         <FadeIn>
           <View style={styles.header}>

@@ -51,7 +51,7 @@ function QrBlock({ value, size = 160 }: { value: string; size?: number }) {
   );
 }
 
-export function Friends() {
+export function Friends({ embedded = false }: { embedded?: boolean } = {}) {
   const {
     go,
     profile,
@@ -81,16 +81,18 @@ export function Friends() {
       <ScrollView
         contentContainerStyle={{
           padding: space(5),
-          paddingTop: insets.top + space(5),
+          paddingTop: embedded ? space(4) : insets.top + space(5),
           paddingBottom: space(8),
         }}
       >
         <FadeIn>
-          <PressScale onPress={() => go('home')}>
-            <Mono style={{ fontSize: 11, color: color.dim, letterSpacing: 1.5 }}>← HOME</Mono>
-          </PressScale>
-          <Text style={styles.h1}>Friends</Text>
-          <Body style={{ color: color.dim, marginTop: space(2) }}>
+          {!embedded && (
+            <PressScale onPress={() => go('home')}>
+              <Mono style={{ fontSize: 11, color: color.dim, letterSpacing: 1.5 }}>← HOME</Mono>
+            </PressScale>
+          )}
+          {!embedded && <Text style={styles.h1}>Friends</Text>}
+          <Body style={{ color: color.dim, marginTop: embedded ? 0 : space(2) }}>
             Codes only. FRAME never suggests people you do not know.
           </Body>
         </FadeIn>

@@ -63,6 +63,11 @@ Where a product decision supersedes the PRD, say so explicitly in the session
 handoff. Current supersessions:
 
 - Round length is **30 minutes**, not the PRD default of 45.
+- **The NEARBY tab crosses "never imply stranger play"**, knowingly. Adults can
+  see players nearby and ask to join their game. It is 18+ only, opt in and off
+  by default, coarse distance buckets rather than positions, requests rather
+  than messaging, with report and block on every row. Anything that widens this
+  needs a fresh decision, not an assumption that the line is already gone.
 - **iOS and Android are both v1 targets.** Session 1's iOS-only decision is
   reversed: the founder is on Android and could not otherwise playtest, which
   blocked the notification-from-pocket test and the PRD 14 interval playtest.
@@ -94,10 +99,16 @@ the record.
       twice. Now a plain effect. See session-2 13.
 - [x] **Round clock jumped 7 to 8 seconds per tick.** It was scaled by
       `DEMO_SPEED`. The round clock is now real time, 1 second per second.
-- [x] **Map opened too zoomed in.** Default camera zoom lowered.
+- [x] **Map default zoom.** Corrected twice: it now opens *closer* (2.6), not
+      wider. The first attempt read the request backwards.
 
 ### Quick wins
 
+- [x] **Home screen restructured into five tabs.** NEARBY, SOCIAL, GAME,
+      STORE, PROFILE, Clash Royale shaped with GAME in the middle. The Game tab
+      holds only identity, missions, host, join, and the ad. See session-2 14.
+- [x] **Missions.** Three a day on the Game tab; finishing all three pays 100
+      FILM.
 - [x] **Host a round / Join with code moved above the fold**, before progression.
 - [x] **Season pass shortened.** 50 tiers at 1000 XP was unfinishable inside a
       10 week season. Now 30 tiers at 500 XP.
@@ -120,6 +131,12 @@ the record.
 - [x] **Shop expansion.** Bundles and tier skips. A pre-existing "1,000 FILM for
       $2.99" SKU was **removed**: seeker bidding spends FILM, so selling it was
       pay-to-win.
+
+### New capability
+
+- [x] **NEARBY tab.** Games and players around you, **18+ only**. See the
+      supersession note in section 3: this crosses a legal line deliberately and
+      is built to the narrowest reading that still delivers it.
 
 ### Standing constraints these must respect
 

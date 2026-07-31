@@ -78,7 +78,22 @@ export async function saveAuth(a: Auth) {
  * The age gate outcome, per PRD 3. Stored on the device rather than the
  * account so clearing an account does not reset it.
  */
-export async function loadAgeGate(): Promise<{ refusedCount: number } | null> {
+export type AgeBracket = '13_17' | '18_plus';
+
+export interface AgeGate {
+  refusedCount: number;
+  /**
+   * Which side of 18 the player is on.
+   *
+   * **The date of birth itself is deliberately never stored** (PRD 3). The
+   * bracket is all the product needs: it drives the ads rule and the 18+ gate
+   * on the Location tab, and holding a birthdate would add real risk for no
+   * benefit.
+   */
+  bracket: AgeBracket | null;
+}
+
+export async function loadAgeGate(): Promise<Partial<AgeGate> | null> {
   try {
     const raw = await AsyncStorage.getItem(AGE_KEY);
     return raw ? JSON.parse(raw) : null;
@@ -87,9 +102,9 @@ export async function loadAgeGate(): Promise<{ refusedCount: number } | null> {
   }
 }
 
-export async function saveAgeGate(refusedCount: number) {
+export async function saveAgeGate(refusedCount: number, bracket: AgeBracket | null) {
   try {
-    await AsyncStorage.setItem(AGE_KEY, JSON.stringify({ refusedCount }));
+    await AsyncStorage.setItem(AGE_KEY, JSON.stringify({ refusedCount, bracket }));
   } catch {}
 }
 
@@ -171,6 +186,7 @@ export async function clearAll() {
   try {
     await AsyncStorage.multiRemove([
       KEY,
+      AGE_KEY,
       AUTH_KEY,
       DAILY_KEY,
       SEEN_KEY,
