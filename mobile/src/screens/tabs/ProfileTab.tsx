@@ -102,6 +102,7 @@ export function ProfileTab() {
           <Label tone="text">Settings</Label>
         </View>
         <Card style={{ padding: 0 }}>
+          <SettingRow label="How to play" onPress={() => go('tutorial')} />
           <SettingRow label="How to read the map" onPress={() => go('mapTutorial')} />
           {!hasAccount && (
             <SettingRow label="Create an account" onPress={() => go('auth')} accent />

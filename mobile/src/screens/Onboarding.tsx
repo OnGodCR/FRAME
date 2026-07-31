@@ -34,7 +34,7 @@ export function Splash() {
     <View style={styles.screen}>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <Brackets size={18} thickness={2.5} inset={-18} tint={color.accent}>
-          <Animated.Text style={[styles.wordmark, { opacity: blink }]}>FRAME</Animated.Text>
+          <Animated.Text style={[styles.wordmark, { opacity: blink }]}>HIDEWIRE</Animated.Text>
         </Brackets>
         <Mono style={{ marginTop: space(8), color: color.dim, letterSpacing: 2, fontSize: 12 }}>
           HIDING ISN'T ENOUGH.
@@ -145,7 +145,7 @@ export function DobGate() {
     return (
       <View style={[styles.screen, { padding: space(6), justifyContent: 'center' }]}>
         <Label tone="danger">Not yet</Label>
-        <Text style={styles.h1}>FRAME is for players 13 and up.</Text>
+        <Text style={styles.h1}>Hidewire is for players 13 and up.</Text>
         <Body style={{ color: color.dim, marginTop: space(3) }}>
           {attemptsLeft > 0
             ? 'If you mistyped your date of birth, you can correct it.'
@@ -174,7 +174,7 @@ export function DobGate() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
-        <Label>Step 1 of 4</Label>
+        <Label>Step 1 of 5</Label>
         <Text style={styles.h1}>Date of birth</Text>
         <Body style={{ color: color.dim, marginTop: space(2) }}>
           Required once. Not shown to other players.
@@ -270,7 +270,7 @@ export function HandlePick() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
-        <Label>Step 4 of 4</Label>
+        <Label>Step 4 of 5</Label>
         <Text style={styles.h1}>Pick a handle</Text>
         <Body style={{ color: color.dim, marginTop: space(2) }}>
           This is what your party sees on the map and in the feed.
@@ -292,12 +292,14 @@ export function HandlePick() {
           disabled={v.length < 3}
           onPress={() => {
             setHandle(v);
-            // Straight to the game. The permission explainer that used to sit
-            // here requested nothing, so it was pure reading in the one place
-            // a new player has the least patience for it. Each permission now
-            // explains itself at the moment it is actually asked for, which is
-            // what that screen promised and the funnel did not do.
-            go('home');
+            // Into the tutorial, which is the first thing in this funnel the
+            // player actually *does* rather than fills in. The permission
+            // explainer that used to sit here requested nothing, so it was pure
+            // reading in the one place a new player has the least patience for
+            // it; each permission now explains itself at the moment it is
+            // actually asked for, which is what that screen promised and the
+            // funnel did not deliver.
+            go('tutorial');
           }}
         />
       </View>
@@ -320,7 +322,7 @@ export const PERMS = {
   },
   camera: {
     name: 'CAMERA',
-    note: 'Live in-app capture only. FRAME never asks for gallery access.',
+    note: 'Live in-app capture only. Hidewire never asks for gallery access.',
   },
   notifications: {
     name: 'NOTIFICATIONS',
@@ -351,9 +353,13 @@ export function PermissionNote({ perm }: { perm: PermKey }) {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },
   wordmark: {
-    fontFamily: font.display,
-    fontSize: 56,
-    letterSpacing: 10,
+    fontFamily: font.wordmark,
+    // HIDEWIRE is eight characters where FRAME was five. At the old 56/10 it
+    // overflowed a 375 pt screen and collided with the corner brackets, so the
+    // size comes down and the tracking with it. The brackets are the constant
+    // in this lockup, not the point size.
+    fontSize: 38,
+    letterSpacing: 6,
     color: color.text,
   },
   footnote: {

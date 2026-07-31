@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     gap: space(3),
   },
   deadline: {
-    fontFamily: font.display,
+    fontFamily: font.numeral,
     fontSize: 34,
     color: color.text,
     fontVariant: ['tabular-nums'],

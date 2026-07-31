@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   clock: {
-    fontFamily: font.display,
+    fontFamily: font.numeral,
     fontSize: 24,
     color: color.text,
     fontVariant: ['tabular-nums'],
@@ -314,7 +314,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.bg,
   },
   checkinTimer: {
-    fontFamily: font.display,
+    fontFamily: font.numeral,
     fontSize: 34,
     color: color.accent,
     fontVariant: ['tabular-nums'],

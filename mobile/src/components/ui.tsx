@@ -146,7 +146,7 @@ export function Bar({
   );
 }
 
-// ---------- corner brackets (the FRAME motif) ----------
+// ---------- corner brackets (the wordmark motif) ----------
 
 export function Brackets({
   size = 14,

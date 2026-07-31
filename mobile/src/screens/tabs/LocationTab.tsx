@@ -14,7 +14,7 @@ import type { Poi } from '../../data/poiRules';
 // ---------------------------------------------------------------------------
 // Nearby.
 //
-// **18+ only, and that is a hard gate.** This is the one surface in FRAME where
+// **18+ only, and that is a hard gate.** This is the one surface in Hidewire where
 // a player can see other players they do not already know, which is why it is
 // the one surface minors never reach. The age bracket comes from the DOB gate;
 // the date of birth itself is never stored.
@@ -216,7 +216,7 @@ function AdultsOnly() {
       <Label tone="danger">18 and over</Label>
       <Text style={styles.gateTitle}>Nearby is not available on your account.</Text>
       <Body style={{ color: color.dim, marginTop: space(3), lineHeight: 21 }}>
-        This is the only part of FRAME where you can see players you do not already
+        This is the only part of Hidewire where you can see players you do not already
         know, so it is limited to adults.
       </Body>
       <Mono style={styles.gateNote}>

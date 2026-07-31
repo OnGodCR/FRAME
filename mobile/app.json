@@ -1,26 +1,26 @@
 {
   "expo": {
-    "name": "FRAME",
-    "slug": "frame",
+    "name": "Hidewire",
+    "slug": "hidewire",
     "version": "1.0.0",
-    "scheme": "frame",
+    "scheme": "hidewire",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0A0A0C",
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.frame.app",
+      "bundleIdentifier": "org.hidewire.app",
       "entitlements": {
         "com.apple.developer.usernotifications.time-sensitive": true
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "FRAME uses your location to set the play zone, load the landmarks around you, and check you have not left the boundary. Between reveals your position is never shared with the seeker.",
-        "NSCameraUsageDescription": "FRAME needs the camera for check-ins. Every few minutes you photograph where you are hiding to prove you are still in play. Photos are deleted 24 hours after the round ends."
+        "NSLocationWhenInUseUsageDescription": "Hidewire uses your location to set the play zone, load the landmarks around you, and check you have not left the boundary. Between reveals your position is never shared with the seeker.",
+        "NSCameraUsageDescription": "Hidewire needs the camera for check-ins. Every few minutes you photograph where you are hiding to prove you are still in play. Photos are deleted 24 hours after the round ends."
       }
     },
     "android": {
-      "package": "com.frame.app",
+      "package": "org.hidewire.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -51,14 +51,14 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "FRAME uses your location to set the play zone and load the landmarks around you."
+          "locationWhenInUsePermission": "Hidewire uses your location to set the play zone and load the landmarks around you."
         }
       ],
       "expo-web-browser",
       [
         "expo-camera",
         {
-          "cameraPermission": "FRAME needs the camera for check-ins. Every few minutes you photograph where you are hiding to prove you are still in play. Photos are deleted 24 hours after the round ends.",
+          "cameraPermission": "Hidewire needs the camera for check-ins. Every few minutes you photograph where you are hiding to prove you are still in play. Photos are deleted 24 hours after the round ends.",
           "recordAudioAndroid": false
         }
       ],

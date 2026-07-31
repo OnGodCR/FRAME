@@ -1,7 +1,7 @@
-# FRAME: UX, retention, and monetization
+# Hidewire: UX, retention, and monetization
 
 Research pass, 2026-07-29. Competitors and adjacent apps, what they do in
-common, and what FRAME should actually change. Priority order is UI/UX first
+common, and what Hidewire should actually change. Priority order is UI/UX first
 (does the player understand how to play), then retention, then money.
 
 Sources are linked inline. Where this document and [PRD.md](PRD.md) disagree on
@@ -18,7 +18,7 @@ a **[HARD CONSTRAINT]**, the PRD wins.
 
 ## 1. The apps studied, and why each one
 
-| App | Why it matters to FRAME |
+| App | Why it matters to Hidewire |
 |---|---|
 | **BeReal** | Nearly the same core mechanic: a timer fires, you have ~2 minutes, front and back camera, no retakes. The closest analogue that exists. |
 | **Pokemon GO** | The reference for teaching a location-based game to a cold player, and for monetizing one. |
@@ -66,24 +66,24 @@ non-payers into recurring payers and lifts DAU at the same time.
 
 ## 3. The BeReal warning, which is the most important finding here
 
-FRAME's differentiator is a forced dual-camera capture on a timer. That is
+Hidewire's differentiator is a forced dual-camera capture on a timer. That is
 BeReal's mechanic. BeReal went from roughly **73 million MAU in August 2022 to
 about 33 million by March 2023**, and at peak hype only about **9% of active
 Android users opened it daily**. Lots of trial, very little habit.
 
-The diagnosed causes, and how FRAME sits against each:
+The diagnosed causes, and how Hidewire sits against each:
 
-| BeReal's failure | FRAME's position |
+| BeReal's failure | Hidewire's position |
 |---|---|
-| The timer fired at 3am, in meetings, at random. It became an obligation. | **Much better.** FRAME's timer only fires inside a 45-minute session the player deliberately started. This is FRAME's single biggest structural advantage over BeReal and it should be stated in marketing. |
-| Novelty without iteration. The mechanic never deepened. | **Unproven.** FRAME has buffs, POIs, and a pass, but they are a UI shell today. |
-| The capture was a performance with no game attached. Nothing was at stake. | **Better.** FRAME attaches elimination to it. Stakes are the point. |
+| The timer fired at 3am, in meetings, at random. It became an obligation. | **Much better.** Hidewire's timer only fires inside a 45-minute session the player deliberately started. This is Hidewire's single biggest structural advantage over BeReal and it should be stated in marketing. |
+| Novelty without iteration. The mechanic never deepened. | **Unproven.** Hidewire has buffs, POIs, and a pass, but they are a UI shell today. |
+| The capture was a performance with no game attached. Nothing was at stake. | **Better.** Hidewire attaches elimination to it. Stakes are the point. |
 | Nothing to do between posts. | **Risk.** A hider who found a good spot has ~5 dead minutes per cycle. |
 
-The actionable read: FRAME's version of the mechanic is defensible precisely
+The actionable read: Hidewire's version of the mechanic is defensible precisely
 because it is **bounded, opted-into, and consequential**. Protect those three
 properties. The moment a check-in feels like an interruption rather than a
-thrill, FRAME becomes BeReal. PRD 14 already names this as the top product
+thrill, Hidewire becomes BeReal. PRD 14 already names this as the top product
 risk, and the 3 / 5 / 10 minute interval playtest is still the only thing that
 answers it.
 
@@ -93,7 +93,7 @@ answers it.
 
 This is the biggest section because it is the biggest gap.
 
-### 4.1 The problem: FRAME's first-time experience is inverted
+### 4.1 The problem: Hidewire's first-time experience is inverted
 
 Current path from install to first check-in:
 
@@ -109,7 +109,7 @@ gates, and a mandatory 3-person party, all before the player has once
 experienced the thing the entire product is about. Compare to catching a
 Pokemon in 60 seconds.
 
-Worse, it currently cannot be completed alone at all. FRAME needs 3 to 20
+Worse, it currently cannot be completed alone at all. Hidewire needs 3 to 20
 people in one city at one time. A player who installs on their own literally
 cannot see the core mechanic.
 
@@ -165,7 +165,7 @@ something to do that keeps their head up:
 ### 4.5 Smaller UX wins
 
 - **Let the tutorial be replayable.** Pokemon GO's most-cited FTUE failure is
-  that its onboarding can never be seen again. FRAME's map tutorial is already
+  that its onboarding can never be seen again. Hidewire's map tutorial is already
   a separate route, so this is nearly free.
 - **Show the check-in flow before the round, not during.** The first time a
   player sees the camera sequence should not be the 60 seconds their survival
@@ -209,7 +209,7 @@ session. Add:
 ### 5.2 Streaks, carefully
 
 Duolingo's streak works by weaponizing loss aversion, and it roughly doubles
-daily retention. But a daily streak is wrong for FRAME: the game needs 3+
+daily retention. But a daily streak is wrong for Hidewire: the game needs 3+
 people and 45 minutes, so a daily requirement is unachievable and would punish
 players for their friends' schedules.
 
@@ -232,7 +232,7 @@ waiting) are the remaining half, and they need the server and remote push.
 
 ## 6. Monetization
 
-### 6.1 What FRAME already gets right
+### 6.1 What Hidewire already gets right
 
 Cosmetics only. Nothing purchasable affects whether you win. That is both the
 legally required position (see [marketing/BRIEF.md](marketing/BRIEF.md) 9) and,
@@ -246,7 +246,7 @@ band that converts a first-time payer best.
 
 ### 6.2 The photo frame is the hero SKU and is currently priced like a sundry
 
-FRAME has five cosmetic slots: title, map pin, photo frame, blackout, tag.
+Hidewire has five cosmetic slots: title, map pin, photo frame, blackout, tag.
 They are merchandised as equals. They are not equals.
 
 **The photo frame is the only cosmetic that every other player sees, repeatedly,
@@ -280,7 +280,7 @@ Recommend:
 ### 6.4 Pass pacing has to match how often this game is actually played
 
 50 tiers is Fortnite-shaped, and Fortnite is played daily by a solo player.
-FRAME needs three friends and 45 minutes. If a realistic engaged player manages
+Hidewire needs three friends and 45 minutes. If a realistic engaged player manages
 one or two rounds a week, they will finish nowhere near 50 tiers, and a player
 who buys a pass and cannot complete it does not buy the next one.
 
@@ -373,7 +373,7 @@ Ordered by leverage per unit of work.
 | **Onboarding cut from 6 steps to 4.** Permissions explainer removed from the funnel, map tutorial removed from the funnel | `screens/Onboarding.tsx`, `App.tsx` |
 | Permission copy moved to the point of request, as `PermissionNote` | `screens/Onboarding.tsx`, used in `screens/JoinLobby.tsx` |
 | Map legend now **replayable** from home and the round `?` | `screens/Home.tsx`, `screens/MapTutorial.tsx` |
-| **TEST FRAME** practice run, 60 s window, real sequence, practice blackout | `screens/Solo.tsx` |
+| Practice run, 60 s window, real sequence, practice blackout, now beat 3 of the tutorial | `screens/Tutorial.tsx` |
 | **DAILY ASSIGNMENT**, one global prompt per calendar date, pays XP + FILM | `data/assignments.ts`, `screens/Solo.tsx` |
 | Capture flow extracted so every mode rehearses the identical sequence | `components/CaptureSequence.tsx` |
 | **Rematch** as the primary results action | `screens/Endings.tsx` |

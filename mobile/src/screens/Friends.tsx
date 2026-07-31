@@ -25,7 +25,7 @@ import QRCode from 'react-native-qrcode-svg';
  * QR renderer, in the game's palette.
  *
  * Acid on near-black inside the same corner brackets the wordmark and the
- * viewfinder use, so the code reads as part of FRAME rather than a pasted-in
+ * viewfinder use, so the code reads as part of Hidewire rather than a pasted-in
  * utility widget. Scanners cope fine: what they need is contrast, and acid on
  * #0A0A0C is a stronger ratio than the usual black on white.
  *
@@ -93,7 +93,7 @@ export function Friends({ embedded = false }: { embedded?: boolean } = {}) {
           )}
           {!embedded && <Text style={styles.h1}>Friends</Text>}
           <Body style={{ color: color.dim, marginTop: embedded ? 0 : space(2) }}>
-            Codes only. FRAME never suggests people you do not know.
+            Codes only. Hidewire never suggests people you do not know.
           </Body>
         </FadeIn>
 

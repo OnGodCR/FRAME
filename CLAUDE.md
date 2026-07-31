@@ -1,4 +1,4 @@
-# FRAME: standing instructions
+# Hidewire: standing instructions
 
 Read these before doing anything. They apply to the whole repo.
 
@@ -117,12 +117,19 @@ the record.
 
 ### Not started, roughly in dependency order
 
-- [ ] **The backend does not exist.** See section 7 below. Nothing else in this
-      list is genuinely multiplayer until it does.
+- [x] **The backend exists.** Migrations 0001 to 0008 are applied to the live
+      project. Schema, RLS, the server-authoritative round layer, storage
+      policies, and four pg_cron jobs. See section 7 and session-3. **The
+      client still does not call any of it**, which is now the gap.
 - [ ] **Daily assignment design.** Current prompts are too menial and not
       engaging enough. Needs a middle ground between "photograph a doorway" and
       something with real pull. Think about stakes, variety, and a reason to
-      care beyond the FILM.
+      care beyond the FILM. **Blocked on Angad**, it is a product call.
+- [x] **Interactive onboarding tutorial.** Five-step funnel now ends in a
+      four-beat tutorial that each beat requires an action for. TEST FRAME was
+      absorbed into it and no longer exists as a Solo card. See session-3.
+- [ ] **Wire the client to the backend.** `data/social.repo.ts` is the seam and
+      already has the right shapes; `GameContext.tsx` is the harder one.
 - [x] **Global leaderboard**, ranked on XP. Global and friends scopes.
 - [x] **Friends tab.** Add by friend code and QR, invite in one tap. Report and
       block on every row. See session-2 14.
@@ -171,20 +178,47 @@ The cap exists because a group of friends mutually applauding would otherwise
 mint more FILM per day than playing does, which devalues every price in the
 shop.
 
-## 7. There is no backend yet
+## 7. The backend exists, the client does not use it
 
-Worth stating plainly because the app looks like it has one and does not.
+Worth stating precisely, because both halves are true and it is easy to read
+either one alone and be wrong.
 
-- **No database calls exist anywhere in the client.** Supabase is used only for
-  OAuth sign-in. There is not a single `.from()`, insert, or select.
-- **All state is device-local `AsyncStorage`.** Progression, the daily streak,
-  and milestones live only on that phone.
-- **`supabase/migrations/0001_core.sql` has never been applied.**
-- Two people on two phones therefore share nothing. Parties, rosters, and the
-  photo feeds are simulated locally.
+**What is real, as of session 3:**
 
-So a "new account" is only new if that device has no stored state. Signing in
-with Google authenticates a person and stores nothing about them.
+- Migrations **0001 through 0008 are applied** to the live Supabase project.
+- Row-level security is enforced and has been **executed**, not just written.
+  `0008_selftest.sql` asserts 21 properties, including the PRD 9 constraint,
+  and the migration fails if any of them is false.
+- The round layer is server-authoritative: `start_round` writes every check-in
+  window's exact open and close timestamp up front, and a one-minute `pg_cron`
+  job resolves them. See INFRASTRUCTURE 4.
+- FILM, XP, levels, and cosmetic ownership are **not writable by any client**.
+  Column-level grants make that true regardless of RLS. Every economy change
+  goes through a SECURITY DEFINER function.
+- Photo storage, its policies, and a queued 24 hour deletion path exist.
+
+**What is not:**
+
+- **The client makes no database calls.** `data/social.repo.ts` has the live
+  branches written and they are unreachable, because `isLive()` needs a signed
+  in session and the OAuth redirect is still unconfigured. `GameContext.tsx` is
+  still the scripted local demo engine.
+- So two phones still share nothing, and progression still lives in
+  device-local `AsyncStorage`.
+- Server-side revalidation of photo pixels does not exist. `submit_checkin`
+  judges the window against the server clock and the signals against
+  server-held thresholds, which is more than the client used to be trusted for
+  and less than PRD 9 finally requires.
+
+**Two things that were wrong and are now fixed**, recorded because reading the
+files did not reveal either:
+
+- `profile_self_rw` granted UPDATE on **every column** of your own row. Any
+  signed-in player could have set their own FILM balance with one request. RLS
+  chooses rows, not columns; closing it needed a column-level GRANT.
+- `parties.host_id` and both `catches` columns referenced `profiles` without
+  `on delete cascade`, so **any account that had ever hosted a party could not
+  be deleted**. App Store 5.1.1(v) requires in-app account deletion.
 
 ## 7.05 Turning test mode off
 

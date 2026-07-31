@@ -19,6 +19,7 @@ import { EASE_OUT } from './src/components/motion';
 import { GameProvider, Route, useGame } from './src/engine/GameContext';
 import { WorldProvider } from './src/engine/WorldContext';
 import { Splash, DobGate, HandlePick } from './src/screens/Onboarding';
+import { Tutorial } from './src/screens/Tutorial';
 import { LegalGate } from './src/screens/LegalGate';
 import { AuthGate } from './src/screens/AuthGate';
 import { Home } from './src/screens/Home';
@@ -45,6 +46,7 @@ const DEPTH: Record<Route, number> = {
   legal: 2,
   auth: 3,
   handle: 4,
+  tutorial: 5,
   mapTutorial: 6,
   home: 7,
   shop: 8,
@@ -100,6 +102,9 @@ function Router() {
       break;
     case 'handle':
       screen = <HandlePick />;
+      break;
+    case 'tutorial':
+      screen = <Tutorial />;
       break;
     case 'mapTutorial':
       screen = <MapTutorial />;

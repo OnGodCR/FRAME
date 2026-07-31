@@ -1,0 +1,5 @@
+# Supabase CLI local state. Created by `supabase link`, machine-specific, and
+# `pooler-url` is a database connection string. None of it belongs in the repo:
+# the migrations are the shared artifact, the link is not.
+.temp/
+.branches/

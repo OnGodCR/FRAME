@@ -342,7 +342,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.bg },
   blackoutScreen: { flex: 1, backgroundColor: color.black },
   blackoutTitle: {
-    fontFamily: font.display,
+    fontFamily: font.blackout,
     fontSize: 64,
     lineHeight: 66,
     letterSpacing: 6,
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     paddingBottom: space(2),
   },
   scoreTotal: {
-    fontFamily: font.display,
+    fontFamily: font.numeral,
     fontSize: 30,
     color: color.text,
   },

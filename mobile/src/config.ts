@@ -55,7 +55,7 @@ export const IS_DEV: boolean =
 export function assertProductionSafe(): void {
   if (!IS_DEV && TEST_MODE) {
     throw new Error(
-      'FRAME: TEST_MODE is enabled in a production build. Set TEST_MODE to false ' +
+      'Hidewire: TEST_MODE is enabled in a production build. Set TEST_MODE to false ' +
         'in src/config.ts, or build with EXPO_PUBLIC_TEST_MODE=false. ' +
         'See TEST-FIXTURES.md.',
     );

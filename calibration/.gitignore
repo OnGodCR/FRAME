@@ -1,4 +1,5 @@
-# Photos are real places — never commit them.
+# Photos are real places you have been. Never commit them.
 *
 !.gitignore
 !README.md
+!HOW-TO-SHOOT.md

@@ -1,4 +1,4 @@
-# FRAME: marketing handoff brief
+# Hidewire: marketing handoff brief
 
 Paste this whole file as the opening context for whichever agent is generating
 marketing. It is written to be self-contained: an agent reading only this
@@ -7,7 +7,7 @@ product.
 
 ---
 
-## 1. What FRAME is, in one line
+## 1. What Hidewire is, in one line
 
 Hide and seek for adults and teenagers, played across a real city, where hiding
 well is not enough because every few minutes your phone makes you photograph
@@ -161,7 +161,7 @@ the first beta,"** never "download now."
 
 ## Appendix: seed prompt for a carousel agent
 
-> You are writing an Instagram and TikTok carousel for FRAME, using the brief
+> You are writing an Instagram and TikTok carousel for Hidewire, using the brief
 > above. Produce N slides. Slide 1 is a hook of six words or fewer that would
 > stop a thumb. Slides 2 to N-1 each carry one idea, at most 12 words of
 > headline plus at most 25 words of body. The final slide is a call to action

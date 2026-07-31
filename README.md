@@ -1,4 +1,4 @@
-# FRAME
+# Hidewire
 
 Extreme IRL hide and seek. Hiding isn't enough. Every few minutes you have to
 photographically prove you're hidden, and the seeker sees everything.
@@ -65,19 +65,24 @@ I buy" at the same time.
 
 ### The core loop
 
-1. **Onboarding**, 4 steps. Neutral DOB gate (under-13 refusal sticks after 3
-   corrections), legal acceptance, account or guest, handle. The date of birth
-   is never stored, only which side of 18 you're on.
-2. **Missions**, three a day. Finishing all three pays 100 FILM.
-3. **Solo**, playable alone from the first minute: TEST FRAME practice and the
-   DAILY ASSIGNMENT, one prompt shared worldwide.
-4. **Lobby**, invite code, zone map, named presets, seeker bidding, and the
+1. **Onboarding**, 5 steps. Neutral DOB gate (under-13 refusal sticks after 3
+   corrections), legal acceptance, account or guest, handle, then the
+   interactive tutorial. The date of birth is never stored, only which side of
+   18 you're on.
+2. **The tutorial**, four beats that each need a real action: drag into the
+   zone, beat a check-in countdown or watch yourself get blacked out, run a
+   real capture through the real validator, then see it from the seeker's side.
+   Replayable from Profile. This absorbed the old TEST FRAME practice mode.
+3. **Missions**, three a day. Finishing all three pays 100 FILM.
+4. **Solo**, playable alone from the first minute: the DAILY ASSIGNMENT, one
+   prompt shared worldwide.
+5. **Lobby**, invite code, zone map, named presets, seeker bidding, and the
    safety card gate.
-5. **Round**, 30 minutes, real time. Full-bleed map, check-ins every 5 minutes
+6. **Round**, 30 minutes, real time. Full-bleed map, check-ins every 5 minutes
    with a 60-second window, reveal pings, shrinking zone, SOS.
-6. **Check-in**, the real camera on device: back then front, decoded and run
+7. **Check-in**, the real camera on device: back then front, decoded and run
    through the PRD 4.5 validator on actual pixels, with one retry on failure.
-7. **Results**, rematch, a next-round appointment with a local reminder, and a
+8. **Results**, rematch, a next-round appointment with a local reminder, and a
    one-time first-purchase offer.
 
 ### What's real
@@ -146,12 +151,13 @@ Roughly in order of how much they hold up.
 4. **Apple Developer Program**, $99/yr. Needed for TestFlight, Sign in with
    Apple (mandatory alongside Google under Guideline 4.8), and the
    time-sensitive notification entitlement.
-5. **A domain.** Four public URLs are App Review requirements: explainer page,
-   POI complaint form, privacy policy, terms.
+5. **The public web pages.** `hidewire.org` is registered. Four URLs are App
+   Review requirements and none of them exist yet: explainer page, POI
+   complaint form, privacy policy, terms.
 6. **An attorney** for the liability language. The drafts in
    [`legal/`](legal) are substantive but explicitly unreviewed.
-7. **Change the app identifiers.** `com.frame.app` is a placeholder and is
-   permanent once published to either store.
+7. ~~Change the app identifiers.~~ Done: `org.hidewire.app`, reverse DNS of
+   the registered domain. Still permanent once published to either store.
 
 ---
 

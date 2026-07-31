@@ -179,7 +179,7 @@ export const DAILY_REWARD = { xp: ECONOMY.dailyCheckin.xp, film: ECONOMY.dailyCh
 
 /**
  * The streak is weekly, not daily. A daily streak is the wrong shape for
- * FRAME: a real round needs three friends and half an hour, so a daily
+ * Hidewire: a real round needs three friends and half an hour, so a daily
  * requirement punishes players for other people's calendars. The assignment
  * itself is solo and daily, but what is tracked and shown is "weeks in a row
  * you turned up at all", which is achievable by anyone who plays at all.

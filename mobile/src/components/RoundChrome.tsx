@@ -140,7 +140,7 @@ export function ExplainerButton() {
       <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
         <View style={styles.explainer}>
           <ScrollView contentContainerStyle={{ padding: space(7), paddingTop: space(16) }}>
-            <Text style={styles.explainerTitle}>I'm playing a mobile game called FRAME.</Text>
+            <Text style={styles.explainerTitle}>I'm playing a mobile game called Hidewire.</Text>
             <Text style={styles.explainerBody}>
               It's an app-based game of hide and seek with friends.{'\n\n'}I'm not filming
               you and I'm not recording audio.{'\n\n'}If I'm somewhere I shouldn't be,

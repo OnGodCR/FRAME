@@ -21,12 +21,45 @@ export const color = {
   onAccent: '#0A0A0C',
 };
 
+// ---------------------------------------------------------------------------
+// One typeface, with four deliberate exceptions.
+//
+// The app used to run two families at roughly a 50/50 split: Space Grotesk for
+// anything headline-shaped, IBM Plex Mono for everything else. In practice that
+// meant a screen could change voice three times between its title and its
+// footnote, and neither face was doing a job the other could not.
+//
+// **IBM Plex Mono is now the base for everything**, including headings. It is
+// the face the product already sounded like: an instrument readout, a set of
+// measurements taken of a place. `display` and `displayMed` are kept as tokens
+// rather than deleted so the 61 call sites do not all have to change, and so
+// the intent at each one ("this is a heading") survives the swap.
+//
+// The exceptions below stay in Space Grotesk because they are **objects, not
+// text**: a logo, a number you read at a glance, and the one screen in the game
+// that is pure typography. Everywhere else, if you are tempted to reach for
+// `wordmark` or `numeral`, use `display` instead.
+// ---------------------------------------------------------------------------
+
 export const font = {
-  display: 'SpaceGrotesk_700Bold',
-  displayMed: 'SpaceGrotesk_500Medium',
+  /** Headings. Mono, like everything else. */
+  display: 'IBMPlexMono_600SemiBold',
+  /** Subheads and heavier body. */
+  displayMed: 'IBMPlexMono_500Medium',
   mono: 'IBMPlexMono_400Regular',
   monoMed: 'IBMPlexMono_500Medium',
   monoSemi: 'IBMPlexMono_600SemiBold',
+
+  /** The HIDEWIRE lockup only. Nothing else. */
+  wordmark: 'SpaceGrotesk_700Bold',
+  /**
+   * Large glanceable figures: the round clock, the check-in countdown, the
+   * level, the score total. Mono is even-width by definition, which is right
+   * for a table and wrong for a number the size of your hand.
+   */
+  numeral: 'SpaceGrotesk_700Bold',
+  /** BLACKED OUT. The one screen that is entirely a piece of typography. */
+  blackout: 'SpaceGrotesk_700Bold',
 };
 
 export const space = (n: number) => n * 4;

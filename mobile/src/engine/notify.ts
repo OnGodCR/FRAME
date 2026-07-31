@@ -259,7 +259,7 @@ export async function scheduleRoundReminder(when: Date): Promise<boolean> {
     reminderId = await N.scheduleNotificationAsync({
       content: {
         title: 'ROUND BOOKED',
-        body: 'Your party is expected. Open FRAME to host.',
+        body: 'Your party is expected. Open Hidewire to host.',
         sound: 'default',
         interruptionLevel: 'timeSensitive',
         data: { tag: REMINDER_TAG, kind: 'appointment' },

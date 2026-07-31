@@ -133,12 +133,23 @@ export interface Seen {
   practised: boolean;
   finishedRound: boolean;
   starterOffered: boolean;
+  /**
+   * Whether the onboarding tutorial has been completed or skipped.
+   *
+   * Separate from `practised`, which records that a capture actually went
+   * through the validator. The tutorial's capture beat is skippable on
+   * purpose, so a player can finish the tutorial without having practised, and
+   * the two must not be conflated: one gates the funnel, the other gates the
+   * first mission.
+   */
+  tutorialDone: boolean;
 }
 
 export const FRESH_SEEN: Seen = {
   practised: false,
   finishedRound: false,
   starterOffered: false,
+  tutorialDone: false,
 };
 
 export async function loadSeen(): Promise<Seen | null> {

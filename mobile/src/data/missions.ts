@@ -14,8 +14,8 @@ import { dayIndex } from './assignments';
 // reason to do the last one when you have already had the FILM from the first
 // two.
 //
-// Missions are derived, not stored. Each one reads existing state (has this
-// player practised, is the daily assignment done, have they finished a round)
+// Missions are derived, not stored. Each one reads existing state (is the
+// daily assignment done, have they applauded, have they finished a round)
 // rather than keeping a parallel copy that can drift out of sync with it.
 // ---------------------------------------------------------------------------
 
@@ -23,7 +23,6 @@ import { dayIndex } from './assignments';
 export const MISSION_SWEEP_BONUS = 100;
 
 export interface MissionInput {
-  practised: boolean;
   dailyDone: boolean;
   finishedRound: boolean;
   roundsToday: number;
@@ -49,11 +48,16 @@ export interface Mission {
  */
 export function missionsFor(input: MissionInput): Mission[] {
   return [
+    // The practice check-in used to be mission one. It moved into the
+    // onboarding tutorial, which means every player has already done it before
+    // they first see this list, so as a mission it was permanently ticked and
+    // permanently useless. Applause replaces it: `applaudedToday` was already
+    // being tracked here and nothing consumed it.
     {
-      key: 'checkin',
-      label: input.practised ? 'Run a practice check-in' : 'Try your first check-in',
-      goto: 'solo',
-      done: input.practised,
+      key: 'applaud',
+      label: "Applaud a friend's capture",
+      goto: 'social',
+      done: input.applaudedToday,
       film: 0,
     },
     {

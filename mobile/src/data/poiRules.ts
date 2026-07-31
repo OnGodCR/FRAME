@@ -181,7 +181,7 @@ export function categoryOf(tags: Tags): string {
 // --- overpass ----------------------------------------------------------------
 
 export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
-export const OVERPASS_UA = 'FRAME/0.1 (hide-and-seek game; POI ingest)';
+export const OVERPASS_UA = 'Hidewire/0.1 (hide-and-seek game; POI ingest)';
 
 export function buildQuery(lat: number, lon: number, radius: number) {
   const clause = (list: [string, string][], kind: string) =>

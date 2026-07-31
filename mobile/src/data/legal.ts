@@ -28,20 +28,20 @@ export const TERMS: Doc = {
   title: 'Terms of Service',
   updated: LEGAL_VERSION,
   intro:
-    'FRAME is a game you play by walking around real places with real people in them. These terms exist mostly to be clear about what that means and who is responsible for what.',
+    'Hidewire is a game you play by walking around real places with real people in them. These terms exist mostly to be clear about what that means and who is responsible for what.',
   sections: [
     {
-      heading: '1. Who can use FRAME',
+      heading: '1. Who can use Hidewire',
       body: [
         'You must be 13 or older. We ask for your date of birth once, and if you are under 13 we refuse the account and remember that refusal on the device.',
         'If you are between 13 and 17, you get non-personalised advertising only, and we do not ask you to allow tracking.',
-        'FRAME is available in the United States only for now.',
+        'Hidewire is available in the United States only for now.',
       ],
     },
     {
       heading: '2. You are responsible for where you go',
       body: [
-        'This is the important one. FRAME shows you places and gives you reasons to walk to them. It does not know whether the route is safe, whether the property is public, or what is happening at that location right now. You do.',
+        'This is the important one. Hidewire shows you places and gives you reasons to walk to them. It does not know whether the route is safe, whether the property is public, or what is happening at that location right now. You do.',
         'You agree to stay on public property, obey the law, keep away from traffic, and stop playing the moment anyone with authority over a place asks you to.',
         'You accept the risks that come with moving around in the physical world, including injury, and you accept them for yourself rather than for us. If you would not do it without the game, do not do it because of the game.',
         'Do not play while driving. The app suspends itself above 10 mph, but that is a backstop and not a permission slip.',
@@ -82,7 +82,7 @@ export const TERMS: Doc = {
     {
       heading: '7. Limitation of liability',
       body: [
-        'FRAME is provided as-is. To the maximum extent the law allows, we are not liable for indirect or consequential damages, and our total liability is limited to what you have paid us in the last twelve months.',
+        'Hidewire is provided as-is. To the maximum extent the law allows, we are not liable for indirect or consequential damages, and our total liability is limited to what you have paid us in the last twelve months.',
         'Nothing here limits liability that cannot be limited by law, including for death or personal injury caused by negligence on our part.',
         'This section in particular has not yet been reviewed by a lawyer and will change before public launch.',
       ],

@@ -80,7 +80,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  levelNum: { fontFamily: font.monoSemi, fontSize: 14, color: color.accent },
+  // The level is one of the four Space Grotesk exceptions: a figure you read
+  // at a glance rather than a piece of text.
+  levelNum: { fontFamily: font.numeral, fontSize: 14, color: color.accent },
   handle: {
     fontFamily: font.display,
     fontSize: 20,

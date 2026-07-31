@@ -69,7 +69,7 @@ import React, {
 } from 'react';
 
 // ---------------------------------------------------------------------------
-// FRAME demo engine.
+// Hidewire demo engine.
 // Everything a real deployment would get from the server (ticks, reveals,
 // eliminations, other players) is scripted here on a compressed timeline so a
 // full round is experienceable in a few minutes. Timers the player sees are
@@ -82,6 +82,7 @@ export type Route =
   | 'legal'
   | 'auth'
   | 'handle'
+  | 'tutorial'
   | 'mapTutorial'
   | 'home'
   | 'shop'
@@ -159,27 +160,28 @@ export interface RoundState {
 }
 
 /**
- * Solo modes. Neither needs a party, a server, or anyone else to be awake.
+ * Solo. One mode: the daily assignment. One prompt, shared worldwide, no
+ * timer, pays XP and FILM. See data/assignments.ts.
  *
- * 'test'  TEST FRAME. The practice run. A real 60 second window and the real
- *         capture sequence, so the first time a player feels that timer is not
- *         also the first time their survival depends on it. Letting it expire
- *         is allowed and shows them the blackout state once, deliberately.
- * 'daily' The daily assignment. One prompt, shared worldwide, no timer, pays
- *         XP and FILM. See data/assignments.ts.
+ * TEST FRAME used to live here too, as an optional card. It is now beat 3 of
+ * the onboarding tutorial (screens/Tutorial.tsx). As an optional card it was
+ * the most important thing in the product sitting where a new player had no
+ * reason to tap; as a tutorial beat every new player performs it once. Nothing
+ * about the practice run itself changed, only where it is reached from.
  */
-export type SoloMode = 'test' | 'daily';
-
 export interface SoloState {
-  mode: SoloMode;
   elapsed: number;
-  /** Seconds allowed, or null for an untimed run. */
-  window: number | null;
-  outcome: 'pending' | 'passed' | 'expired';
+  outcome: 'pending' | 'passed';
 }
 
-/** The practice window matches the real one so the rehearsal is honest. */
-export const TEST_FRAME_WINDOW = 60;
+/**
+ * The practice check-in window, in seconds.
+ *
+ * Matches the real PRD 4.4 window so the rehearsal is honest. It lives here
+ * rather than in the tutorial because the round engine and the tutorial must
+ * never disagree about how long a player has.
+ */
+export const PRACTICE_WINDOW = 60;
 
 export interface Equipped {
   title: string;
@@ -593,7 +595,7 @@ interface Game {
   equip: (slot: keyof Equipped, id: string) => void;
   // --- solo ---
   solo: SoloState | null;
-  startSolo: (mode: SoloMode) => void;
+  startSolo: () => void;
   passSolo: () => void;
   exitSolo: () => void;
   daily: DailyState;
@@ -866,41 +868,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   // --- solo modes ----------------------------------------------------------
 
-  // 1 Hz clock for a timed solo run. Only TEST FRAME has a window; the daily
-  // assignment is something you do on a walk and rushing it teaches nothing.
-  useEffect(() => {
-    if (!solo || solo.window == null || solo.outcome !== 'pending') return;
-    if (route !== 'soloRun') return;
-    const id = setInterval(() => {
-      setSolo((s) => {
-        if (!s || s.window == null || s.outcome !== 'pending') return s;
-        const elapsed = s.elapsed + 1;
-        return {
-          ...s,
-          elapsed,
-          outcome: elapsed >= s.window ? 'expired' : 'pending',
-        };
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [solo?.outcome, solo == null, solo?.window, route]);
-
-  const startSolo = useCallback(
-    (mode: SoloMode) => {
-      setSolo({
-        mode,
-        elapsed: 0,
-        window: mode === 'test' ? TEST_FRAME_WINDOW : null,
-        outcome: 'pending',
-      });
-      go('soloRun');
-    },
-    [go],
-  );
+  // The daily assignment is deliberately untimed: it is something you do on a
+  // walk, and rushing it teaches nothing. The only timed practice run is the
+  // tutorial's, which owns its own clock.
+  const startSolo = useCallback(() => {
+    setSolo({ elapsed: 0, outcome: 'pending' });
+    go('soloRun');
+  }, [go]);
 
   const passSolo = useCallback(() => {
     setSolo((s) => (s && s.outcome === 'pending' ? { ...s, outcome: 'passed' } : s));
-    setSeen((s) => ({ ...s, practised: true }));
   }, []);
 
   /**
@@ -921,7 +898,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
    */
   const exitSolo = useCallback(() => {
     const s = solo;
-    if (s && s.mode === 'daily' && s.outcome === 'passed' && isDailyOpen(daily)) {
+    if (s && s.outcome === 'passed' && isDailyOpen(daily)) {
       setDaily((d) => (isDailyOpen(d) ? advanceDaily(d) : d));
       setProfile((p) => withXp({ ...p, film: p.film + DAILY_REWARD.film }, DAILY_REWARD.xp));
     }
@@ -953,7 +930,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   // cannot drift out of sync with the things they describe.
   const today = forToday(missionState);
   const missions = missionsFor({
-    practised: seen.practised,
     dailyDone: !isDailyOpen(daily),
     finishedRound: seen.finishedRound,
     roundsToday: today.roundsToday,
@@ -971,7 +947,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const t = forToday(missionState);
     if (t.sweepPaid) return 0;
     const set = missionsFor({
-      practised: seen.practised,
       dailyDone: !isDailyOpen(daily),
       finishedRound: seen.finishedRound,
       roundsToday: t.roundsToday,

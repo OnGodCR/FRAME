@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   clock: {
-    fontFamily: font.display,
+    fontFamily: font.numeral,
     fontSize: 24,
     color: color.text,
     fontVariant: ['tabular-nums'],

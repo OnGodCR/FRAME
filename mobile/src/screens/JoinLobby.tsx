@@ -379,7 +379,7 @@ export function Lobby() {
                   : 'Test players are arriving.'}
               </Mono>
               <Mono style={{ fontSize: 9, color: color.faint, letterSpacing: 1, marginTop: 4 }}>
-                NOBODY CAN JOIN WITHOUT THE CODE. FRAME NEVER MATCHES YOU WITH STRANGERS.
+                NOBODY CAN JOIN WITHOUT THE CODE. HIDEWIRE NEVER MATCHES YOU WITH STRANGERS.
               </Mono>
               {simFrom == null && TEST_MODE && (
                 <Pressable

@@ -6,12 +6,12 @@ import { Body, Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { FadeIn, PressScale } from '../components/motion';
 import { CaptureSequence } from '../components/CaptureSequence';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
-import { useGame, TEST_FRAME_WINDOW } from '../engine/GameContext';
+import { useGame } from '../engine/GameContext';
 import { useWorld } from '../engine/WorldContext';
 import { DAILY_REWARD, nearestMatch, type Assignment } from '../data/assignments';
 
 // ---------------------------------------------------------------------------
-// Solo. The half of FRAME that does not need three friends to be free at the
+// Solo. The half of Hidewire that does not need three friends to be free at the
 // same time.
 //
 // This exists because the game structurally cannot be played alone, which is
@@ -64,7 +64,7 @@ function DistanceReadout({ a }: { a: Assignment }) {
 }
 
 export function SoloHub() {
-  const { go, startSolo, daily, dailyAssignment, dailyOpen, seen } = useGame();
+  const { go, startSolo, daily, dailyAssignment, dailyOpen } = useGame();
   const insets = useSafeAreaInsets();
 
   return (
@@ -116,7 +116,7 @@ export function SoloHub() {
               </View>
               <View style={{ marginTop: space(3) }}>
                 {dailyOpen ? (
-                  <Btn title="Take the shot" onPress={() => startSolo('daily')} />
+                  <Btn title="Take the shot" onPress={() => startSolo()} />
                 ) : (
                   <View style={styles.doneChip}>
                     <Mono style={{ fontSize: 11, color: color.accent, letterSpacing: 1.5 }}>
@@ -137,29 +137,6 @@ export function SoloHub() {
           <PartyFeed />
         </FadeIn>
 
-        {/* ---- test frame ---- */}
-        <FadeIn index={3}>
-          <Card style={{ marginTop: space(3), padding: 0 }}>
-            <View style={styles.cardHead}>
-              <Label tone="text">Test frame</Label>
-              <Label tone="faint">{seen.practised ? 'PRACTISED' : 'RECOMMENDED'}</Label>
-            </View>
-            <View style={{ paddingHorizontal: space(4), paddingBottom: space(4) }}>
-              <Body style={{ color: color.dim, lineHeight: 21 }}>
-                One check-in, {TEST_FRAME_WINDOW} seconds, exactly like the real thing.
-                Nothing is at stake. Let the timer run out on purpose if you want to
-                see what that looks like before it costs you a round.
-              </Body>
-              <View style={{ marginTop: space(3) }}>
-                <Btn
-                  title="Run a test frame"
-                  variant={seen.practised ? 'outline' : 'primary'}
-                  onPress={() => startSolo('test')}
-                />
-              </View>
-            </View>
-          </Card>
-        </FadeIn>
       </ScrollView>
     </View>
   );
@@ -281,53 +258,21 @@ function PartyFeed() {
 
 export function SoloRun() {
   const { solo, dailyAssignment, passSolo, exitSolo } = useGame();
-  const insets = useSafeAreaInsets();
 
   if (!solo) return null;
 
-  // Practice blackout. Deliberately the real thing, minus the consequence,
-  // so the first time a player sees this screen is not the first time it
-  // has actually cost them something.
-  if (solo.outcome === 'expired') {
-    return (
-      <View style={styles.blackScreen}>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={styles.blackoutTitle}>BLACKED{'\n'}OUT</Text>
-          <View style={styles.blackoutBar} />
-          <Mono style={styles.blackoutNote}>
-            THE WINDOW CLOSED WITH NO SUBMISSION.
-          </Mono>
-          <Mono style={[styles.blackoutNote, { color: color.faint, marginTop: space(3) }]}>
-            IN A REAL ROUND THAT IS THE END OF IT.{'\n'}THIS ONE COST YOU NOTHING.
-          </Mono>
-        </View>
-        <View style={{ padding: space(6), paddingBottom: insets.bottom + space(6), gap: space(2) }}>
-          <Btn title="Try again" onPress={() => exitSolo()} />
-        </View>
-      </View>
-    );
-  }
-
-  const isDaily = solo.mode === 'daily';
-  const remaining = solo.window == null ? null : solo.window - solo.elapsed;
-
+  // Untimed on purpose. The assignment is something you do on a walk, and the
+  // only timed practice run in the product is the tutorial's, which is where a
+  // player learns what a deadline feels like.
   return (
     <CaptureSequence
-      eyebrow={isDaily ? 'Daily assignment' : 'Test frame'}
-      prompt={isDaily ? dailyAssignment.text : null}
-      remaining={remaining}
+      eyebrow="Daily assignment"
+      prompt={dailyAssignment.text}
+      remaining={null}
       onValidated={passSolo}
-      validatingNote={
-        isDaily
-          ? 'The prompt is not scored. The capture only has to be real.'
-          : 'Practice run. The same checks, none of the consequences.'
-      }
-      doneTitle={isDaily ? 'Assignment complete.' : 'That would have counted.'}
-      doneNote={
-        isDaily
-          ? `+${Math.round(DAILY_REWARD.xp * 1000)} XP · +${DAILY_REWARD.film} FILM · SHARED WITH YOUR PARTY · DELETED IN 24 H`
-          : "IN A REAL ROUND BOTH FRAMES WOULD NOW BE IN THE SEEKER'S FEED."
-      }
+      validatingNote="The prompt is not scored. The capture only has to be real."
+      doneTitle="Assignment complete."
+      doneNote={`+${Math.round(DAILY_REWARD.xp * 1000)} XP · +${DAILY_REWARD.film} FILM · SHARED WITH YOUR PARTY · DELETED IN 24 H`}
       doneCta="Done"
       onDone={exitSolo}
     />

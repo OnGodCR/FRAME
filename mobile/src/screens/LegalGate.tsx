@@ -23,7 +23,7 @@ import { useGame } from '../engine/GameContext';
 const HIGHLIGHTS = [
   {
     title: 'You are responsible for where you go',
-    body: 'FRAME gives you reasons to walk to real places. It does not know if the route is safe or the property is public. Stay on public ground, obey the law, and stop if anyone asks you to.',
+    body: 'Hidewire gives you reasons to walk to real places. It does not know if the route is safe or the property is public. Stay on public ground, obey the law, and stop if anyone asks you to.',
   },
   {
     title: 'Your photos go to the seeker, then get deleted',
@@ -71,7 +71,7 @@ export function LegalGate() {
   return (
     <View style={styles.screen}>
       <View style={{ paddingHorizontal: space(6), paddingTop: insets.top + space(8) }}>
-        <Label>Step 2 of 4</Label>
+        <Label>Step 2 of 5</Label>
         <Text style={styles.h1}>Before you make an account</Text>
       </View>
 

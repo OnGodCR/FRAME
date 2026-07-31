@@ -10,22 +10,30 @@ import { Body, Btn, Label, Mono } from '../components/ui';
 import { FadeIn, PressScale } from '../components/motion';
 import { supabase, supabaseReady } from '../lib/supabase';
 import { TEST_MODE } from '../config';
-import { useGame } from '../engine/GameContext';
+import { useGame, type Route } from '../engine/GameContext';
 
 type Provider = 'google' | 'apple';
 
 export function AuthGate() {
-  const { go, setAuth, profile } = useGame();
+  const { go, setAuth, profile, seen } = useGame();
 
   /**
    * Where to go after choosing an account type.
    *
    * Skips the handle step when one already exists. Reaching this screen a
-   * second time is normal now: a guest who taps into the shop or friends is
-   * sent here, and asking them to name themselves again reads as the app
-   * having forgotten who they are.
+   * second time is normal: a guest who taps into the shop or friends is sent
+   * here, and asking them to name themselves again reads as the app having
+   * forgotten who they are.
+   *
+   * The tutorial is checked separately rather than being treated as "the step
+   * after the handle". Those two came apart the moment a handle could exist
+   * without the tutorial having run: a player who quit partway through
+   * onboarding, or a guest who came back here from the shop wall, would have
+   * been dropped straight onto the home screen having never performed a
+   * check-in. That is exactly the cold start the tutorial exists to prevent.
    */
-  const nextAfterAuth = () => (profile.handle ? 'home' : 'handle');
+  const nextAfterAuth = (): Route =>
+    !profile.handle ? 'handle' : !seen.tutorialDone ? 'tutorial' : 'home';
   const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +94,7 @@ export function AuthGate() {
     <View style={styles.screen}>
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(8) }}>
         <FadeIn>
-          <Label>Step 3 of 4</Label>
+          <Label>Step 3 of 5</Label>
           <Text style={styles.h1}>Save your progress</Text>
           <Body style={{ color: color.dim, marginTop: space(2) }}>
             Linking an account keeps your level, cosmetics, and stats if you change phone.
@@ -148,7 +156,7 @@ export function AuthGate() {
             style={{ marginTop: space(2) }}
             sub="test mode only, stands in for a signed-in account"
             onPress={() => {
-              setAuth({ kind: 'google', email: 'test@frame.local' });
+              setAuth({ kind: 'google', email: 'test@hidewire.local' });
               go(nextAfterAuth());
             }}
           />

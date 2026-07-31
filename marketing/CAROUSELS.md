@@ -1,4 +1,4 @@
-# FRAME: 50 carousel concepts
+# Hidewire: 50 carousel concepts
 
 Read [BRIEF.md](BRIEF.md) first for voice, palette, and the claims that cannot
 be made. This file is the backlog.
@@ -15,7 +15,7 @@ that image back as a style reference for every following slide, changing only
 the copy. Independently generated slides will not match.
 
 ```
-You are generating one slide of an Instagram carousel for FRAME, a real-world
+You are generating one slide of an Instagram carousel for Hidewire, a real-world
 hide and seek game where players must photograph their hiding spot every few
 minutes to prove they are still hidden.
 

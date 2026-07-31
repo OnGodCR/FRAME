@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Pre-bakes a POI dataset for FRAME.
+ * Pre-bakes a POI dataset for Hidewire.
  *
  * The app normally loads landmarks live around the player's real position. This
  * script produces the offline sample it falls back to when location is denied

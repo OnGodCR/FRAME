@@ -1,4 +1,4 @@
-# FRAME: test fixtures and simulated data
+# Hidewire: test fixtures and simulated data
 
 ## Turning all of this off
 
@@ -250,4 +250,4 @@ screens. It disappears with TEST_MODE.
 - [ ] Store buttons are wired to a real payment provider
 - [ ] Validator thresholds are calibrated against real photos
 - [ ] `ios.bundleIdentifier` and `android.package` are changed off the
-      `com.frame.app` placeholder, which is permanent once published
+      `org.hidewire.app` placeholder, which is permanent once published

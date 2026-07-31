@@ -1,4 +1,4 @@
-# FRAME infrastructure plan
+# Hidewire infrastructure plan
 
 What it takes to turn the demo into a real app, on a stack that costs $0/month
 until there are real players on it.
@@ -207,7 +207,7 @@ custom dark style is also the better *design* answer, not just the cheaper one.
 
 ## 6. Where the free tier actually breaks
 
-| Constraint | Free ceiling | What that means for FRAME |
+| Constraint | Free ceiling | What that means for Hidewire |
 |---|---|---|
 | Supabase Realtime concurrent | ~200 connections | ~33 six-player parties live at once |
 | Supabase egress | 5 GB/mo | Thousands of rounds (photos bypass this via R2) |
@@ -251,7 +251,7 @@ backend work is meaningful.
    gives you 7-day builds on your own hardware. Real testers need TestFlight,
    which needs the paid program. Reasonable to defer until the check-in loop
    feels good.
-4. **The name.** The PRD says BLACKOUT; I built it as FRAME because the photo
+4. **The name.** The PRD says BLACKOUT; I built it as Hidewire because the photo
    mechanic is the differentiator and "blackout" is already the name of the
    *loss state* inside the game. Both names have existing games on the stores, so
    do a trademark search before you print anything.
