@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "frame-mobile",
+      "name": "hidewire-app",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "--prefix",
@@ -14,21 +14,6 @@
         "8091"
       ],
       "port": 8091,
-      "autoPort": false
-    },
-    {
-      "name": "frame-app-web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "--prefix",
-        "/Users/vintibangkochar/Documents/GitHub/FRAME/mobile",
-        "run",
-        "web",
-        "--",
-        "--port",
-        "8095"
-      ],
-      "port": 8095,
       "autoPort": false
     },
     {
