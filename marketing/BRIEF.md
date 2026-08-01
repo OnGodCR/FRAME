@@ -141,9 +141,18 @@ built around. Marketing that contradicts them creates real exposure.
   or train tracks, or playing in a vehicle.** The app actively suspends itself
   above 10 mph. Content showing unsafe hiding is off-limits regardless of how
   well it would perform.
-- **Do not imply anything purchasable makes you win.** Nothing purchasable
-  affects a round, and that is a deliberate ethical line worth stating, not
-  hiding.
+- **Do not claim that nothing purchasable affects a round.** It used to be
+  true and it is not any more: the FIRST LIGHT CASE contains utility items that
+  change how a round plays. Saying otherwise in marketing is now a false
+  statement about the product rather than a positioning choice, which is a
+  consumer-protection problem instead of a taste one.
+  What is still true and can be said: **the seeker role cannot be bought.**
+  Bidding spends only FILM that was earned, enforced in the database, so no
+  amount of money buys the role. Utility items are capped at one use per player
+  per round, and every one of them is reachable without paying.
+- **Do not imply the random boxes are a sure thing.** The odds are published and
+  the copy must not contradict them. No "guaranteed", no "unlock the elite five"
+  without the probability next to it.
 - **Do not promise photos are private.** They go to the Seeker. Say so plainly.
   What you can promise is that they are deleted 24 hours after the round and
   never enter match history.

@@ -75,7 +75,7 @@ export function Splash() {
  * which goes further than PRD 3's promise not to store it. The app only ever
  * learns an age, and only ever keeps which side of 18 it falls on.
  */
-const MIN_AGE = 8;
+const MIN_AGE = 1;
 const MAX_AGE = 80;
 
 /**
@@ -156,34 +156,51 @@ export function DobGate() {
           Asked once. Never shown to other players, and never stored as a date.
         </Body>
 
-        <View style={{ alignItems: 'center', marginTop: space(10) }}>
-          <Text style={[styles.ageValue, age == null && { color: color.faint }]}>
-            {age ?? '--'}
-          </Text>
-          <Mono style={{ fontSize: 10, letterSpacing: 2, color: color.faint, marginTop: space(1) }}>
-            YEARS OLD
-          </Mono>
-        </View>
+        {/* A chunky track with the value riding above the handle, rather than a
+            hairline. The number belongs on the thumb: it is the thing being
+            set, and putting it there means the thumb never has to be lifted to
+            read the answer. */}
+        <View style={styles.sliderBlock}>
+          <View style={styles.bubbleRow} pointerEvents="none">
+            {age != null && track > 0 && (
+              <View style={[styles.bubbleWrap, { left: frac * track - 34 }]}>
+                <View style={styles.bubble}>
+                  <Text style={styles.bubbleValue}>{age}</Text>
+                </View>
+                <View style={styles.bubbleTail} />
+              </View>
+            )}
+          </View>
 
-        <View
-          style={styles.sliderHit}
-          onLayout={(e) => setTrack(e.nativeEvent.layout.width)}
-          onStartShouldSetResponder={() => true}
-          onMoveShouldSetResponder={() => true}
-          onResponderGrant={(e) => setFromX(e.nativeEvent.locationX)}
-          onResponderMove={(e) => setFromX(e.nativeEvent.locationX)}
-        >
-          <View style={styles.sliderTrack} />
-          {age != null && (
-            <>
-              <View style={[styles.sliderFill, { width: frac * track }]} />
-              <View style={[styles.sliderThumb, { left: frac * track - 14 }]} />
-            </>
-          )}
+          <View
+            style={styles.sliderHit}
+            onLayout={(e) => setTrack(e.nativeEvent.layout.width)}
+            onStartShouldSetResponder={() => true}
+            onMoveShouldSetResponder={() => true}
+            onResponderGrant={(e) => setFromX(e.nativeEvent.locationX)}
+            onResponderMove={(e) => setFromX(e.nativeEvent.locationX)}
+          >
+            <View style={styles.sliderTrack}>
+              {age != null && (
+                <View style={[styles.sliderFill, { width: Math.max(0, frac * track) }]} />
+              )}
+            </View>
+            {age != null && (
+              <View style={[styles.sliderThumb, { left: frac * track - 13 }]}>
+                <View style={styles.thumbGrip} />
+                <View style={styles.thumbGrip} />
+              </View>
+            )}
+          </View>
+
+          <View style={styles.scaleRow}>
+            <Mono style={styles.scaleEnd}>{MIN_AGE}</Mono>
+            <Mono style={styles.scaleEnd}>{MAX_AGE}+</Mono>
+          </View>
         </View>
 
         <Mono style={styles.sliderHint}>
-          {age == null ? 'TAP OR DRAG THE LINE TO SET YOUR AGE' : ' '}
+          {age == null ? 'DRAG THE SLIDER TO SET YOUR AGE' : 'THIS WILL NOT AFFECT GAMEPLAY'}
         </Mono>
       </View>
       <View style={{ padding: space(6), paddingBottom: insets.bottom + space(6) }}>
@@ -315,34 +332,69 @@ const styles = StyleSheet.create({
     marginTop: space(4),
     letterSpacing: 0.5,
   },
-  ageValue: {
+  sliderBlock: { marginTop: space(12) },
+  bubbleRow: { height: 54 },
+  bubbleWrap: { position: 'absolute', alignItems: 'center', width: 68 },
+  bubble: {
+    minWidth: 68,
+    paddingHorizontal: space(3),
+    paddingVertical: space(2),
+    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: color.lineBright,
+    backgroundColor: color.surface2,
+    alignItems: 'center',
+  },
+  bubbleValue: {
     fontFamily: font.numeral,
-    fontSize: 76,
+    fontSize: 28,
     color: color.text,
     fontVariant: ['tabular-nums'],
   },
-  // A generous touch target around a thin line. The line is the design; the
-  // hit area is 44pt so it is actually usable.
-  sliderHit: {
-    height: 44,
-    marginTop: space(9),
-    justifyContent: 'center',
+  // The little pointer under the bubble, aimed at the thumb.
+  bubbleTail: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: color.lineBright,
   },
-  sliderTrack: { height: 2, backgroundColor: color.lineBright },
-  sliderFill: { position: 'absolute', height: 2, backgroundColor: color.accent },
+  // 44pt of touch around a 20pt bar, so the target is usable at the ends.
+  sliderHit: { height: 44, justifyContent: 'center' },
+  sliderTrack: {
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: color.lineBright,
+    backgroundColor: color.surface,
+    overflow: 'hidden',
+  },
+  sliderFill: { height: '100%', backgroundColor: color.accent },
   sliderThumb: {
     position: 'absolute',
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: color.accent,
+    width: 26,
+    height: 34,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: color.text,
+    backgroundColor: color.surface2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
   },
+  thumbGrip: { width: 2, height: 12, borderRadius: 1, backgroundColor: color.dim },
+  scaleRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space(2) },
+  scaleEnd: { fontSize: 10, letterSpacing: 1, color: color.faint },
   sliderHint: {
     fontSize: 10,
     letterSpacing: 1.4,
     color: color.faint,
     textAlign: 'center',
-    marginTop: space(4),
+    marginTop: space(5),
     minHeight: 14,
   },
   dateCell: {

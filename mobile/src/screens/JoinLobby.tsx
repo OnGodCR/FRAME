@@ -19,6 +19,7 @@ import { ZoneMap } from '../components/ZoneMap';
 import { useWorld } from '../engine/WorldContext';
 import { useGame, SEEKER_BOT } from '../engine/GameContext';
 import { PermissionNote } from './Onboarding';
+import { useScrollGate } from '../components/useScrollGate';
 import { TEST_MODE } from '../config';
 
 // ---------- join ----------
@@ -645,25 +646,8 @@ const RULES = [
 ];
 
 function SafetyOverlay({ onAck, onClose }: { onAck: () => void; onClose: () => void }) {
-  const [reachedEnd, setReachedEnd] = useState(false);
-  const [viewH, setViewH] = useState(0);
-  const [contentH, setContentH] = useState(0);
+  const { reachedEnd, scrollProps } = useScrollGate();
   const insets = useSafeAreaInsets();
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 40) {
-      setReachedEnd(true);
-    }
-  };
-
-  // Same fits-entirely case as the legal gate, and the stakes are higher: this
-  // gate is the only thing standing between a tall-screen player and never
-  // being able to start a round. onLayout and onContentSizeChange fire in an
-  // order that is not guaranteed, so the comparison belongs in an effect that
-  // re-runs when either value lands rather than inside one of the handlers.
-  useEffect(() => {
-    if (viewH > 0 && contentH > 0 && contentH <= viewH + 8) setReachedEnd(true);
-  }, [viewH, contentH]);
   return (
     <View style={[styles.safetyOverlay, { paddingTop: insets.top + space(4) }]}>
       <View style={{ paddingHorizontal: space(6) }}>
@@ -671,10 +655,7 @@ function SafetyOverlay({ onAck, onClose }: { onAck: () => void; onClose: () => v
         <Text style={styles.h1}>Before you play</Text>
       </View>
       <ScrollView
-        onScroll={onScroll}
-        onLayout={(e) => setViewH(e.nativeEvent.layout.height)}
-        onContentSizeChange={(_, h) => setContentH(h)}
-        scrollEventThrottle={16}
+        {...scrollProps}
         showsVerticalScrollIndicator
         style={{ flex: 1, marginTop: space(4) }}
         contentContainerStyle={{ paddingHorizontal: space(6), paddingBottom: space(8) }}

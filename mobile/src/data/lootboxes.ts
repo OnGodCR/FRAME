@@ -308,11 +308,22 @@ export const LOOT_BOXES: LootBox[] = [
   {
     id: 'box-first-light',
     name: 'FIRST LIGHT CASE',
-    blurb: 'One item. A one in five chance at one of the five elite items.',
+    blurb: 'Guaranteed elite. Which of the five is a one in five roll.',
     film: null,
     price: '$4.99',
     draws: 1,
-    odds: { common: 0, uncommon: 0.3, rare: 0.5, elite: 0.2 },
+    // **Guaranteed elite.** The 20% figure was always about *which* elite item
+    // you get, not whether you get one, and the first version of this file read
+    // it the other way round.
+    //
+    // Be clear about what this does: at 100% elite, the paid box is now
+    // strictly better than every FILM box, including the 10,000 one at 25%.
+    // The "better odds for earned currency" defence in LOOT-BOXES.md section 2
+    // is gone, and $4.99 is now the fastest route to a gameplay item by a wide
+    // margin. That is a deliberate product decision, recorded rather than
+    // smoothed over.
+    odds: { common: 0, uncommon: 0, rare: 0, elite: 1 },
+    tag: 'GUARANTEED ELITE',
   },
 ];
 
@@ -373,14 +384,46 @@ export function boxAvailability(
   country: string | null,
   box: LootBox,
 ): BoxAvailability {
+  // FILM is purchasable, so a FILM box is bought into indirectly with real
+  // money and is a paid random item everywhere that tests it that way.
   const isPaidRandom = box.price !== null || FILM_IS_PURCHASABLE;
 
   if (!isPaidRandom) return 'available';
   if (bracket !== '18_plus') return 'blocked_age';
-  if (country && (NO_PAID_RANDOM_ITEMS as readonly string[]).includes(country)) {
+
+  // **Fails closed.** An unknown country used to mean "allow", which is the
+  // wrong way round: it meant the Belgium block never fired at all, because
+  // nothing supplies a country yet. Refusing is the safe default and also the
+  // honest one, since there is no payment provider either, so no legitimate
+  // paid purchase can happen today regardless.
+  //
+  // The source has to be the **store storefront country**, from the payment
+  // provider. Not the IP, which a VPN moves, and not the GPS, which answers a
+  // different question. The storefront is what governs the transaction, so it
+  // is the only thing that answers what a regulator is actually asking.
+  // `open_box` applies the identical rule server side.
+  if (!country) return 'blocked_region';
+  if ((NO_PAID_RANDOM_ITEMS as readonly string[]).includes(country)) {
     return 'blocked_region';
   }
   return 'available';
+}
+
+/**
+ * Refuses to ship a build that can take money without knowing where from.
+ *
+ * Same shape as `assertProductionSafe()` in config.ts and for the same reason:
+ * the failure it guards is silent. A release selling FILM with no storefront
+ * country would be offering paid random items in Belgium, where they are
+ * prohibited and enforced, and nothing in the app would look wrong.
+ */
+export function assertMonetizationSafe(isDev: boolean, hasCountrySource: boolean): void {
+  if (!isDev && FILM_IS_PURCHASABLE && !hasCountrySource) {
+    throw new Error(
+      'Hidewire: FILM is purchasable but no store country source is wired up, so ' +
+        'paid random items cannot be region-gated. See monetization/LOOT-BOXES.md.',
+    );
+  }
 }
 
 /**

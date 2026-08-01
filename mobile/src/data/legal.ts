@@ -66,7 +66,7 @@ export const TERMS: Doc = {
     {
       heading: '5. Purchases',
       body: [
-        'Anything you buy is cosmetic or currency spendable on cosmetics. Nothing purchasable changes the outcome of a round. This is deliberate: in a game played with real bodies in real places, a purchasable advantage would be an incentive to take a real risk.',
+        'You can buy FILM and one box containing a random item. Some of those items do change how a round plays. Three limits: the seeker role cannot be bought, because bidding spends only FILM you earned and that is enforced in our database; one utility item per player per round; and nothing is purchase-only, so every item is reachable by playing. Odds are published before you buy. Nothing purchasable rewards taking a physical risk.',
         'Purchases are handled by Apple or Google under their refund terms, not ours.',
         'Any real-money purchase disables advertising on your account permanently.',
       ],

@@ -16,6 +16,7 @@ import { Body, Btn, Label, Mono } from '../components/ui';
 import { FadeIn } from '../components/motion';
 import { Doc, PRIVACY, TERMS } from '../data/legal';
 import { useGame } from '../engine/GameContext';
+import { useScrollGate } from '../components/useScrollGate';
 
 // The points a player actually needs to have registered before they agree.
 // The full documents are one tap away, but nobody reads a wall of text, and
@@ -42,31 +43,8 @@ const HIGHLIGHTS = [
 export function LegalGate() {
   const { go } = useGame();
   const insets = useSafeAreaInsets();
-  const [reachedEnd, setReachedEnd] = useState(false);
-  const [viewerH, setViewerH] = useState(0);
-  const [contentH, setContentH] = useState(0);
+  const { reachedEnd, scrollProps } = useScrollGate();
   const [open, setOpen] = useState<Doc | null>(null);
-
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const { layoutMeasurement, contentOffset, contentSize } = e.nativeEvent;
-    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 40) {
-      setReachedEnd(true);
-    }
-  };
-
-  // A gate that cannot be satisfied is worse than no gate at all. On a wide or
-  // tall viewport the four points fit without overflowing, so there is nothing
-  // to scroll and onScroll never fires: the player is locked out of the app
-  // permanently. That is reachable on a tablet, on an unfolded foldable, and in
-  // the desktop dev preview.
-  //
-  // This has to live in an effect rather than inside either handler, because
-  // onLayout and onContentSizeChange fire in an order React Native does not
-  // guarantee. Checking inside onContentSizeChange alone (the previous version)
-  // read viewerH while it was still 0, skipped the check, and never ran again.
-  useEffect(() => {
-    if (viewerH > 0 && contentH > 0 && contentH <= viewerH + 8) setReachedEnd(true);
-  }, [viewerH, contentH]);
 
   return (
     <View style={styles.screen}>
@@ -75,11 +53,11 @@ export function LegalGate() {
         <Text style={styles.h1}>Before you make an account</Text>
       </View>
 
+      {/* The fits-entirely case is handled inside useScrollGate, which has to
+          read the DOM on web because react-native-web's ScrollView fires
+          neither onLayout nor onContentSizeChange. */}
       <ScrollView
-        onScroll={onScroll}
-        onLayout={(e) => setViewerH(e.nativeEvent.layout.height)}
-        onContentSizeChange={(_, h) => setContentH(h)}
-        scrollEventThrottle={16}
+        {...scrollProps}
         style={{ flex: 1, marginTop: space(4) }}
         contentContainerStyle={{ paddingHorizontal: space(6), paddingBottom: space(6) }}
       >

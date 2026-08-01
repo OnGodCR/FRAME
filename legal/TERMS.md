@@ -40,7 +40,17 @@ Accounts caught cheating lose their progress for the affected rounds and may be 
 
 ## 5. Purchases
 
-Anything you buy is cosmetic or currency spendable on cosmetics. Nothing purchasable changes the outcome of a round. This is deliberate: in a game played with real bodies in real places, a purchasable advantage would be an incentive to take a real risk.
+You can buy FILM, the in-game currency, and you can buy one box that contains a random item. Some of those items are utility items, and they do change how a round plays: they can extend a check-in window, hide you from one reveal, or bring a zone contraction forward.
+
+Three limits on that, which we hold ourselves to:
+
+- **The seeker role cannot be bought.** Bidding to seek spends only FILM you earned by playing. This is enforced in our database, not by our good intentions.
+- **One utility item per player per round**, so the gap between someone who paid and someone who did not has a ceiling.
+- **Nothing is purchase-only.** Every item, including the rarest, can be obtained with FILM you earned.
+
+Odds for every box are published in the app before you buy, and they do not improve after a failed attempt.
+
+Nothing you can buy rewards taking a physical risk. No item asks you to move faster, go further, or be anywhere in particular, because in a game played with real bodies in real places that would be an incentive to get hurt.
 
 Purchases are handled by Apple or Google under their refund terms, not ours.
 

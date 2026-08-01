@@ -101,7 +101,7 @@ One screen of real content, then supporting sections. In order:
    stay: it is where the safety and privacy posture becomes a feature rather
    than fine print. Cover: invite codes only and never strangers, no face
    recognition of any kind, photos are deleted 24 hours after the round, and
-   nothing purchasable affects whether you win.
+   the seeker role cannot be bought.
 5. **Footer** with links to `/terms`, `/privacy`, and a contact address.
 
 ## Claims that are legally off-limit
@@ -117,8 +117,10 @@ of things that create real exposure. The short version:
 - **Never depict or suggest** trespassing, hiding on private property, hiding
   near roads or train tracks, or playing in a vehicle. No stock photography of
   someone crouched behind a car on a road, however good it looks.
-- **Never imply anything purchasable helps you win.** Nothing purchasable
-  affects a round, and that is worth stating outright rather than hiding.
+- **Do not claim that nothing purchasable affects a round.** That was true and
+  is not any more. What is still true and worth saying: the seeker role cannot
+  be bought, because bidding spends only earned FILM; utility items are capped
+  at one use per round; and nothing is purchase-only.
 - **Never promise the photos are private.** They go to the Seeker. Say so
   plainly. What you can promise is that they are deleted 24 hours after the
   round ends and never enter match history.

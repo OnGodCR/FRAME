@@ -186,7 +186,15 @@ legal requirement.
 | CONTACT SHEET | 3,000 FILM | 45% | 38% | 16% | 1% |
 | SILVER RESERVE | 5,000 FILM | 25% | 40% | 32% | 3% |
 | VAULT NEGATIVE | 10,000 FILM | 5% | 30% | 40% | **25%** |
-| FIRST LIGHT CASE | $4.99 | 0% | 30% | 50% | **20%** |
+| FIRST LIGHT CASE | $4.99 | 0% | 0% | 0% | **100%** |
+
+**The paid box is a guaranteed elite**, corrected in `0011_first_light_odds.sql`.
+The "one in five" was always about *which* elite item you get, not whether you
+get one. That makes the paid box strictly better than every FILM box, including
+VAULT NEGATIVE at 25%, so the better-odds-for-earned-currency argument in
+section 2 no longer holds. $4.99 is the fastest route to a gameplay item by a
+wide margin. What still holds: the seeker role cannot be bought, one utility
+item per player per round, and nothing is purchase-only.
 
 **Twelve utility items**, five of them elite. These are the first things in
 Hidewire that are not cosmetic. Three rules keep the blast radius bounded:
@@ -226,7 +234,10 @@ has a materially worse real outcome than the table implies.
 5. **The receipt path** for the $4.99 box. There is no payment provider yet.
 6. **Odds in the store listing metadata**, and the ESRB "Includes Random Items"
    interactive element.
-7. **A decision on seeker bidding**, per section 1.
+7. ~~A decision on seeker bidding.~~ **Done.** `0010_monetization.sql` splits
+   earned from bought FILM on `profiles.film_purchased`, and `bid_seeker` may
+   spend only the earned remainder, so the role is not for sale. Spending draws
+   bought FILM down first.
 8. **Somewhere for the stranded pass cosmetics to go.** Removing the paid track
    left fifteen paid-track cosmetics with no route to a player. The boxes are
    the obvious home, and they need it: as built, the boxes contain twelve

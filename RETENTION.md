@@ -234,7 +234,9 @@ waiting) are the remaining half, and they need the server and remote push.
 
 ### 6.1 What Hidewire already gets right
 
-Cosmetics only. Nothing purchasable affects whether you win. That is both the
+Cosmetics were the whole shop when this was written. Superseded 2026-08-01:
+the shop now sells FILM and one random box containing utility items that do
+affect a round. The seeker role is still unbuyable. That is both the
 legally required position (see [marketing/BRIEF.md](marketing/BRIEF.md) 9) and,
 per the current research, the commercially better one: the trend has moved away
 from aggressive tactics toward optional purchases that respect player time,

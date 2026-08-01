@@ -8,7 +8,10 @@
 // (JoinLobby, "Bid to seek"). The shop may sell cosmetics and pass tiers for
 // real money. It must never sell FILM, because bidding would immediately turn
 // that into a purchasable advantage, and marketing/BRIEF.md 9 lists "never
-// imply anything purchasable helps you win" as a legal line.
+// imply anything purchasable helps you win" as a legal line. Superseded: FILM
+// is sold, and the paid box contains items that change a round. What survives
+// is narrower and enforced in the database, in 0010_monetization.sql: seeker
+// bids may spend only FILM that was earned, so the role itself is not for sale.
 //
 // Every faucet below is capped or once-only. That is deliberate: a group of
 // five friends applauding each other every morning would otherwise mint more

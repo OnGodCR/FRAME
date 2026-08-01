@@ -190,8 +190,7 @@ export const TIERS: Tier[] = buildTiers();
  * before any of that means anything, is the standard mistake.
  *
  * Priced at $2.99, inside the band that converts a first-time payer, and
- * anchored against component value. Cosmetic only, like everything else:
- * nothing purchasable may affect whether you win.
+ * anchored against component value.
  */
 /**
  * Retired. The one-time first-purchase offer on the results screen is gone
@@ -216,14 +215,13 @@ export const TIERS: Tier[] = buildTiers();
 /**
  * Real-money products.
  *
- * **None of these is FILM, and none of them ever can be.** Seeker bidding
- * spends FILM (JoinLobby, "Bid to seek"), so selling FILM would make a role
- * advantage purchasable, and marketing/BRIEF.md 9 lists "never imply anything
- * purchasable helps you win" as a legal line rather than a tone note.
+ * **Superseded 2026-08-01.** FILM is now sold, and the shop's one paid box
+ * contains items that change how a round plays. This array is empty; the real
+ * storefront is `LOOT_BOXES` and `FILM_PACKS` in data/lootboxes.ts.
  *
- * What is safe to sell: cosmetics, cosmetic bundles, and pass tiers, because
- * the pass pays out cosmetics only. If a future tier ever pays FILM, tier
- * skips have to come out of the shop.
+ * The narrower rule that survived, and is enforced in the database rather than
+ * here: **seeker bids may spend only FILM that was earned**, so the role
+ * itself is still not for sale. See 0010_monetization.sql.
  */
 export interface StoreProduct {
   id: string;

@@ -78,7 +78,7 @@ handoff. Current supersessions:
   date-of-birth entry and marks it [HARD CONSTRAINT] for COPPA, on the
   reasoning that anything easier is "trivially defeated". Superseded
   deliberately. The slider is built as neutrally as one can be: no starting
-  position, a range beginning at 8 so the control does not announce the
+  position, a range beginning at 1 so the control does not announce the
   threshold, and nothing marking where the cutoff is. The sticky refusal and
   the three-correction limit are unchanged, and the date of birth is now never
   entered at all, which goes further than PRD 3's promise not to store it.
@@ -96,7 +96,10 @@ code from memory of an older SDK.
 
 [marketing/BRIEF.md](marketing/BRIEF.md) 9 lists these and they are legal
 lines, not tone notes. Never imply face recognition, never imply stranger play,
-never depict unsafe hiding, never imply anything purchasable helps you win.
+never depict unsafe hiding. The fourth claim, that nothing purchasable helps
+you win, was removed on 2026-08-01 rather than softened, because it stopped
+being true. What can still be claimed is narrower: the seeker role cannot be
+bought.
 These constrain product design as much as copy: a feature that puts strangers
 in contact with each other is out regardless of how it is described.
 

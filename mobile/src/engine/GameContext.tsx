@@ -202,12 +202,14 @@ export interface Profile {
   xp: number; // 0..1 through current level
   prestige: number;
   /**
-   * Soft currency. Cosmetics only, and **earned only**.
+   * Soft currency. Spendable on cosmetics, utility items, and loot boxes.
    *
-   * FILM must never become purchasable with real money while seeker bidding
-   * exists (see `bidSeeker`), because that would turn a role advantage into
-   * something you can buy. marketing/BRIEF.md 9 lists "never imply anything
-   * purchasable helps you win" as a legal line, not a tone note.
+   * **Superseded 2026-08-01: FILM is now purchasable.** The rule that replaced
+   * "earned only" is narrower and lives in the database, in
+   * 0010_monetization.sql: `profiles.film_purchased` tracks how much of the
+   * balance arrived through a payment, and `bid_seeker` may spend only the
+   * earned remainder. So bought FILM buys boxes and cosmetics, and never the
+   * seeker role. Do not reintroduce a client-side bid path that skips it.
    */
   film: number;
   /** Drives season pass tier. See passState() in data/catalog.ts. */

@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
 import { Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { CosmeticPreview } from '../components/Cosmetics';
+import { CrateArt, FilmStack } from '../components/CrateArt';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { CountUp, FadeIn, PressScale, useFlash } from '../components/motion';
 import { Cosmetic, SHOP_ITEMS, SEASON, TIER_COUNT, categoryKind, CATEGORIES } from '../data/catalog';
@@ -20,6 +21,7 @@ import {
 import { ECONOMY } from '../data/economy';
 import { useGame } from '../engine/GameContext';
 import { Animated } from 'react-native';
+import Svg, { Line as SvgLine, Rect } from 'react-native-svg';
 
 export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
   const { go, profile, purchase, ageBracket } = useGame();
@@ -124,7 +126,7 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
                 style={styles.pack}
               >
                 {pack.tag && <Mono style={styles.packTag}>{pack.tag}</Mono>}
-                <CosmeticPreview kind="film" size={28} />
+                <FilmStack count={i + 1} size={62} />
                 <Text style={styles.packFilm}>{pack.film.toLocaleString()}</Text>
                 {pack.bonus && <Mono style={styles.packBonus}>{pack.bonus}</Mono>}
                 <Text style={styles.packPrice}>{pack.price}</Text>
@@ -199,12 +201,36 @@ function AdsForeverNotice({ visible, onClose }: { visible: boolean; onClose: () 
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.noticeBackdrop}>
         <View style={styles.noticeCard}>
-          <Label tone="accent">Before you spend</Label>
-          <Text style={styles.noticeTitle}>Any real-money purchase turns ads off for good.</Text>
-          <Mono style={styles.noticeBody}>
-            Not for a season, not for the purchase. Once, permanently, on this
-            account. It applies to the smallest FILM pack as much as the largest.
-          </Mono>
+          <View style={styles.noticeArt}>
+            <Svg width={132} height={92} viewBox="0 0 132 92">
+              {/* An ad banner with the signal cut. The crossed-out slot says
+                  the whole thing without a paragraph under it. */}
+              <Rect
+                x={6}
+                y={26}
+                width={120}
+                height={40}
+                rx={5}
+                fill={color.surface2}
+                stroke={color.lineBright}
+                strokeWidth={2}
+              />
+              {[16, 16 + 22, 16 + 44].map((x) => (
+                <Rect key={x} x={x} y={38} width={16} height={4} rx={2} fill={color.faint} />
+              ))}
+              <Rect x={16} y={50} width={62} height={4} rx={2} fill={color.faint} />
+              <SvgLine
+                x1={14}
+                y1={20}
+                x2={118}
+                y2={72}
+                stroke={color.accent}
+                strokeWidth={5}
+                strokeLinecap="round"
+              />
+            </Svg>
+          </View>
+          <Text style={styles.noticeTitle}>Buy anything, and ads are gone for good.</Text>
           <Btn title="Got it" style={{ marginTop: space(5) }} onPress={onClose} />
         </View>
       </View>
@@ -246,6 +272,7 @@ function BoxCard({
     <FadeIn index={index} delay={60}>
       <View style={[styles.boxCard, blocked && { opacity: 0.5 }]}>
         <View style={styles.boxTop}>
+          <CrateArt id={box.id} size={82} />
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
               <Text style={styles.boxName}>{box.name}</Text>
@@ -546,9 +573,11 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     padding: space(5),
   },
+  noticeArt: { alignItems: 'center', marginBottom: space(4) },
   noticeTitle: {
     fontFamily: font.display,
     fontSize: 21,
+    textAlign: 'center',
     lineHeight: 28,
     color: color.text,
     marginTop: space(2),
