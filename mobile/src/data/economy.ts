@@ -18,7 +18,25 @@
 
 export const ECONOMY = {
   /** The daily check-in. XP is 0..1 through a level; 0.1 is 100 XP. */
-  dailyCheckin: { film: 100, xp: 0.1 },
+  dailyCheckin: { film: 500, xp: 0.1 },
+
+  /** Finishing all three of the day's missions. */
+  missionSweep: 500,
+
+  /**
+   * Rewarded video. 250 FILM for a 30 second view.
+   *
+   * **The cap is the whole design.** At 250 per 30 seconds this pays 500 FILM a
+   * minute, which is far and away the highest rate in the game, and uncapped it
+   * would be the only sensible way to earn: a player would sit in a menu
+   * watching adverts rather than walking around a city, which is the opposite
+   * of the product. Four a day puts the ad ceiling at 1,000 FILM against 1,100
+   * from actually playing, so playing still pays better. That ordering is the
+   * point and it should survive any retune.
+   *
+   * Not yet wired to an ad network. See TEST-FIXTURES.md.
+   */
+  rewardedAd: { film: 250, seconds: 30, dailyCap: 4 },
 
   /** What the RECEIVER earns when somebody applauds their capture. */
   applauseFilm: 20,
@@ -33,8 +51,29 @@ export const ECONOMY = {
   applauseDailyCap: 100,
 
   /** Referral bonus, paid to BOTH sides, once per pair. */
-  referralFilm: 500,
+  referralFilm: 2500,
 } as const;
+
+/** Rewarded-ad state, per local day. Same shape as the applause wallet. */
+export interface AdWallet {
+  /** dayIndex the counter belongs to. */
+  day: number;
+  /** Views already paid today. */
+  views: number;
+}
+
+export const FRESH_ADS: AdWallet = { day: -1, views: 0 };
+
+/** Whether another rewarded view will pay. Past the cap it pays nothing. */
+export function adViewsLeft(w: AdWallet, today: number): number {
+  const views = w.day === today ? w.views : 0;
+  return Math.max(0, ECONOMY.rewardedAd.dailyCap - views);
+}
+
+export function creditAdView(w: AdWallet, today: number): AdWallet {
+  const views = w.day === today ? w.views : 0;
+  return { day: today, views: views + 1 };
+}
 
 /** Applause state, per local day. Reset when the day index changes. */
 export interface ApplauseWallet {

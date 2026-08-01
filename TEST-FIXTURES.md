@@ -148,16 +148,36 @@ cosmetics only.
 
 ## 8. Purchases are not real
 
-No payment provider is wired up. Every price is display text and every buy
-button grants immediately, for free.
+No payment provider is wired up. Every price is display text.
 
-- `STORE` in `data/catalog.ts`: pass, cosmetic bundles, tier skips.
-- `STARTER_BUNDLE`: the one-time first-purchase offer.
+`STORE` in `data/catalog.ts` is now **empty**, and `STARTER_BUNDLE` is retired.
+Every paid SKU that used to be here is gone: the season pass paid track, the
+darkroom set, both tier skips, the founder bundle, and the first-purchase
+offer.
 
-**None of these sells FILM, and none of them ever can.** Seeker bidding spends
-FILM, so selling it makes a role advantage purchasable. A "1,000 FILM for
-$2.99" SKU existed here before bidding was added and was removed for exactly
-this reason.
+What replaced them, in `data/lootboxes.ts`, and **none of it does anything
+yet**:
+
+| Surface | State |
+|---|---|
+| The five loot boxes | Render with real prices and real published odds. **The buy button does nothing.** There is no roll, client or server. |
+| `FILM_PACKS` | Render. No payment provider, no grant. |
+| WATCH AN AD | Renders 250 FILM and the four-a-day cap. **No ad network is wired up** and the row grants nothing. |
+| The twelve utility items | Defined, priced, and rollable in theory. **No round consumes one**, so nothing they describe actually happens. |
+
+Two things about this that are not fixtures and should not be "fixed" by
+wiring the client:
+
+- **The roll belongs on the server**, as a SECURITY DEFINER function that
+  checks age and region, debits FILM, and grants in one transaction. A
+  client-side roll is worse than a client-side price.
+- **`boxAvailability()` is called with a null country**, so the Belgium and
+  Netherlands block never fires. That is a missing data source, not a decision.
+  See [monetization/LOOT-BOXES.md](monetization/LOOT-BOXES.md) section 5.
+
+**FILM is now sold**, which reverses the rule that used to live here. The
+consequence to keep in view: seeker bidding spends FILM, so the seeker role is
+now winnable with money.
 
 ---
 

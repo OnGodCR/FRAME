@@ -17,6 +17,21 @@
       "autoPort": false
     },
     {
+      "name": "frame-app-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "/Users/vintibangkochar/Documents/GitHub/FRAME/mobile",
+        "run",
+        "web",
+        "--",
+        "--port",
+        "8095"
+      ],
+      "port": 8095,
+      "autoPort": false
+    },
+    {
       "name": "hidewire-web",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

@@ -51,7 +51,33 @@ export function Splash() {
   );
 }
 
-const MAX_AGE = 120;
+/**
+ * The age gate, as a slider.
+ *
+ * **This supersedes PRD 3**, which specifies a blank date-of-birth field and
+ * marks it [HARD CONSTRAINT] for COPPA, on the reasoning that anything easier
+ * is "trivially defeated and not a good-faith gate". Angad's call, recorded
+ * here and in the session handoff rather than made quietly, because it moves a
+ * line the PRD draws in a section about a children's privacy statute.
+ *
+ * What is kept, so the gate stays as good-faith as a slider can be:
+ *
+ * - **No starting position.** The thumb does not exist until the player puts
+ *   it somewhere. A slider pre-set to 18, or to any adult age, is a leading
+ *   question with a default answer.
+ * - **The range starts below 13.** If the lowest reachable value were 13 the
+ *   control would announce the threshold, and a gate that shows you the
+ *   passing answer is not a gate.
+ * - **Nothing marks where the cutoff is.** No colour change, no tick, no label.
+ * - **The refusal still sticks**, with the same three corrections as before.
+ *
+ * What is genuinely better: the date of birth is now never entered at all,
+ * which goes further than PRD 3's promise not to store it. The app only ever
+ * learns an age, and only ever keeps which side of 18 it falls on.
+ */
+const MIN_AGE = 8;
+const MAX_AGE = 80;
+
 /**
  * A typo should be correctable, but unlimited retries turn the age gate into a
  * guessing game, which is exactly what a good-faith gate is meant to avoid.
@@ -59,101 +85,22 @@ const MAX_AGE = 120;
  */
 const MAX_CORRECTIONS = 3;
 
-/** Days in a month, leap-year aware, so 02/30 and 04/31 are rejected. */
-function daysInMonth(month: number, year: number) {
-  if (month === 2) {
-    const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-    return leap ? 29 : 28;
-  }
-  return [4, 6, 9, 11].includes(month) ? 30 : 31;
-}
-
-/** Returns an error string, or null when the date is real and plausible. */
-function validateDob(mm: string, dd: string, yyyy: string): string | null {
-  const m = parseInt(mm, 10);
-  const d = parseInt(dd, 10);
-  const y = parseInt(yyyy, 10);
-  if (!m || m < 1 || m > 12) return 'That month does not exist.';
-  if (!y) return 'Check the year.';
-
-  const now = new Date();
-  if (y > now.getFullYear()) return 'That year is in the future.';
-  if (y < now.getFullYear() - MAX_AGE) return `Nobody is over ${MAX_AGE}. Check the year.`;
-  if (!d || d < 1 || d > daysInMonth(m, y)) return 'That day does not exist in that month.';
-
-  const dob = new Date(y, m - 1, d);
-  if (dob.getTime() > now.getTime()) return 'That date has not happened yet.';
-  return null;
-}
-
-/** Whole years elapsed, counting whether this year's birthday has passed. */
-function ageFrom(mm: string, dd: string, yyyy: string) {
-  const now = new Date();
-  const dob = new Date(parseInt(yyyy, 10), parseInt(mm, 10) - 1, parseInt(dd, 10));
-  let age = now.getFullYear() - dob.getFullYear();
-  const beforeBirthday =
-    now.getMonth() < dob.getMonth() ||
-    (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate());
-  if (beforeBirthday) age--;
-  return age;
-}
-
 export function DobGate() {
   const { go, setAgeBracket } = useGame();
-  const [mm, setMm] = useState('');
-  const [dd, setDd] = useState('');
-  const [yyyy, setYyyy] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  const [age, setAge] = useState<number | null>(null);
   const [refused, setRefused] = useState(false);
   const [corrections, setCorrections] = useState(0);
-  const ddRef = useRef<TextInput>(null);
-  const yyRef = useRef<TextInput>(null);
-  const insets = useSafeAreaInsets();
-
-  /**
-   * Month and day are accepted as one digit or two.
-   *
-   * This used to require exactly two, and the failure was silent: somebody born
-   * on the 1st of January typed 1 / 1 / 1998, got a Continue button that was
-   * disabled with no message next to it, and had no way to find out why. The
-   * app looked broken on the second screen of the funnel, which is the worst
-   * possible place for it. A gate is allowed to reject a date. It is not
-   * allowed to reject one without saying so.
-   */
-  const complete = mm.length >= 1 && dd.length >= 1 && yyyy.length === 4;
-
-  /**
-   * 1 becomes 01, applied only when the field is finished by a separator.
-   *
-   * **There is deliberately no padding on blur.** The first version of this did
-   * pad on blur, via `setMm(pad(mm))`, and that reads `mm` from the render that
-   * installed the handler. Typing the second digit moves focus, so the blur
-   * fired holding the stale one-character value and overwrote the real one:
-   * typing 05 left 00 in the field, and 12 left 01.
-   *
-   * A functional update fixes the staleness, but the padding is cosmetic and it
-   * could not be shown to fire reliably, so it is gone instead. A one-character
-   * month is valid input, `validateDob` reads it correctly, and 1/7/1998 is not
-   * ambiguous. Fewer handlers on the gate that blocks the entire app is worth
-   * more than a leading zero.
-   */
-  const pad = (v: string) => (v.length === 1 ? '0' + v : v);
+  const [track, setTrack] = useState(0);
 
   const submit = () => {
-    const invalid = validateDob(mm, dd, yyyy);
-    if (invalid) {
-      setError(invalid);
-      return;
-    }
-    setError(null);
-    const age = ageFrom(mm, dd, yyyy);
+    if (age == null) return;
     if (age < 13) {
       setRefused(true);
       return;
     }
-    // Only the bracket is kept. The date of birth itself is never stored
-    // (PRD 3): the bracket drives the ads rule and the 18+ Nearby gate, and
-    // holding a birthdate would add real risk for no benefit.
+    // Only the bracket is kept, per PRD 3. Nothing here can reconstruct a
+    // birthday, because nothing here ever asked for one.
     setAgeBracket(age >= 18 ? '18_plus' : '13_17');
     go('legal');
   };
@@ -161,10 +108,7 @@ export function DobGate() {
   const reenter = () => {
     setCorrections((c) => c + 1);
     setRefused(false);
-    setMm('');
-    setDd('');
-    setYyyy('');
-    setError(null);
+    setAge(null);
   };
 
   if (refused) {
@@ -175,13 +119,13 @@ export function DobGate() {
         <Text style={styles.h1}>Hidewire is for players 13 and up.</Text>
         <Body style={{ color: color.dim, marginTop: space(3) }}>
           {attemptsLeft > 0
-            ? 'If you mistyped your date of birth, you can correct it.'
+            ? 'If you set that wrong, you can correct it.'
             : 'You have used all your corrections on this device.'}
         </Body>
         {attemptsLeft > 0 && (
           <>
             <Btn
-              title="Re-enter my date of birth"
+              title="Set my age again"
               variant="outline"
               style={{ marginTop: space(6) }}
               onPress={reenter}
@@ -195,104 +139,57 @@ export function DobGate() {
     );
   }
 
+  const setFromX = (x: number) => {
+    if (track <= 0) return;
+    const frac = Math.max(0, Math.min(1, x / track));
+    setAge(Math.round(MIN_AGE + frac * (MAX_AGE - MIN_AGE)));
+  };
+
+  const frac = age == null ? 0 : (age - MIN_AGE) / (MAX_AGE - MIN_AGE);
+
   return (
-    <KeyboardAvoidingView
-      style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <View style={styles.screen}>
       <View style={{ flex: 1, padding: space(6), paddingTop: insets.top + space(10) }}>
         <Label>Step 1 of 5</Label>
-        <Text style={styles.h1}>Date of birth</Text>
+        <Text style={styles.h1}>How old are you?</Text>
         <Body style={{ color: color.dim, marginTop: space(2) }}>
-          Required once. Not shown to other players.
+          Asked once. Never shown to other players, and never stored as a date.
         </Body>
-        <View style={{ flexDirection: 'row', gap: space(3), marginTop: space(8) }}>
-          <DateCell
-            value={mm}
-            placeholder="MM"
-            maxLength={2}
-            onChange={(v, separator) => {
-              setError(null);
-              // Two digits, or a typed separator. Somebody entering "1/" means
-              // January as clearly as "01" does.
-              const advance = v.length === 2 || (separator && v.length >= 1);
-              setMm(advance ? pad(v) : v);
-              if (advance) ddRef.current?.focus();
-            }}
-            autoFocus
-          />
-          <DateCell
-            inputRef={ddRef}
-            value={dd}
-            placeholder="DD"
-            maxLength={2}
-            onChange={(v, separator) => {
-              setError(null);
-              const advance = v.length === 2 || (separator && v.length >= 1);
-              setDd(advance ? pad(v) : v);
-              if (advance) yyRef.current?.focus();
-            }}
-          />
-          <DateCell
-            inputRef={yyRef}
-            value={yyyy}
-            placeholder="YYYY"
-            maxLength={4}
-            wide
-            onChange={(v) => {
-              setYyyy(v);
-              setError(null);
-            }}
-          />
+
+        <View style={{ alignItems: 'center', marginTop: space(10) }}>
+          <Text style={[styles.ageValue, age == null && { color: color.faint }]}>
+            {age ?? '--'}
+          </Text>
+          <Mono style={{ fontSize: 10, letterSpacing: 2, color: color.faint, marginTop: space(1) }}>
+            YEARS OLD
+          </Mono>
         </View>
 
-        {error && (
-          <Mono style={styles.dobError} accessibilityLiveRegion="polite">
-            {error}
-          </Mono>
-        )}
+        <View
+          style={styles.sliderHit}
+          onLayout={(e) => setTrack(e.nativeEvent.layout.width)}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          onResponderGrant={(e) => setFromX(e.nativeEvent.locationX)}
+          onResponderMove={(e) => setFromX(e.nativeEvent.locationX)}
+        >
+          <View style={styles.sliderTrack} />
+          {age != null && (
+            <>
+              <View style={[styles.sliderFill, { width: frac * track }]} />
+              <View style={[styles.sliderThumb, { left: frac * track - 14 }]} />
+            </>
+          )}
+        </View>
+
+        <Mono style={styles.sliderHint}>
+          {age == null ? 'TAP OR DRAG THE LINE TO SET YOUR AGE' : ' '}
+        </Mono>
       </View>
       <View style={{ padding: space(6), paddingBottom: insets.bottom + space(6) }}>
-        <Btn title="Continue" disabled={!complete} onPress={submit} />
+        <Btn title="Continue" disabled={age == null} onPress={submit} />
       </View>
-    </KeyboardAvoidingView>
-  );
-}
-
-function DateCell({
-  value,
-  onChange,
-  placeholder,
-  maxLength,
-  wide,
-  autoFocus,
-  inputRef,
-}: {
-  value: string;
-  /** Receives the digits, plus whether the raw input carried a separator. */
-  onChange: (v: string, separator: boolean) => void;
-  placeholder: string;
-  maxLength: number;
-  wide?: boolean;
-  autoFocus?: boolean;
-  inputRef?: React.RefObject<TextInput | null>;
-}) {
-  return (
-    <TextInput
-      ref={inputRef}
-      value={value}
-      onChangeText={(v) =>
-        // The separator is detected before it is stripped, so the caller can
-        // treat "1/" as a finished month.
-        onChange(v.replace(/[^0-9]/g, ''), /[^0-9]/.test(v))
-      }
-      placeholder={placeholder}
-      placeholderTextColor={color.faint}
-      keyboardType="number-pad"
-      maxLength={maxLength}
-      autoFocus={autoFocus}
-      style={[styles.dateCell, wide && { flex: 1.6 }]}
-    />
+    </View>
   );
 }
 
@@ -417,6 +314,36 @@ const styles = StyleSheet.create({
     color: color.warn,
     marginTop: space(4),
     letterSpacing: 0.5,
+  },
+  ageValue: {
+    fontFamily: font.numeral,
+    fontSize: 76,
+    color: color.text,
+    fontVariant: ['tabular-nums'],
+  },
+  // A generous touch target around a thin line. The line is the design; the
+  // hit area is 44pt so it is actually usable.
+  sliderHit: {
+    height: 44,
+    marginTop: space(9),
+    justifyContent: 'center',
+  },
+  sliderTrack: { height: 2, backgroundColor: color.lineBright },
+  sliderFill: { position: 'absolute', height: 2, backgroundColor: color.accent },
+  sliderThumb: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: color.accent,
+  },
+  sliderHint: {
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: color.faint,
+    textAlign: 'center',
+    marginTop: space(4),
+    minHeight: 14,
   },
   dateCell: {
     flex: 1,

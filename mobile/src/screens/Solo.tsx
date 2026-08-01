@@ -247,7 +247,7 @@ function PartyFeed() {
 
       <View style={{ paddingHorizontal: space(4), paddingBottom: space(4) }}>
         <Mono style={{ fontSize: 9, color: color.faint, lineHeight: 14 }}>
-          DELETED AFTER 24 H · REPORTS REVIEWED WITHIN 24 H · BLOCK IS PERMANENT
+
         </Mono>
       </View>
     </Card>

@@ -554,7 +554,7 @@ export function Lobby() {
               </Mono>
             )}
             <Mono style={{ fontSize: 9, color: color.faint, marginTop: space(2), lineHeight: 14 }}>
-              FILM IS EARNED, NEVER SOLD. SEEKING IS A ROLE, NOT AN ADVANTAGE.
+
             </Mono>
           </View>
         </Card>

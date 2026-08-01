@@ -40,65 +40,70 @@ position of every box in the game, for the reason in section 3.
 
 ---
 
-## 2. The arithmetic problem, which is bigger than the legal one
+## 2. The arithmetic, after the retune
 
 The defence of this design is that the 10,000 FILM box has **better** elite odds
 than the paid box: 25% against 20%. Nothing is purchase-only, so nothing is
 pay-to-win.
 
-That defence does not survive contact with the earn rate.
+When this file was first written that defence did not survive the earn rate: an
+elite item was 76 to 400 days of play against $24.95 in cash. The faucets have
+since been retuned, in `ECONOMY` and in migration `0009_economy.sql`.
 
-**What a player earns per day**, from `ECONOMY` and `claim_round_reward`:
-
-| Player | Sources | FILM/day |
+| Faucet | Was | Now |
 |---|---|---|
-| Casual | daily assignment only | 100 |
-| Regular | daily plus the mission sweep | 200 |
-| Heavy | daily, sweep, full applause cap, and a complete round every day | 525 |
+| Daily assignment | 100 | **500** |
+| All three missions | 100 | **500** |
+| Referral, each side | 500 | **2,500** |
+| Rewarded video | none | **250, four a day** |
 
-**What the boxes cost in days:**
+**What a player earns per day:**
 
-| Box | Casual | Regular | Heavy |
-|---|---|---|---|
-| 1,000 | 10 days | 5 days | 2 days |
-| 3,000 | 30 days | 15 days | 6 days |
-| 5,000 | 50 days | 25 days | 10 days |
-| 10,000 | 100 days | 50 days | 19 days |
+| Player | FILM/day |
+|---|---|
+| Casual, daily only | 500 |
+| Regular, daily plus missions | 1,000 |
+| Heavy, everything plus four ads | 2,325 |
 
 **What one elite item costs**, expected, at a 25% roll:
 
-| Route | Cost |
-|---|---|
-| Vault box, casual player | **400 days** |
-| Vault box, regular player | **200 days** |
-| Vault box, heavy player | **76 days** |
-| First Light Case | **$24.95** |
+| Route | Before | After |
+|---|---|---|
+| Vault box, casual | 400 days | **80 days** |
+| Vault box, regular | 200 days | **40 days** |
+| Vault box, heavy | 76 days | **17 days** |
+| First Light Case | $24.95 | $24.95 |
 
-A season is ten weeks. Every FILM route to an elite item is longer than the
-season it would be used in, and the heavy figure assumes somebody plays a full
-round every single day, which is a game that needs three other people free
-simultaneously.
+A fivefold improvement, and it moves the FILM route inside the ten-week season,
+which is the bar that matters.
 
-**So in practice the elite items are cash-only, and the better-odds defence is
-technically true and materially false.** A regulator, an app store reviewer, or
-a journalist would do this arithmetic in about four minutes.
+**It does not make the two routes equal.** 17 days of maximal play against
+$24.95 is still a real gap, and a regular player is looking at 40 days. Whether
+that gap is acceptable is a product judgment rather than an arithmetic one. The
+remaining levers, in the order I would reach for them:
 
-### Four ways to fix it, in order of how much I would recommend them
+1. **A pity counter.** Guarantee an elite item every N boxes of a tier and
+   publish N alongside the odds. It bounds the worst case, which published odds
+   do not, and it is standard in the markets that regulate this hardest.
+2. **Drop the box prices**, which are still the originally specified tiers.
+3. **Keep elite items out of the paid box.** Cleanest by far, at the cost of the
+   paid box being the thing that was specifically asked for.
 
-1. **Raise the FILM faucets five to ten times.** The current rates were set when
-   the only sink was a 300 to 800 FILM cosmetic. A 10,000 FILM box is a
-   different economy and the faucets were never re-tuned for it. This is the
-   smallest change to the design and the largest change to the outcome.
-2. **Add a pity counter.** Guarantee an elite item every N boxes of a tier and
-   publish N alongside the odds. It bounds the worst case, which is the thing
-   published odds do not do, and it is now standard in the markets that regulate
-   this hardest.
-3. **Drop the box prices** to roughly a fifth of the current tiers.
-4. **Keep elite items out of the paid box.** Cleanest by far, and it makes the
-   pay-to-win question disappear entirely, at the cost of the paid box being the
-   thing that was specifically asked for.
+### What the ad cap is doing
 
-None of these is implemented. They are a product call.
+250 FILM per 30 second view is 500 FILM a minute, far the highest rate in the
+game. **Uncapped, the optimal way to play Hidewire would be to sit in a menu
+watching adverts** rather than walking around a city, which is the opposite of
+the product. Four a day puts the ad ceiling at 1,000 against 1,100 from actually
+playing, so playing still pays more. That ordering is the design and it should
+survive any retune. Enforced in `claim_ad_reward`, not in the client.
+
+### What raising the referral did
+
+2,500 a side makes inventing accounts five times more attractive than it was.
+The level-2 requirement on the referrer is now doing real work and should not be
+relaxed. If abuse appears, the next lever is requiring the *referred* account to
+reach level 2 before either side is paid.
 
 ---
 

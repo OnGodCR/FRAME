@@ -117,7 +117,7 @@ export function GameTab({ onTab }: { onTab: (t: Tab) => void }) {
             AD · 320 × 50 BANNER
           </Mono>
           <Mono style={{ fontSize: 9, letterSpacing: 1, color: color.faint, marginTop: 3 }}>
-            ADMOB ADAPTIVE · NEVER SHOWN DURING A ROUND
+
           </Mono>
         </View>
       </FadeIn>

@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { color, font, radius, space } from '../theme';
@@ -7,15 +7,40 @@ import { Btn, Card, Label, Mono, Rule } from '../components/ui';
 import { CosmeticPreview } from '../components/Cosmetics';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { CountUp, FadeIn, PressScale, useFlash } from '../components/motion';
-import { Cosmetic, SHOP_ITEMS, SEASON, TIER_COUNT, categoryKind, CATEGORIES, STORE } from '../data/catalog';
+import { Cosmetic, SHOP_ITEMS, SEASON, TIER_COUNT, categoryKind, CATEGORIES } from '../data/catalog';
+import {
+  LOOT_BOXES,
+  FILM_PACKS,
+  RARITY_ORDER,
+  RARITY_LABEL,
+  itemOdds,
+  boxAvailability,
+  type LootBox,
+} from '../data/lootboxes';
+import { ECONOMY } from '../data/economy';
 import { useGame } from '../engine/GameContext';
 import { Animated } from 'react-native';
 
 export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
-  const { go, profile, purchase, buyPass, buyProduct } = useGame();
+  const { go, profile, purchase, ageBracket } = useGame();
   const insets = useSafeAreaInsets();
   const frames = SHOP_ITEMS.filter((i) => i.category === 'frame');
   const others = SHOP_ITEMS.filter((i) => i.category !== 'frame');
+
+  /**
+   * The one disclosure that stays in the app.
+   *
+   * Everything else that used to be printed under the shop (FILM is never sold,
+   * cosmetics only, nothing affects a round) has moved to the Terms, where it
+   * belongs and where it is not competing with the thing being sold. This one
+   * is different: it is a **permanent, irreversible consequence of spending
+   * money**, so it has to be in front of the player before they spend it rather
+   * than in a document they accepted once. Shown every time the store opens.
+   */
+  const [adsNotice, setAdsNotice] = useState(true);
+
+  /** Which box's odds are expanded. Only one at a time. */
+  const [openOdds, setOpenOdds] = useState<string | null>(null);
 
   return (
     <View style={styles.screen}>
@@ -43,68 +68,70 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
               </Label>
             </View>
           </View>
-          <Mono style={{ fontSize: 11, color: color.faint, marginTop: 2 }}>
-            Cosmetics only. Nothing here changes how a round plays.
-          </Mono>
         </FadeIn>
 
-        {/* season pass product */}
-        {/* The paid season-pass track was removed with the rest of the paid
-            SKUs. The pass itself is unchanged and still runs: what is gone is
-            the ability to buy the second track. See monetization/LOOT-BOXES.md.
-
-            **This strands fifteen paid-track cosmetics** that no longer have a
-            route to a player. They are the obvious pool for the loot boxes,
-            which currently contain utility items and no cosmetics at all. */}
-
-        {/* Real money products. Cosmetics and pass tiers only: FILM is never
-            sold, because seeker bidding spends it and that would make a role
-            advantage purchasable. */}
+        {/* ---- loot boxes ---- */}
         <FadeIn index={1}>
           <View style={styles.sectionHead}>
-            <Label tone="text">Store</Label>
-            <Label tone="faint">REAL MONEY</Label>
+            <Label tone="text">Boxes</Label>
+            <Label tone="faint">ODDS PUBLISHED</Label>
           </View>
         </FadeIn>
-        {STORE.map((prod, i) => {
-          const owned =
-            prod.id === 'store-pass'
-              ? profile.paidPass
-              : prod.grants.length > 0 && prod.grants.every((g) => profile.owned.includes(g));
-          return (
-            <FadeIn key={prod.id} index={i} delay={100}>
+        {LOOT_BOXES.map((box, i) => (
+          <BoxCard
+            key={box.id}
+            box={box}
+            index={i}
+            film={profile.film}
+            bracket={ageBracket}
+            oddsOpen={openOdds === box.id}
+            onToggleOdds={() => setOpenOdds(openOdds === box.id ? null : box.id)}
+          />
+        ))}
+
+        {/* ---- FILM ---- */}
+        <FadeIn index={2}>
+          <View style={styles.sectionHead}>
+            <Label tone="text">Film</Label>
+            <Label tone="faint">SPENDABLE ON ANY BOX</Label>
+          </View>
+        </FadeIn>
+
+        {/* Rewarded video. Capped, and the cap is shown rather than discovered
+            when the fourth one silently pays nothing. */}
+        <FadeIn index={3}>
+          <Card style={{ padding: 0, marginBottom: space(3) }}>
+            <PressScale onPress={() => Haptics.selectionAsync()} style={styles.filmRow}>
+              <View style={styles.filmRowLeft}>
+                <CosmeticPreview kind="film" size={34} tint={color.dim} />
+                <View style={styles.filmRowText}>
+                  <Text style={styles.itemName}>WATCH AN AD</Text>
+                  <Mono style={styles.filmRowSub}>
+                    {ECONOMY.rewardedAd.seconds} seconds. {ECONOMY.rewardedAd.dailyCap} a day.
+                  </Mono>
+                </View>
+              </View>
+              <Mono style={styles.filmRowPrice}>+{ECONOMY.rewardedAd.film}</Mono>
+            </PressScale>
+          </Card>
+        </FadeIn>
+
+        <View style={styles.packGrid}>
+          {FILM_PACKS.map((pack, i) => (
+            <FadeIn key={pack.id} index={i} delay={60}>
               <PressScale
-                disabled={owned}
-                onPress={() => {
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                  if (prod.id === 'store-pass') buyPass();
-                  buyProduct(prod);
-                }}
-                style={[styles.storeCard, owned && { opacity: 0.55 }]}
+                onPress={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)}
+                style={styles.pack}
               >
-                <View style={styles.storeTop}>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
-                      <Text style={styles.storeName}>{prod.name}</Text>
-                      {prod.tag && <Mono style={styles.storeTag}>{prod.tag}</Mono>}
-                    </View>
-                    <Mono style={styles.storeBlurb}>{prod.blurb}</Mono>
-                  </View>
-                </View>
-                <View style={styles.storeFoot}>
-                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space(2) }}>
-                    {prod.anchor && <Mono style={styles.storeAnchor}>{prod.anchor}</Mono>}
-                    <Text style={styles.storePrice}>{prod.price}</Text>
-                  </View>
-                  <Mono style={styles.storeCta}>{owned ? 'OWNED' : 'BUY →'}</Mono>
-                </View>
+                {pack.tag && <Mono style={styles.packTag}>{pack.tag}</Mono>}
+                <CosmeticPreview kind="film" size={28} />
+                <Text style={styles.packFilm}>{pack.film.toLocaleString()}</Text>
+                {pack.bonus && <Mono style={styles.packBonus}>{pack.bonus}</Mono>}
+                <Text style={styles.packPrice}>{pack.price}</Text>
               </PressScale>
             </FadeIn>
-          );
-        })}
-        <Mono style={styles.filmNote}>
-          FILM IS NEVER SOLD. IT IS EARNED BY PLAYING, BECAUSE SEEKER BIDDING SPENDS IT.
-        </Mono>
+          ))}
+        </View>
 
         {/* Frames get flagship billing rather than being one tab of five.
             Every check-in photo a hider sends is wearing theirs, and the
@@ -150,36 +177,136 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
           ))}
         </View>
 
-        {/* film top-ups */}
-        <FadeIn index={3}>
-          <Label tone="text" style={{ marginTop: space(6), marginBottom: space(3) }}>
-            Film
-          </Label>
-          <Card style={{ padding: 0 }}>
-            <PressScale onPress={() => {}} style={styles.filmRow}>
-              <View style={styles.filmRowLeft}>
-                <CosmeticPreview kind="film" size={34} tint={color.dim} />
-                <View style={styles.filmRowText}>
-                  <Text style={styles.itemName}>WATCH AN AD</Text>
-                  <Mono style={styles.filmRowSub}>
-                    Optional. Never grants buffs or gameplay items.
-                  </Mono>
-                </View>
-              </View>
-              <Mono style={styles.filmRowPrice}>+50</Mono>
-            </PressScale>
-          </Card>
-
-          <Mono style={{ fontSize: 10, color: color.faint, marginTop: space(4), lineHeight: 16 }}>
-            FILM cannot be bought. Seeker bidding spends it, so selling it would make a
-            role advantage purchasable. Rewarded video is the one exception and it is
-            optional, capped, and never grants buffs.{'\n\n'}
-            Any real-money purchase permanently disables all advertising on this account.
-            Not for a season. Forever.
-          </Mono>
-        </FadeIn>
       </ScrollView>
+
+      <AdsForeverNotice visible={adsNotice} onClose={() => setAdsNotice(false)} />
     </View>
+  );
+}
+
+/**
+ * Shown every time the store opens, and dismissed rather than remembered.
+ *
+ * The rest of the shop's small print is gone, moved to the Terms where it is
+ * read once and not competing with the thing being sold. This one stayed for a
+ * specific reason: it is the only consequence of a purchase here that is
+ * **permanent and cannot be undone**, and a consequence like that belongs in
+ * front of the player at the moment of spending, not in a document accepted
+ * during onboarding.
+ */
+function AdsForeverNotice({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.noticeBackdrop}>
+        <View style={styles.noticeCard}>
+          <Label tone="accent">Before you spend</Label>
+          <Text style={styles.noticeTitle}>Any real-money purchase turns ads off for good.</Text>
+          <Mono style={styles.noticeBody}>
+            Not for a season, not for the purchase. Once, permanently, on this
+            account. It applies to the smallest FILM pack as much as the largest.
+          </Mono>
+          <Btn title="Got it" style={{ marginTop: space(5) }} onPress={onClose} />
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/**
+ * One box, with its odds one tap away.
+ *
+ * **The odds have to be reachable before the purchase, not after.** Apple has
+ * required that since 2017 and Google Play since 2019, and it is statutory in
+ * China and South Korea. Putting the table behind a tap is fine; putting it
+ * behind the transaction is not. See monetization/LOOT-BOXES.md.
+ */
+function BoxCard({
+  box,
+  index,
+  film,
+  bracket,
+  oddsOpen,
+  onToggleOdds,
+}: {
+  box: LootBox;
+  index: number;
+  film: number;
+  bracket: '13_17' | '18_plus' | null;
+  oddsOpen: boolean;
+  onToggleOdds: () => void;
+}) {
+  // Country is not yet plumbed through, so the regional block cannot be
+  // evaluated here. Passing null means it never blocks, which is the wrong
+  // default to ship: see LOOT-BOXES.md section 5.
+  const availability = boxAvailability(bracket, null, box);
+  const blocked = availability !== 'available';
+  const affordable = box.film == null || film >= box.film;
+
+  return (
+    <FadeIn index={index} delay={60}>
+      <View style={[styles.boxCard, blocked && { opacity: 0.5 }]}>
+        <View style={styles.boxTop}>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
+              <Text style={styles.boxName}>{box.name}</Text>
+              {box.tag && <Mono style={styles.boxTag}>{box.tag}</Mono>}
+            </View>
+            <Mono style={styles.boxBlurb}>{box.blurb}</Mono>
+          </View>
+          <View style={styles.boxElite}>
+            <Text style={styles.boxElitePct}>{Math.round(box.odds.elite * 100)}%</Text>
+            <Mono style={styles.boxEliteLabel}>ELITE</Mono>
+          </View>
+        </View>
+
+        <View style={styles.boxFoot}>
+          <PressScale onPress={onToggleOdds}>
+            <Mono style={styles.boxOddsLink}>{oddsOpen ? 'HIDE ODDS' : 'SEE FULL ODDS'}</Mono>
+          </PressScale>
+
+          {blocked ? (
+            <Mono style={styles.boxBlocked}>
+              {availability === 'blocked_age' ? '18+ ONLY' : 'NOT AVAILABLE HERE'}
+            </Mono>
+          ) : (
+            <PressScale
+              onPress={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)}
+            >
+              <View style={[styles.boxBuy, !affordable && styles.boxBuyOff]}>
+                <Mono style={[styles.boxBuyText, !affordable && { color: color.faint }]}>
+                  {box.price ?? `${box.film?.toLocaleString()} FILM`}
+                </Mono>
+              </View>
+            </PressScale>
+          )}
+        </View>
+
+        {oddsOpen && (
+          <View style={styles.oddsPanel}>
+            {RARITY_ORDER.map((r) => (
+              <View key={r} style={styles.oddsRow}>
+                <Mono style={styles.oddsName}>{RARITY_LABEL[r]}</Mono>
+                <Mono style={styles.oddsPct}>{(box.odds[r] * 100).toFixed(box.odds[r] < 0.01 && box.odds[r] > 0 ? 1 : 0)}%</Mono>
+              </View>
+            ))}
+            <Rule style={{ marginVertical: space(2) }} />
+            <Mono style={styles.oddsHead}>PER ITEM</Mono>
+            {itemOdds(box).map(({ item, p }) => (
+              <View key={item.id} style={styles.oddsRow}>
+                <Mono style={styles.oddsItem} numberOfLines={1}>
+                  {item.name}
+                </Mono>
+                <Mono style={styles.oddsPct}>{(p * 100).toFixed(2)}%</Mono>
+              </View>
+            ))}
+            <Mono style={styles.oddsFoot}>
+              ONE ITEM PER BOX. DUPLICATES REFUND FILM. ODDS ARE PER OPEN AND DO NOT
+              IMPROVE WITH FAILED ATTEMPTS.
+            </Mono>
+          </View>
+        )}
+      </View>
+    </FadeIn>
   );
 }
 
@@ -339,6 +466,95 @@ function ShopTile({
 }
 
 const styles = StyleSheet.create({
+  // ---- loot boxes ----
+  boxCard: {
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    padding: space(4),
+    marginBottom: space(3),
+  },
+  boxTop: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start' },
+  boxName: { fontFamily: font.display, fontSize: 16, color: color.text, letterSpacing: 0.5 },
+  boxTag: { fontSize: 8, letterSpacing: 1.2, color: color.accent },
+  boxBlurb: { fontSize: 11, color: color.dim, marginTop: 4, lineHeight: 16 },
+  boxElite: { alignItems: 'flex-end', minWidth: 56 },
+  boxElitePct: { fontFamily: font.numeral, fontSize: 24, color: color.accent },
+  boxEliteLabel: { fontSize: 8, letterSpacing: 1.4, color: color.faint },
+  boxFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: space(4),
+  },
+  boxOddsLink: { fontSize: 10, letterSpacing: 1.2, color: color.dim },
+  boxBlocked: { fontSize: 10, letterSpacing: 1.2, color: color.warn },
+  boxBuy: {
+    borderWidth: 1,
+    borderColor: color.accent,
+    backgroundColor: color.accent,
+    borderRadius: radius.sm,
+    paddingHorizontal: space(4),
+    paddingVertical: space(2.5),
+  },
+  boxBuyOff: { backgroundColor: 'transparent', borderColor: color.line },
+  boxBuyText: { fontSize: 12, letterSpacing: 1.4, color: color.onAccent },
+  oddsPanel: {
+    marginTop: space(4),
+    borderTopWidth: 1,
+    borderTopColor: color.line,
+    paddingTop: space(3),
+  },
+  oddsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
+  oddsName: { fontSize: 10, letterSpacing: 1.2, color: color.text },
+  oddsItem: { fontSize: 10, color: color.dim, flex: 1, minWidth: 0 },
+  oddsPct: { fontSize: 10, color: color.text, fontVariant: ['tabular-nums'] },
+  oddsHead: { fontSize: 8, letterSpacing: 1.4, color: color.faint, marginBottom: 3 },
+  oddsFoot: { fontSize: 8, letterSpacing: 1, color: color.faint, marginTop: space(3), lineHeight: 13 },
+
+  // ---- FILM packs ----
+  packGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space(3) },
+  pack: {
+    width: 150,
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    padding: space(3),
+    alignItems: 'center',
+    gap: 4,
+  },
+  packTag: { fontSize: 8, letterSpacing: 1.2, color: color.accent },
+  packFilm: { fontFamily: font.numeral, fontSize: 22, color: color.text },
+  packBonus: { fontSize: 9, letterSpacing: 1, color: color.accent },
+  packPrice: { fontFamily: font.display, fontSize: 15, color: color.text, marginTop: 2 },
+
+  // ---- the one notice that stayed ----
+  noticeBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.82)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: space(6),
+  },
+  noticeCard: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    padding: space(5),
+  },
+  noticeTitle: {
+    fontFamily: font.display,
+    fontSize: 21,
+    lineHeight: 28,
+    color: color.text,
+    marginTop: space(2),
+  },
+  noticeBody: { fontSize: 11, color: color.dim, lineHeight: 18, marginTop: space(3) },
+
   screen: { flex: 1, backgroundColor: color.bg },
   header: {
     flexDirection: 'row',

@@ -396,7 +396,31 @@ export function boxAvailability(
  * It is false here because that consequence should be chosen out loud rather
  * than arrived at. See LOOT-BOXES.md section 1.
  */
-export const FILM_IS_PURCHASABLE = false;
+export const FILM_IS_PURCHASABLE = true;
+
+/**
+ * FILM packs.
+ *
+ * Priced so the 10,000 FILM box, which has the best elite odds in the game, is
+ * reachable for roughly the price of two paid boxes. That relationship is the
+ * one to hold: if bought FILM ever becomes a cheaper route to an elite item
+ * than the $4.99 box, the paid box stops being the premium product.
+ */
+export interface FilmPack {
+  id: string;
+  film: number;
+  price: string;
+  /** Bonus over the base rate, so the value claim is checkable. */
+  bonus?: string;
+  tag?: string;
+}
+
+export const FILM_PACKS: FilmPack[] = [
+  { id: 'film-1', film: 1200, price: '$0.99' },
+  { id: 'film-2', film: 4000, price: '$2.99', bonus: '+11%' },
+  { id: 'film-3', film: 7500, price: '$4.99', bonus: '+25%' },
+  { id: 'film-4', film: 17000, price: '$9.99', bonus: '+42%', tag: 'BEST VALUE' },
+];
 
 // ---------------------------------------------------------------------------
 // Odds integrity

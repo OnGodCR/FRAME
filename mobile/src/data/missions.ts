@@ -19,8 +19,8 @@ import { dayIndex } from './assignments';
 // rather than keeping a parallel copy that can drift out of sync with it.
 // ---------------------------------------------------------------------------
 
-/** Paid once per day for finishing every mission. */
-export const MISSION_SWEEP_BONUS = 100;
+/** Paid once per day for finishing every mission. Single source is ECONOMY. */
+export const MISSION_SWEEP_BONUS = ECONOMY.missionSweep;
 
 export interface MissionInput {
   dailyDone: boolean;

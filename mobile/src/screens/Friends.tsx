@@ -92,9 +92,6 @@ export function Friends({ embedded = false }: { embedded?: boolean } = {}) {
             </PressScale>
           )}
           {!embedded && <Text style={styles.h1}>Friends</Text>}
-          <Body style={{ color: color.dim, marginTop: embedded ? 0 : space(2) }}>
-            Codes only. Hidewire never suggests people you do not know.
-          </Body>
         </FadeIn>
 
         {/* ---- your code ---- */}
@@ -384,7 +381,7 @@ export function Friends({ embedded = false }: { embedded?: boolean } = {}) {
 
         <FadeIn index={11}>
           <Mono style={styles.footnote}>
-            FRIEND CODES ONLY · NO DISCOVERY · REPORTS REVIEWED WITHIN 24 H
+
           </Mono>
         </FadeIn>
       </ScrollView>

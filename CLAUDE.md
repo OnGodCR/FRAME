@@ -71,6 +71,21 @@ handoff. Current supersessions:
 - **iOS and Android are both v1 targets.** Session 1's iOS-only decision is
   reversed: the founder is on Android and could not otherwise playtest, which
   blocked the notification-from-pocket test and the PRD 14 interval playtest.
+- **The product is called Hidewire**, on `hidewire.org`, with identifiers
+  `org.hidewire.app` and the scheme `hidewire://`. It was FRAME through
+  sessions 1 and 2 and those files are left as written, being a history.
+- **The age gate is a slider, not a date field.** PRD 3 specifies a blank
+  date-of-birth entry and marks it [HARD CONSTRAINT] for COPPA, on the
+  reasoning that anything easier is "trivially defeated". Superseded
+  deliberately. The slider is built as neutrally as one can be: no starting
+  position, a range beginning at 8 so the control does not announce the
+  threshold, and nothing marking where the cutoff is. The sticky refusal and
+  the three-correction limit are unchanged, and the date of birth is now never
+  entered at all, which goes further than PRD 3's promise not to store it.
+- **Real money now buys an advantage.** marketing/BRIEF.md 9 lists "never imply
+  anything purchasable helps you win" as a legal line. It is no longer true, so
+  the claim has to come out of the marketing copy rather than being softened,
+  or it becomes a misleading-advertising problem instead of a tone one.
 
 ## 4. Read the versioned Expo docs before writing app code
 
@@ -156,9 +171,14 @@ Every item above is still bound by section 3 and section 5. In particular:
 - **There is exactly one currency and it is called FILM.** If a note, a ticket,
   or a conversation says "link", "coins", or anything else, it means FILM.
   Never introduce a second currency without saying so explicitly.
-- FILM is **earned, never sold**, while seeker bidding exists. The shop may sell
-  cosmetics and pass tiers for real money; it must never sell FILM, because
-  bidding would turn that into a purchasable advantage.
+- ~~FILM is **earned, never sold**, while seeker bidding exists.~~
+  **Superseded 2026-08-01.** FILM is now sold, in packs, and the shop sells a
+  $4.99 loot box containing items that change how a round plays. Both were
+  deliberate calls. Two consequences follow and neither is optional:
+  **seeker bidding is now winnable with money**, so it either comes out or the
+  product accepts that; and every FILM loot box is now a *paid* random item in
+  the jurisdictions that test for indirect purchase, which is most of them.
+  See [monetization/LOOT-BOXES.md](monetization/LOOT-BOXES.md) sections 1 and 3.
 - Applause and referral grants are FILM faucets and are capped for that reason.
   See section 6.1.
 
@@ -169,10 +189,17 @@ there, not in screens.
 
 | Source | Pays | Notes |
 |---|---|---|
-| Daily check-in | **100 FILM + 100 XP** | Once per day. |
+| Daily check-in | **500 FILM + 100 XP** | Once per day. |
+| All three missions | **500 FILM** | Once per day, on top of what each mission pays. |
+| Rewarded video | **250 FILM** | 30 seconds. **Capped at 4 a day**, so ads pay 1,000 against 1,100 from playing. Playing must always pay more; preserve that ordering through any retune. |
 | Applause received | **20 FILM** | From another player applauding your capture. |
 | Applause received, daily cap | **100 FILM** | Roughly five applauds. Past the cap people can still applaud, it just stops paying, so the social signal survives without the faucet running. |
-| Referral, both sides | **500 FILM** | One time, per pair. |
+| Referral, both sides | **2,500 FILM** | One time, per pair. The referrer must be level 2, and at this size that guard is load-bearing. |
+
+**The server's numbers are the ones that count.** `mobile/src/data/economy.ts`
+mirrors them so the UI can render a price without a round trip, but every grant
+is applied in a SECURITY DEFINER function in `0009_economy.sql`. If the two
+disagree, the migration wins.
 
 The cap exists because a group of friends mutually applauding would otherwise
 mint more FILM per day than playing does, which devalues every price in the
