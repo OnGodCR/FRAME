@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
   // at a glance rather than a piece of text.
   levelNum: { fontFamily: font.numeral, fontSize: 14, color: color.accent },
   handle: {
-    fontFamily: font.display,
+    fontFamily: font.monoSemi,
     fontSize: 20,
     color: color.text,
     letterSpacing: 0.5,

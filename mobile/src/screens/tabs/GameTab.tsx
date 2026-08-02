@@ -6,6 +6,8 @@ import { Btn, Label, Mono } from '../../components/ui';
 import { FadeIn, PressScale } from '../../components/motion';
 import { useGame } from '../../engine/GameContext';
 import { MISSION_SWEEP_BONUS } from '../../data/missions';
+import { DAILY_REWARD } from '../../data/assignments';
+import { ECONOMY } from '../../data/economy';
 import type { Tab } from '../../components/TabBar';
 
 // ---------------------------------------------------------------------------
@@ -28,6 +30,12 @@ export function GameTab({ onTab }: { onTab: (t: Tab) => void }) {
     missionSweepPaid,
     claimMissionSweep,
     hasAccount,
+    daily,
+    dailyAssignment,
+    dailyOpen,
+    startSolo,
+    profile,
+    seen,
   } = useGame();
 
   const doneCount = missions.filter((m) => m.done).length;
@@ -103,15 +111,65 @@ export function GameTab({ onTab }: { onTab: (t: Tab) => void }) {
         </View>
       </FadeIn>
 
-      {/* ---- play ---- */}
+      {/* ---- today's assignment ----
+          Promoted from the Solo screen, which was two taps away behind a
+          mission row. It is the one thing in the product a player can do alone,
+          today, without three friends being free at the same time, so burying
+          it under a screen nobody opened made the tab look empty and the game
+          look like it needed a party to touch at all. */}
       <FadeIn index={1}>
+        <View style={[styles.section, { marginTop: space(5) }]}>
+          <View style={styles.sectionHead}>
+            <Label tone="accent">Today's assignment</Label>
+            {daily.streak > 0 ? (
+              <Mono style={styles.streak}>{daily.streak} WK STREAK</Mono>
+            ) : (
+              <Mono style={styles.progress}>
+                +{DAILY_REWARD.film} FILM
+              </Mono>
+            )}
+          </View>
+
+          <View style={styles.promptWrap}>
+            <Text style={styles.prompt} numberOfLines={3}>
+              {dailyAssignment.text}
+            </Text>
+          </View>
+
+          {dailyOpen ? (
+            <Btn
+              title="Take the shot"
+              style={{ marginTop: space(3) }}
+              sub={`+${Math.round(DAILY_REWARD.xp * 1000)} XP · +${DAILY_REWARD.film} FILM`}
+              onPress={() => startSolo()}
+            />
+          ) : (
+            <View style={styles.doneChip}>
+              <Mono style={styles.doneChipText}>DONE TODAY · NEXT ONE AT MIDNIGHT</Mono>
+            </View>
+          )}
+        </View>
+      </FadeIn>
+
+      {/* ---- a line of state, so the tab says where you are ---- */}
+      <FadeIn index={2}>
+        <View style={styles.statRow}>
+          <Stat k="FILM" v={profile.film.toLocaleString()} />
+          <Stat k="LEVEL" v={String(profile.level)} />
+          <Stat k="STREAK" v={`${daily.streak} WK`} />
+          <Stat k="ROUNDS" v={seen.finishedRound ? 'PLAYED' : 'NONE'} />
+        </View>
+      </FadeIn>
+
+      {/* ---- play ---- */}
+      <FadeIn index={3}>
         <View style={{ marginTop: space(5), gap: space(3) }}>
           <Btn title="Host a round" onPress={() => go('lobby')} />
           <Btn title="Join with code" variant="outline" onPress={() => go('join')} />
         </View>
       </FadeIn>
 
-      <FadeIn index={2}>
+      <FadeIn index={4}>
         <View style={styles.adSlot}>
           <Mono style={{ fontSize: 11, letterSpacing: 2, color: color.dim }}>
             AD · 320 × 50 BANNER
@@ -125,7 +183,48 @@ export function GameTab({ onTab }: { onTab: (t: Tab) => void }) {
   );
 }
 
+function Stat({ k, v }: { k: string; v: string }) {
+  return (
+    <View style={styles.stat}>
+      <Mono style={styles.statV}>{v}</Mono>
+      <Mono style={styles.statK}>{k}</Mono>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  streak: { fontFamily: font.monoSemi, fontSize: 11, color: color.accent },
+  promptWrap: {
+    borderLeftWidth: 2,
+    borderLeftColor: color.accent,
+    paddingLeft: space(3),
+    paddingVertical: space(1),
+    marginTop: space(3),
+  },
+  prompt: { fontFamily: font.display, fontSize: 17, lineHeight: 24, color: color.text },
+  doneChip: {
+    marginTop: space(3),
+    borderWidth: 1,
+    borderColor: color.accentDim,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    paddingVertical: space(3),
+  },
+  doneChipText: { fontSize: 10, letterSpacing: 1.3, color: color.accent },
+  statRow: { flexDirection: 'row', gap: space(2), marginTop: space(3) },
+  stat: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: color.line,
+    borderRadius: radius.sm,
+    backgroundColor: color.surface,
+    paddingVertical: space(3),
+    alignItems: 'center',
+    gap: 2,
+  },
+  statV: { fontFamily: font.monoSemi, fontSize: 13, color: color.text },
+  statK: { fontSize: 8, letterSpacing: 1.3, color: color.faint },
+
   // Sections sit on a lifted surface with a real border, so a boundary is
   // visible rather than implied by spacing alone.
   section: {

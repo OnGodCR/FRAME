@@ -303,7 +303,7 @@ export const LOOT_BOXES: LootBox[] = [
     price: null,
     draws: 1,
     odds: { common: 0.05, uncommon: 0.3, rare: 0.4, elite: 0.25 },
-    tag: 'BEST ELITE ODDS IN THE GAME',
+    tag: 'BEST ODDS',
   },
   {
     id: 'box-first-light',
@@ -323,7 +323,7 @@ export const LOOT_BOXES: LootBox[] = [
     // margin. That is a deliberate product decision, recorded rather than
     // smoothed over.
     odds: { common: 0, uncommon: 0, rare: 0, elite: 1 },
-    tag: 'GUARANTEED ELITE',
+    tag: 'GUARANTEED',
   },
 ];
 

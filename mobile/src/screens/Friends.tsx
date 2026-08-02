@@ -409,14 +409,14 @@ const styles = StyleSheet.create({
     gap: space(1),
   },
   refCodeMine: {
-    fontFamily: font.numeral,
+    fontFamily: font.monoSemi,
     fontSize: 26,
     letterSpacing: 4,
     color: color.text,
     marginVertical: space(1),
   },
   myCode: {
-    fontFamily: font.display,
+    fontFamily: font.monoSemi,
     fontSize: 34,
     letterSpacing: 6,
     color: color.accent,
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   empty: { marginTop: space(3), padding: space(4) },
   friendCard: { marginTop: space(3), padding: space(4) },
   friendTop: { flexDirection: 'row', alignItems: 'center', gap: space(3) },
-  friendName: { fontFamily: font.display, fontSize: 20, color: color.text },
+  friendName: { fontFamily: font.monoSemi, fontSize: 18, letterSpacing: 1, color: color.text },
   inviteBtn: {
     borderWidth: 1,
     borderColor: color.accent,

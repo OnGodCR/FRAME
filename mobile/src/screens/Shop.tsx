@@ -41,8 +41,8 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
    */
   const [adsNotice, setAdsNotice] = useState(!seen.adsNoticeHidden);
 
-  /** Which box's odds are expanded. Only one at a time. */
-  const [openOdds, setOpenOdds] = useState<string | null>(null);
+  /** The box whose contents are open, or null. */
+  const [detail, setDetail] = useState<LootBox | null>(null);
 
   return (
     <View style={styles.screen}>
@@ -79,17 +79,11 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
             <Label tone="faint">ODDS PUBLISHED</Label>
           </View>
         </FadeIn>
-        {LOOT_BOXES.map((box, i) => (
-          <BoxCard
-            key={box.id}
-            box={box}
-            index={i}
-            film={profile.film}
-            bracket={ageBracket}
-            oddsOpen={openOdds === box.id}
-            onToggleOdds={() => setOpenOdds(openOdds === box.id ? null : box.id)}
-          />
-        ))}
+        <View style={styles.boxGrid}>
+          {LOOT_BOXES.map((box, i) => (
+            <BoxTile key={box.id} box={box} index={i} onOpen={() => setDetail(box)} />
+          ))}
+        </View>
 
         {/* ---- FILM ---- */}
         <FadeIn index={2}>
@@ -181,6 +175,13 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
 
       </ScrollView>
 
+      <BoxDetail
+        box={detail}
+        film={profile.film}
+        bracket={ageBracket}
+        onClose={() => setDetail(null)}
+      />
+
       <AdsForeverNotice
         visible={adsNotice}
         onClose={() => setAdsNotice(false)}
@@ -264,94 +265,144 @@ function AdsForeverNotice({
  * China and South Korea. Putting the table behind a tap is fine; putting it
  * behind the transaction is not. See monetization/LOOT-BOXES.md.
  */
-function BoxCard({
+/**
+ * One box in the grid: the art, the name, the price. Nothing else.
+ *
+ * The previous version put the blurb, the elite percentage, an odds toggle, and
+ * a buy button on every row, which meant five boxes filled the screen with
+ * small print and none of them looked like an object you might want. A shop
+ * shelf shows you the thing and its price; everything else belongs behind the
+ * tap.
+ */
+function BoxTile({ box, index, onOpen }: { box: LootBox; index: number; onOpen: () => void }) {
+  return (
+    <FadeIn index={index} delay={50}>
+      <PressScale onPress={onOpen} haptic="light">
+        <View style={styles.boxTile}>
+          {box.tag && (
+            <View style={styles.ribbon}>
+              <Mono style={styles.ribbonText} numberOfLines={1}>
+                {box.tag}
+              </Mono>
+            </View>
+          )}
+          <CrateArt id={box.id} size={104} />
+          <Text style={styles.tileName} numberOfLines={1}>
+            {box.name}
+          </Text>
+          <View style={styles.pricePill}>
+            {box.film != null && <CosmeticPreview kind="film" size={14} />}
+            <Mono style={styles.priceText}>
+              {box.price ?? box.film?.toLocaleString()}
+            </Mono>
+          </View>
+        </View>
+      </PressScale>
+    </FadeIn>
+  );
+}
+
+/**
+ * What is in the box, before you buy it.
+ *
+ * **The odds live here and this screen is reachable without spending anything.**
+ * Apple has required pre-purchase disclosure since 2017 and Google Play since
+ * 2019, and it is statutory in China and South Korea. Putting the table one tap
+ * away is fine. Putting it behind the transaction is not, so the buy button is
+ * deliberately below the odds rather than above them.
+ */
+function BoxDetail({
   box,
-  index,
   film,
   bracket,
-  oddsOpen,
-  onToggleOdds,
+  onClose,
 }: {
-  box: LootBox;
-  index: number;
+  box: LootBox | null;
   film: number;
   bracket: '13_17' | '18_plus' | null;
-  oddsOpen: boolean;
-  onToggleOdds: () => void;
+  onClose: () => void;
 }) {
-  // Country is not yet plumbed through, so the regional block cannot be
-  // evaluated here. Passing null means it never blocks, which is the wrong
-  // default to ship: see LOOT-BOXES.md section 5.
+  if (!box) return null;
+
   const availability = boxAvailability(bracket, null, box);
   const blocked = availability !== 'available';
   const affordable = box.film == null || film >= box.film;
+  const rows = itemOdds(box);
 
   return (
-    <FadeIn index={index} delay={60}>
-      <View style={[styles.boxCard, blocked && { opacity: 0.5 }]}>
-        <View style={styles.boxTop}>
-          <CrateArt id={box.id} size={82} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space(2) }}>
-              <Text style={styles.boxName}>{box.name}</Text>
-              {box.tag && <Mono style={styles.boxTag}>{box.tag}</Mono>}
+    <Modal visible transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.detailBackdrop}>
+        <View style={styles.detailCard}>
+          <View style={styles.detailHead}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.detailName}>{box.name}</Text>
+              <Mono style={styles.detailBlurb}>{box.blurb}</Mono>
             </View>
-            <Mono style={styles.boxBlurb}>{box.blurb}</Mono>
-          </View>
-          <View style={styles.boxElite}>
-            <Text style={styles.boxElitePct}>{Math.round(box.odds.elite * 100)}%</Text>
-            <Mono style={styles.boxEliteLabel}>ELITE</Mono>
-          </View>
-        </View>
-
-        <View style={styles.boxFoot}>
-          <PressScale onPress={onToggleOdds}>
-            <Mono style={styles.boxOddsLink}>{oddsOpen ? 'HIDE ODDS' : 'SEE FULL ODDS'}</Mono>
-          </PressScale>
-
-          {blocked ? (
-            <Mono style={styles.boxBlocked}>
-              {availability === 'blocked_age' ? '18+ ONLY' : 'NOT AVAILABLE HERE'}
-            </Mono>
-          ) : (
-            <PressScale
-              onPress={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)}
-            >
-              <View style={[styles.boxBuy, !affordable && styles.boxBuyOff]}>
-                <Mono style={[styles.boxBuyText, !affordable && { color: color.faint }]}>
-                  {box.price ?? `${box.film?.toLocaleString()} FILM`}
-                </Mono>
-              </View>
+            <PressScale onPress={onClose}>
+              <Mono style={styles.detailClose}>CLOSE</Mono>
             </PressScale>
-          )}
-        </View>
+          </View>
 
-        {oddsOpen && (
-          <View style={styles.oddsPanel}>
+          <View style={styles.detailArt}>
+            <CrateArt id={box.id} size={132} />
+          </View>
+
+          <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator>
+            <Mono style={styles.detailSection}>CHANCE BY TIER</Mono>
             {RARITY_ORDER.map((r) => (
               <View key={r} style={styles.oddsRow}>
                 <Mono style={styles.oddsName}>{RARITY_LABEL[r]}</Mono>
-                <Mono style={styles.oddsPct}>{(box.odds[r] * 100).toFixed(box.odds[r] < 0.01 && box.odds[r] > 0 ? 1 : 0)}%</Mono>
+                <Mono style={styles.oddsPct}>
+                  {(box.odds[r] * 100).toFixed(box.odds[r] > 0 && box.odds[r] < 0.01 ? 1 : 0)}%
+                </Mono>
               </View>
             ))}
-            <Rule style={{ marginVertical: space(2) }} />
-            <Mono style={styles.oddsHead}>PER ITEM</Mono>
-            {itemOdds(box).map(({ item, p }) => (
-              <View key={item.id} style={styles.oddsRow}>
-                <Mono style={styles.oddsItem} numberOfLines={1}>
-                  {item.name}
-                </Mono>
+
+            <Rule style={{ marginVertical: space(3) }} />
+            <Mono style={styles.detailSection}>WHAT IS IN IT</Mono>
+            {rows.map(({ item, p }) => (
+              <View key={item.id} style={styles.itemRow}>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Mono style={styles.itemRowName} numberOfLines={1}>
+                    {item.name}
+                  </Mono>
+                  <Mono style={styles.itemRowBlurb} numberOfLines={2}>
+                    {item.blurb}
+                  </Mono>
+                </View>
                 <Mono style={styles.oddsPct}>{(p * 100).toFixed(2)}%</Mono>
               </View>
             ))}
-            <Mono style={styles.oddsFoot}>
+
+            <Mono style={styles.detailFoot}>
               ONE ITEM PER BOX. DUPLICATES REFUND FILM. ODDS ARE PER OPEN AND DO NOT
-              IMPROVE WITH FAILED ATTEMPTS.
+              IMPROVE AFTER A FAILED ATTEMPT. ONE UTILITY ITEM MAY BE USED PER ROUND.
             </Mono>
+          </ScrollView>
+
+          <View style={{ marginTop: space(4) }}>
+            {blocked ? (
+              <View style={styles.detailBlocked}>
+                <Mono style={styles.detailBlockedText}>
+                  {availability === 'blocked_age'
+                    ? 'RANDOM ITEMS ARE 18 AND OVER'
+                    : 'NOT AVAILABLE IN YOUR REGION'}
+                </Mono>
+              </View>
+            ) : (
+              <Btn
+                title={box.price ?? `Open for ${box.film?.toLocaleString()} FILM`}
+                disabled={!affordable}
+                sub={!affordable ? 'not enough FILM' : undefined}
+                onPress={() =>
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
+                }
+              />
+            )}
           </View>
-        )}
+        </View>
       </View>
-    </FadeIn>
+    </Modal>
   );
 }
 
@@ -512,51 +563,99 @@ function ShopTile({
 
 const styles = StyleSheet.create({
   // ---- loot boxes ----
-  boxCard: {
+  boxGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space(3) },
+  boxTile: {
+    width: 156,
     borderWidth: 1,
     borderColor: color.lineBright,
     borderRadius: radius.md,
     backgroundColor: color.surface,
-    padding: space(4),
-    marginBottom: space(3),
+    paddingVertical: space(4),
+    paddingHorizontal: space(3),
+    alignItems: 'center',
+    gap: space(2),
   },
-  boxTop: { flexDirection: 'row', gap: space(3), alignItems: 'flex-start' },
-  boxName: { fontFamily: font.display, fontSize: 16, color: color.text, letterSpacing: 0.5 },
-  boxTag: { fontSize: 8, letterSpacing: 1.2, color: color.accent },
-  boxBlurb: { fontSize: 11, color: color.dim, marginTop: 4, lineHeight: 16 },
-  boxElite: { alignItems: 'flex-end', minWidth: 56 },
-  boxElitePct: { fontFamily: font.numeral, fontSize: 24, color: color.accent },
-  boxEliteLabel: { fontSize: 8, letterSpacing: 1.4, color: color.faint },
-  boxFoot: {
+  // The ribbon sits over the art, like a sale flash on a shelf.
+  ribbon: {
+    position: 'absolute',
+    top: space(3),
+    left: 0,
+    backgroundColor: color.accent,
+    paddingHorizontal: space(2),
+    paddingVertical: 3,
+    borderTopRightRadius: radius.sm,
+    borderBottomRightRadius: radius.sm,
+    maxWidth: '85%',
+  },
+  ribbonText: { fontSize: 7, letterSpacing: 1, color: color.onAccent },
+  tileName: {
+    fontFamily: font.display,
+    fontSize: 12,
+    letterSpacing: 0.8,
+    color: color.text,
+    textAlign: 'center',
+  },
+  pricePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: space(4),
-  },
-  boxOddsLink: { fontSize: 10, letterSpacing: 1.2, color: color.dim },
-  boxBlocked: { fontSize: 10, letterSpacing: 1.2, color: color.warn },
-  boxBuy: {
+    gap: 5,
     borderWidth: 1,
-    borderColor: color.accent,
-    backgroundColor: color.accent,
-    borderRadius: radius.sm,
-    paddingHorizontal: space(4),
-    paddingVertical: space(2.5),
+    borderColor: color.line,
+    backgroundColor: color.surface2,
+    borderRadius: 999,
+    paddingHorizontal: space(3),
+    paddingVertical: space(1.5),
   },
-  boxBuyOff: { backgroundColor: 'transparent', borderColor: color.line },
-  boxBuyText: { fontSize: 12, letterSpacing: 1.4, color: color.onAccent },
-  oddsPanel: {
-    marginTop: space(4),
-    borderTopWidth: 1,
-    borderTopColor: color.line,
-    paddingTop: space(3),
+  priceText: { fontFamily: font.monoSemi, fontSize: 12, color: color.text },
+
+  // ---- box detail ----
+  detailBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    padding: space(5),
   },
+  detailCard: {
+    borderWidth: 1,
+    borderColor: color.lineBright,
+    borderRadius: radius.md,
+    backgroundColor: color.surface,
+    padding: space(5),
+  },
+  detailHead: { flexDirection: 'row', alignItems: 'flex-start', gap: space(3) },
+  detailName: { fontFamily: font.display, fontSize: 19, color: color.text },
+  detailBlurb: { fontSize: 11, color: color.dim, marginTop: 3, lineHeight: 16 },
+  detailClose: { fontSize: 10, letterSpacing: 1.3, color: color.faint },
+  detailArt: { alignItems: 'center', paddingVertical: space(3) },
+  detailSection: { fontSize: 8, letterSpacing: 1.5, color: color.faint, marginBottom: space(2) },
   oddsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 3 },
   oddsName: { fontSize: 10, letterSpacing: 1.2, color: color.text },
-  oddsItem: { fontSize: 10, color: color.dim, flex: 1, minWidth: 0 },
-  oddsPct: { fontSize: 10, color: color.text, fontVariant: ['tabular-nums'] },
-  oddsHead: { fontSize: 8, letterSpacing: 1.4, color: color.faint, marginBottom: 3 },
-  oddsFoot: { fontSize: 8, letterSpacing: 1, color: color.faint, marginTop: space(3), lineHeight: 13 },
+  oddsPct: { fontSize: 11, color: color.accent, fontVariant: ['tabular-nums'] },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space(3),
+    paddingVertical: space(2),
+    borderBottomWidth: 1,
+    borderBottomColor: color.line,
+  },
+  itemRowName: { fontFamily: font.monoSemi, fontSize: 11, color: color.text },
+  itemRowBlurb: { fontSize: 9, color: color.faint, lineHeight: 13, marginTop: 2 },
+  detailFoot: {
+    fontSize: 8,
+    letterSpacing: 1,
+    color: color.faint,
+    lineHeight: 13,
+    marginTop: space(4),
+  },
+  detailBlocked: {
+    borderWidth: 1,
+    borderColor: color.warn,
+    borderRadius: radius.sm,
+    alignItems: 'center',
+    paddingVertical: space(3.5),
+  },
+  detailBlockedText: { fontSize: 10, letterSpacing: 1.3, color: color.warn },
 
   // ---- FILM packs ----
   packGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: space(3) },

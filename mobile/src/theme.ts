@@ -22,43 +22,50 @@ export const color = {
 };
 
 // ---------------------------------------------------------------------------
-// One typeface, with four deliberate exceptions.
+// Two typefaces, split on a rule rather than by screen.
 //
-// The app used to run two families at roughly a 50/50 split: Space Grotesk for
-// anything headline-shaped, IBM Plex Mono for everything else. In practice that
-// meant a screen could change voice three times between its title and its
-// footnote, and neither face was doing a job the other could not.
+// The app briefly ran everything in IBM Plex Mono. That was too far: a whole
+// product set in a monospace face reads as a terminal, and the prose stopped
+// being prose. It also ran two faces at a 50/50 split before that, which was
+// too little rule and too much coincidence.
 //
-// **IBM Plex Mono is now the base for everything**, including headings. It is
-// the face the product already sounded like: an instrument readout, a set of
-// measurements taken of a place. `display` and `displayMed` are kept as tokens
-// rather than deleted so the 61 call sites do not all have to change, and so
-// the intent at each one ("this is a heading") survives the swap.
+// **The rule: mono is for things a machine produced, Space Grotesk is for
+// things a person wrote.**
 //
-// The exceptions below stay in Space Grotesk because they are **objects, not
-// text**: a logo, a number you read at a glance, and the one screen in the game
-// that is pure typography. Everywhere else, if you are tempted to reach for
-// `wordmark` or `numeral`, use `display` instead.
+//   Mono            codes, handles, timers, prices, all-caps labels and chips,
+//                   button text, validator readouts, odds tables, stat values.
+//                   Anything you would read out loud character by character,
+//                   and anything that wants even-width digits.
+//
+//   Space Grotesk   screen titles, card headings, body copy, mission labels,
+//                   item names and descriptions. Anything written in
+//                   sentences.
+//
+// If a new surface is ambiguous, ask whether the text would still make sense
+// if a person had not written it. A friend code would. A safety warning would
+// not.
+//
+// The three exceptions below are Space Grotesk regardless, because they are
+// objects rather than text: a logo, a figure read at a glance, and the one
+// screen that is entirely typography.
 // ---------------------------------------------------------------------------
 
 export const font = {
-  /** Headings. Mono, like everything else. */
-  display: 'IBMPlexMono_600SemiBold',
-  /** Subheads and heavier body. */
-  displayMed: 'IBMPlexMono_500Medium',
+  /** Screen titles and card headings. */
+  display: 'SpaceGrotesk_700Bold',
+  /** Body copy and anything written in sentences. */
+  displayMed: 'SpaceGrotesk_500Medium',
+
+  /** The machine voice: labels, codes, buttons, readouts. */
   mono: 'IBMPlexMono_400Regular',
   monoMed: 'IBMPlexMono_500Medium',
   monoSemi: 'IBMPlexMono_600SemiBold',
 
-  /** The HIDEWIRE lockup only. Nothing else. */
+  /** The HIDEWIRE lockup only. */
   wordmark: 'SpaceGrotesk_700Bold',
-  /**
-   * Large glanceable figures: the round clock, the check-in countdown, the
-   * level, the score total. Mono is even-width by definition, which is right
-   * for a table and wrong for a number the size of your hand.
-   */
+  /** Large glanceable figures: round clock, countdown, level, score total. */
   numeral: 'SpaceGrotesk_700Bold',
-  /** BLACKED OUT. The one screen that is entirely a piece of typography. */
+  /** BLACKED OUT. */
   blackout: 'SpaceGrotesk_700Bold',
 };
 

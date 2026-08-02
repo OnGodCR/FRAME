@@ -87,6 +87,29 @@ handoff. Current supersessions:
   the claim has to come out of the marketing copy rather than being softened,
   or it becomes a misleading-advertising problem instead of a tone one.
 
+## 3.5 Typography: two faces, split on a rule
+
+`mobile/src/theme.ts` is the single source. The rule, so a new surface does not
+need a debate:
+
+- **IBM Plex Mono is the machine voice.** Codes, handles, timers, prices,
+  all-caps labels and chips, button text, validator readouts, odds tables, stat
+  values. Anything read out character by character, and anything wanting
+  even-width digits.
+- **Space Grotesk is the human voice.** Screen titles, card headings, body
+  copy, mission labels, item names and descriptions. Anything in sentences.
+
+If a surface is ambiguous, ask whether the text would still make sense had a
+person not written it. A friend code would. A safety warning would not.
+
+Three exceptions are Space Grotesk regardless, because they are objects rather
+than text: `font.wordmark` (the lockup), `font.numeral` (a figure read at a
+glance), `font.blackout`.
+
+This settled after two wrong turns worth not repeating: a 50/50 split with no
+rule, then everything in mono, which read as a terminal and stopped the prose
+being prose.
+
 ## 4. Read the versioned Expo docs before writing app code
 
 See [mobile/AGENTS.md](mobile/AGENTS.md). Expo has changed; do not write mobile
