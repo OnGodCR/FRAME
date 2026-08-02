@@ -143,6 +143,15 @@ export interface Seen {
    * first mission.
    */
   tutorialDone: boolean;
+  /**
+   * Whether the player has switched off the ads-forever notice on the store.
+   *
+   * The notice covers a permanent, irreversible consequence of spending, so it
+   * is shown every time the store opens until the player says otherwise. Once
+   * they have, it stays off: repeating a warning somebody has explicitly
+   * dismissed is how people learn to tap past warnings.
+   */
+  adsNoticeHidden: boolean;
 }
 
 export const FRESH_SEEN: Seen = {
@@ -150,6 +159,7 @@ export const FRESH_SEEN: Seen = {
   finishedRound: false,
   starterOffered: false,
   tutorialDone: false,
+  adsNoticeHidden: false,
 };
 
 export async function loadSeen(): Promise<Seen | null> {

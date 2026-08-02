@@ -377,6 +377,27 @@ family-only swap and it reads fine.
   through PostgREST with a real JWT. The self-test exercised them in-database
   with simulated claims, which is not the same thing.
 
+### The scroll gate had never worked on web
+
+Recorded because it is the fourth fix to this class of bug and the first that
+explains why the previous one did not take.
+
+Session 2 added a fits-entirely guard so a viewport the content fits in would
+satisfy the consent gate automatically, since `onScroll` never fires when there
+is nothing to scroll. **On react-native-web that guard never ran.** RN Web's
+ScrollView forwards neither `onLayout` nor `onContentSizeChange`, so both
+measurements stayed at 0 and the `contentH > 0` condition was never true.
+Confirmed by logging: `viewer=0 content=0`.
+
+The effect: on a wide or tall viewport the legal gate reads SCROLL TO THE END
+forever and **the entire app is unreachable**. Same for the safety card and
+starting a round.
+
+Both gates now share `components/useScrollGate.ts`, which keeps the native
+callback path and measures the DOM node on web, polling briefly because fonts
+and the FadeIn animations change the content height after first paint. Verified
+at 768x1024: the gate reads I AGREE immediately.
+
 ### One thing worth recording about the preview pane
 
 Session 2 could not resolve why the round clock advances at roughly half wall

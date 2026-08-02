@@ -1,12 +1,18 @@
 # Hidewire: session 4 handoff
 
-Written 2026-07-31. This session did not touch the app. It built
-**hidewire.org**, the public waitlist site, in the separate `Hidewire-web`
-repository (`github.com/OnGodCR/Hidewire-web`, which had no commits before
-today). Read [session-3.md](session-3.md) for the state of the app itself.
+Written 2026-07-31, extended 2026-08-01. This session did not change the app.
+It built **hidewire.org**, the public waitlist site, in the separate
+`Hidewire-web` repository (`github.com/OnGodCR/Hidewire-web`, which had no
+commits before today). Read [session-3.md](session-3.md) for the state of the
+app itself.
 
 The brief was `marketing/WAITLIST-BRIEF.md`, which is untracked in this repo and
 should be committed alongside this file.
+
+**Read section 9 first if you are picking this up cold.** The site was built to
+the brief, then rebuilt on Angad's feedback the same day. Sections 1 to 8
+describe the first version; section 9 says what changed and why, and it is the
+version that exists now.
 
 ---
 
@@ -211,3 +217,137 @@ which is never deployed, and it is documented in that repo's README.
 
 The only edit to this repo is the extra entry in `.claude/launch.json` described
 in section 6.
+
+---
+
+## 9. The rebuild, same day
+
+Angad's verdict on the first version: **"ugly and there's too much text."** Six
+changes, all of them made. What follows is what changed, and the two places
+where doing exactly what was asked would have created a problem.
+
+### 9.1 What was asked, and what it looks like now
+
+| Asked | Done |
+|---|---|
+| Remove "what it is not" | Gone. |
+| Real screenshots in "how a round works", with animation | Three real captures of the app, driven out of a real round. Scroll reveals and a live countdown. |
+| Emphasize the waitlist reward | Second thing in the hero, under the form. |
+| Make it landscape | Two column at every section, desktop first. |
+| Remove the email fine print | Gone. |
+| The lede is too much, make it vague | "The future of getting outside with your friends." |
+
+The layout question was the one that needed asking, and the answer was
+**"the primary version is the desktop version"**, with a mobile version that
+still works. So the hero is a two column landscape screen, the three beats are
+alternating landscape rows, and everything stacks below 60rem.
+
+### 9.2 The screenshots are real, and getting them was the whole afternoon
+
+`Hidewire-web/tools/capture-shots.mjs` exports the app as a static web build,
+drives a real Chrome through the **entire onboarding funnel**, hosts a round,
+fills the party, acknowledges the safety card, starts the round, and waits out
+a real five minute check-in window. Every image on the site came out of it.
+
+Four things cost real time and will again:
+
+- **The Bash tool cannot reach the preview servers.** They live in the harness
+  and are invisible to a process started from a shell, so the first plan
+  (point Puppeteer at `localhost:8095`) was dead on arrival. The fix is
+  `npx expo export --platform web`, then serve the export to Chrome through
+  request interception. No server, so nothing has to be reachable.
+- **The export has to be `--dev`.** A production export refuses to boot with
+  fixtures on, and without fixtures a party cannot reach three players.
+- **The splash always routes into onboarding.** Seeding `localStorage` with a
+  signed-in account skips nothing, so the script walks the funnel for real,
+  including a **touch** tap on the age slider: it is built on the React Native
+  responder system, and a synthetic mouse click does not move it.
+- **Every tap in the lobby needs to be verified, not assumed.** It is a long
+  scrolling view with a sticky footer, and a tap issued while it settles lands
+  on whatever used to be there. `tapUntil` retries until the screen proves the
+  tap landed. Three separate runs died on this before the helper existed.
+
+### 9.3 Two places where the honest thing beat the asked-for thing
+
+**The check-in screen is not photographed.** It is the one screen the whole
+game is about, so it was the obvious thing to capture. On web the viewfinder is
+a **procedural stand-in** (`CameraStage` falls back to `ProceduralPhoto`
+because expo-camera has no useful web path). A screenshot of it would have put
+an invented photo on a marketing page and presented it as somebody's real
+check-in. `TEST-FIXTURES.md` exists to stop exactly that.
+
+What the site shows instead is what happened when the headless player let the
+window close: **BLACKED OUT**. Real screen, real round, no fake photograph, and
+it carries the stakes better than a viewfinder would have. If a real check-in
+screenshot is wanted, it has to come off a phone, which means Angad taking it.
+
+**The lobby screenshot has one element hidden.** `ADD TEST PLAYERS` is only
+there because `TEST_MODE` is on and does not exist in a shipping build. The
+capture script hides it for that one frame and restores it immediately. That
+makes the screenshot **more** representative of the real app, not less, but it
+is a doctored screenshot and that is worth knowing. Everything else in all
+three images is untouched.
+
+### 9.4 The page now makes a promise it did not make before
+
+"Everyone on this list gets a link to an exclusive in-game reward the day
+Hidewire drops. Cosmetic, one time, and never offered again."
+
+The word **cosmetic** is load bearing and should not be edited out for
+brevity. A waitlist reward that affects a round is an advantage handed out for
+an email address, which is the same problem as selling FILM, and
+`marketing/BRIEF.md` section 9 rules it out. `LEGAL-GAPS.md` section 1a records
+the three things that have to be true at launch for the promise to be kept, one
+of which is that **something has to actually exist to send**.
+
+There is also a quiet collision worth naming: the proposed privacy clause says
+waitlist addresses are deleted when the beta opens, and the hero promises an
+email when the game drops. Both can be true only if the email goes first.
+
+### 9.5 What removing "what it is not" costs
+
+The site no longer says anywhere that photos go to the Seeker, that there is no
+face detection, that nothing purchasable helps you win, or that a round is
+invite-code only. Angad's reason was that he does not want to promise anything
+about the future, which is a reasonable call for a pre-launch page.
+
+The rules in `BRIEF.md` section 9 are prohibitions on what may be **claimed**,
+not requirements to claim anything, so saying less is safe. But the section was
+also the page's best answer to a parent, a journalist, or an app reviewer
+asking what this thing does with photographs of teenagers. When the app is
+closer to shipping, it should come back as **statements about what the app
+does**, checked against the app, rather than as promises.
+
+### 9.6 One real bug, found by testing the thing the brief asked for
+
+The reveal animation hid every section at `opacity: 0` and let JavaScript
+reveal them. **With scripting off, that is not a static page, it is a blank
+one**, and the brief says the site has to work with JavaScript disabled apart
+from the form.
+
+The fix is the standard one and worth remembering: `motion.js` loads in the
+head **without defer** and its first act is to set a class on the document.
+Every rule that hides anything is scoped to that class. No script, old browser,
+or reduced motion means the class never appears and nothing is ever hidden.
+There is also a 2.5 second failsafe, because a tab that is never composited
+never fires an intersection callback, which is exactly what happens in a
+headless or backgrounded browser.
+
+Verified by rendering the built page with scripting disabled and comparing it
+against the scripted render.
+
+### 9.7 State of it
+
+Verified with a real Chrome against the built output, at 1440x900 and 390x844:
+hero, all three beats, the closing block, the footer, and both legal pages. The
+ten endpoint tests still pass. The em-dash check is clean across the repo.
+
+The page is now about **450 KB** built, of which 400 KB is three PNG
+screenshots at 3x. They are not compressed or resized yet, and that is the
+first thing to do if the page ever feels slow: `sips` on this machine can write
+PNG and JPEG but not WebP, so either resize to 2x with `sips -Z` or add a real
+encoder.
+
+Everything in section 7 is still outstanding, unchanged: the privacy clause,
+the Supabase table, the Pages project, DNS, `/what-is-this`, and the POI
+complaint form.

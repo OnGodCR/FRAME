@@ -24,7 +24,7 @@ import { Animated } from 'react-native';
 import Svg, { Line as SvgLine, Rect } from 'react-native-svg';
 
 export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
-  const { go, profile, purchase, ageBracket } = useGame();
+  const { go, profile, purchase, ageBracket, seen, markSeen } = useGame();
   const insets = useSafeAreaInsets();
   const frames = SHOP_ITEMS.filter((i) => i.category === 'frame');
   const others = SHOP_ITEMS.filter((i) => i.category !== 'frame');
@@ -39,7 +39,7 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
    * money**, so it has to be in front of the player before they spend it rather
    * than in a document they accepted once. Shown every time the store opens.
    */
-  const [adsNotice, setAdsNotice] = useState(true);
+  const [adsNotice, setAdsNotice] = useState(!seen.adsNoticeHidden);
 
   /** Which box's odds are expanded. Only one at a time. */
   const [openOdds, setOpenOdds] = useState<string | null>(null);
@@ -181,7 +181,14 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
 
       </ScrollView>
 
-      <AdsForeverNotice visible={adsNotice} onClose={() => setAdsNotice(false)} />
+      <AdsForeverNotice
+        visible={adsNotice}
+        onClose={() => setAdsNotice(false)}
+        onNeverAgain={() => {
+          markSeen({ adsNoticeHidden: true });
+          setAdsNotice(false);
+        }}
+      />
     </View>
   );
 }
@@ -196,7 +203,15 @@ export function Shop({ embedded = false }: { embedded?: boolean } = {}) {
  * front of the player at the moment of spending, not in a document accepted
  * during onboarding.
  */
-function AdsForeverNotice({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+function AdsForeverNotice({
+  visible,
+  onClose,
+  onNeverAgain,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onNeverAgain: () => void;
+}) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.noticeBackdrop}>
@@ -232,6 +247,9 @@ function AdsForeverNotice({ visible, onClose }: { visible: boolean; onClose: () 
           </View>
           <Text style={styles.noticeTitle}>Buy anything, and ads are gone for good.</Text>
           <Btn title="Got it" style={{ marginTop: space(5) }} onPress={onClose} />
+          <PressScale onPress={onNeverAgain}>
+            <Mono style={styles.noticeNever}>DON'T SHOW THIS AGAIN</Mono>
+          </PressScale>
         </View>
       </View>
     </Modal>
@@ -582,7 +600,13 @@ const styles = StyleSheet.create({
     color: color.text,
     marginTop: space(2),
   },
-  noticeBody: { fontSize: 11, color: color.dim, lineHeight: 18, marginTop: space(3) },
+  noticeNever: {
+    fontSize: 10,
+    letterSpacing: 1.4,
+    color: color.faint,
+    textAlign: 'center',
+    marginTop: space(4),
+  },
 
   screen: { flex: 1, backgroundColor: color.bg },
   header: {
