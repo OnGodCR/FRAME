@@ -6,7 +6,15 @@ import { color, font, radius, space } from '../theme';
 import { Bar, Btn, Label, Mono } from '../components/ui';
 import { CosmeticPreview } from '../components/Cosmetics';
 import { FadeIn } from '../components/motion';
-import { SEASON, TIERS, Tier, TierReward } from '../data/catalog';
+import {
+  SEASON,
+  TIERS,
+  TIER_COUNT,
+  PASS_PRICE,
+  PAID_TIER_FILM,
+  Tier,
+  TierReward,
+} from '../data/catalog';
 import { useGame } from '../engine/GameContext';
 
 const ROW_H = 92;
@@ -105,6 +113,14 @@ export function SeasonPass({ embedded = false }: { embedded?: boolean } = {}) {
             backgroundColor: color.bg,
           }}
         >
+          <Btn
+            title={`Unlock the paid track · ${PASS_PRICE}`}
+            sub={`${TIER_COUNT - 2} tiers of ${PAID_TIER_FILM} FILM, plus a FIRST LIGHT CASE at 15 and ${TIER_COUNT}`}
+            onPress={() => {
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              buyPass();
+            }}
+          />
         </View>
       )}
     </View>

@@ -197,6 +197,9 @@ Every item above is still bound by section 3 and section 5. In particular:
 - **There is exactly one currency and it is called FILM.** If a note, a ticket,
   or a conversation says "link", "coins", or anything else, it means FILM.
   Never introduce a second currency without saying so explicitly.
+- **The season pass is $7.00.** The paid track pays 250 FILM a tier, with a
+  FIRST LIGHT CASE at tier 15 and tier 30. That is a third paid avenue
+  alongside the paid box and FILM packs, reversing the "only two" note below.
 - ~~FILM is **earned, never sold**, while seeker bidding exists.~~
   **Superseded 2026-08-01.** FILM is now sold, in packs, and the shop sells a
   $4.99 loot box containing items that change how a round plays. Both were
@@ -220,6 +223,7 @@ there, not in screens.
 | Rewarded video | **250 FILM** | 30 seconds. **Capped at 4 a day**, so ads pay 1,000 against 1,100 from playing. Playing must always pay more; preserve that ordering through any retune. |
 | Applause received | **20 FILM** | From another player applauding your capture. |
 | Applause received, daily cap | **100 FILM** | Roughly five applauds. Past the cap people can still applaud, it just stops paying, so the social signal survives without the faucet running. |
+| Finishing the tutorial | **1,000 FILM** | Once, ever. This is the starting balance and it is **earned**: a new account still opens on zero and the grant lands the moment a check-in has actually been performed. Guests get it too, since the tutorial is not gated on an account. |
 | Referral, both sides | **2,500 FILM** | One time, per pair. The referrer must be level 2, and at this size that guard is load-bearing. |
 
 **The server's numbers are the ones that count.** `mobile/src/data/economy.ts`

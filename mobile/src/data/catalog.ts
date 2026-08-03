@@ -150,29 +150,43 @@ const film = (amount: number): TierReward => ({
 // sells. Milestones are included so every tenth tier pays out on both.
 const FREE_FILM = [2, 5, 11, 14, 17, 23, 26, 29];
 
+/**
+ * The paid track pays FILM every tier, and a FIRST LIGHT CASE at 15 and 30.
+ *
+ * That replaces the old per-tier cosmetic ladder, which had two problems: the
+ * cosmetics on it were the same ones the shop no longer sells, so half of them
+ * were unreachable anyway, and a track of thirty different small rewards is
+ * harder to value at the point of sale than one number times thirty.
+ *
+ * 28 tiers x 250 FILM plus two cases is a legible offer against $7. The free
+ * track keeps its cosmetics, because they are the only reason to care about the
+ * pass without paying.
+ */
+export const PAID_TIER_FILM = 250;
+const CASE_TIERS = [15, TIER_COUNT];
+
+const lootCase = (): TierReward => ({
+  name: 'FIRST LIGHT CASE',
+  kind: 'film',
+  tint: color.accent,
+});
+
 function buildTiers(): Tier[] {
   const freeCos = new Map<number, Cosmetic>();
-  const paidCos = new Map<number, Cosmetic>();
   for (const c of COSMETICS) {
     if (c.source === 'free' && c.tier) freeCos.set(c.tier, c);
-    if (c.source === 'paid' && c.tier) paidCos.set(c.tier, c);
   }
 
   return Array.from({ length: TIER_COUNT }, (_, i) => {
     const n = i + 1;
-    const milestone = n % 10 === 0;
+    const milestone = CASE_TIERS.includes(n);
 
     let free: TierReward | undefined;
     const fc = freeCos.get(n);
     if (fc) free = asReward(fc);
     else if (FREE_FILM.includes(n)) free = film(n >= TIER_COUNT * 0.6 ? 100 : 50);
 
-    // Every paid tier pays out something; a dead row on the track people
-    // bought reads as a bug.
-    const pc = paidCos.get(n);
-    const paid: TierReward = pc
-      ? asReward(pc)
-      : film(milestone ? 300 : n >= 25 ? 150 : 100);
+    const paid: TierReward = milestone ? lootCase() : film(PAID_TIER_FILM);
 
     return { n, free, paid, milestone };
   });
@@ -258,6 +272,9 @@ export interface StoreProduct {
  */
 export const STORE: StoreProduct[] = [];
 
+
+/** What the paid track costs. One place, so the pass screen and the shop agree. */
+export const PASS_PRICE = '$7.00';
 
 export const SEASON = {
   number: '01',

@@ -9,6 +9,7 @@ import { CaptureSequence } from '../components/CaptureSequence';
 import { ProceduralPhoto } from '../components/ProceduralPhoto';
 import { PermissionNote } from './Onboarding';
 import { useGame, PRACTICE_WINDOW, fmtClock } from '../engine/GameContext';
+import { ECONOMY } from '../data/economy';
 
 // ---------------------------------------------------------------------------
 // The interactive tutorial.
@@ -57,7 +58,7 @@ const BEATS: Beat[] = ['zone', 'window', 'capture', 'seeker'];
 const DEMO_WINDOW = 10;
 
 export function Tutorial() {
-  const { go, markSeen, profile, seen } = useGame();
+  const { go, markSeen, profile, seen, claimTutorialGrant } = useGame();
   const insets = useSafeAreaInsets();
   const [beat, setBeat] = useState<Beat>('zone');
   // BLACKED OUT is the one screen in the product that owns the whole display.
@@ -70,6 +71,8 @@ export function Tutorial() {
   const replay = seen.tutorialDone;
 
   const finish = () => {
+    // Paid before the flag is set, because the grant is guarded on that flag.
+    claimTutorialGrant();
     markSeen({ tutorialDone: true });
     go('home');
   };
@@ -120,7 +123,9 @@ export function Tutorial() {
 
       {beat === 'zone' && <ZoneBeat onDone={next} />}
       {beat === 'window' && <WindowBeat onDone={next} onChrome={setChrome} />}
-      {beat === 'seeker' && <SeekerBeat handle={profile.handle} onDone={finish} />}
+      {beat === 'seeker' && (
+        <SeekerBeat handle={profile.handle} reward={replay ? 0 : ECONOMY.tutorialGrant} onDone={finish} />
+      )}
     </View>
   );
 }
@@ -531,7 +536,15 @@ function CaptureBeat({ onPass, onSkip }: { onPass: () => void; onSkip: () => voi
  * a wide margin, and it is why they are the flagship shop category. Showing it
  * once, here, does more than the shop screen can.
  */
-function SeekerBeat({ handle, onDone }: { handle: string; onDone: () => void }) {
+function SeekerBeat({
+  handle,
+  reward,
+  onDone,
+}: {
+  handle: string;
+  reward: number;
+  onDone: () => void;
+}) {
   const insets = useSafeAreaInsets();
   const [flipped, setFlipped] = useState(false);
   const seeds = useMemo(() => ({ back: 4402, front: 8821 }), []);
@@ -580,7 +593,11 @@ function SeekerBeat({ handle, onDone }: { handle: string; onDone: () => void }) 
       </View>
 
       <View style={{ paddingHorizontal: space(6), paddingBottom: insets.bottom + space(6) }}>
-        <Btn title="Start playing" onPress={onDone} />
+        <Btn
+          title="Start playing"
+          sub={reward > 0 ? `+${reward.toLocaleString()} FILM FOR FINISHING` : undefined}
+          onPress={onDone}
+        />
       </View>
     </View>
   );

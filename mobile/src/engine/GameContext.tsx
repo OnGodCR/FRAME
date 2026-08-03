@@ -587,6 +587,8 @@ interface Game {
   leaveRound: () => void;
   finishRound: () => void;
   addXp: (n: number) => void;
+  /** Pays the one-time tutorial grant. Returns the FILM paid, or 0. */
+  claimTutorialGrant: () => number;
   purchase: (id: string, costFilm: number) => boolean;
   buyPass: () => void;
   redeemBundle: (frameId: string, film: number) => void;
@@ -1065,6 +1067,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const addXp = useCallback((n: number) => setProfile((p) => withXp(p, n)), []);
 
+  /**
+   * Once ever, guarded on `seen.tutorialDone` rather than on a separate flag,
+   * because that is the same thing the tutorial uses to decide it is a replay.
+   * Two flags would be two chances to drift apart and pay twice.
+   */
+  const claimTutorialGrant = useCallback((): number => {
+    if (seen.tutorialDone) return 0;
+    setProfile((p) => ({ ...p, film: p.film + ECONOMY.tutorialGrant }));
+    return ECONOMY.tutorialGrant;
+  }, [seen.tutorialDone]);
+
   const setHandle = useCallback(
     (h: string) => setProfile((p) => ({ ...p, handle: h })),
     [],
@@ -1153,6 +1166,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         leaveRound,
         finishRound,
         addXp,
+        claimTutorialGrant,
         purchase,
         buyPass,
         redeemBundle,

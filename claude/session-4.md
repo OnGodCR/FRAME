@@ -351,3 +351,94 @@ encoder.
 Everything in section 7 is still outstanding, unchanged: the privacy clause,
 the Supabase table, the Pages project, DNS, `/what-is-this`, and the POI
 complaint form.
+
+---
+
+## 10. Second rebuild, 2026-08-02
+
+Angad again, five changes. The site is now a **scroll experience** rather than a
+stack of sections, modelled on royal-pop-website.vercel.app: one phone stays
+pinned while the copy moves past it and the screen inside it changes.
+
+### 10.1 The scroller
+
+Four steps: the lobby, the drop, the hunt, the check-in. Four real screenshots,
+one per step, swapped under a sticky phone. The reference site does it by
+fixing every section and cross-fading on scroll offset; this does it with an
+IntersectionObserver and no scroll arithmetic at all, which is far less
+fragile.
+
+Two things that took a while to get right and will break again if touched:
+
+- **The observer watches the copy, not the panel.** A panel is a full screen
+  tall, so it enters the band long before its words do, and the phone would
+  change while the previous step was still being read.
+- **The band moves with the phone.** Centred phone on desktop, so the band is
+  the middle of the viewport; pinned to the top on mobile, so the band moves
+  down under it. The first mobile attempt had paragraphs sliding across the
+  screenshot at 20% opacity, which reads as a rendering fault.
+
+There is also a CSS ordering trap: the mobile override of `.panel-copy` opacity
+has the same specificity as the desktop rule, so it only works because it comes
+later in the file. Moving it back up the stylesheet silently breaks mobile.
+
+### 10.2 Type: the site and the app now disagree, on purpose
+
+Angad said the type was hard to read. It was: everything was IBM Plex Mono,
+because `theme.ts` made mono the app's base face and section 5 of this handoff
+followed it.
+
+The site is now **Space Grotesk** at 400 and 700, with IBM Plex Mono kept for
+the letterspaced caps label only. That is the split `marketing/BRIEF.md` asked
+for in the first place. Mono at paragraph length on a 1440 pixel screen is a
+different problem from mono in a 390 pixel app, and the site should be readable
+before it is consistent with the app.
+
+### 10.3 The mark is on the page now
+
+`brand/frame-mark.svg`, fetched from the app repo on GitHub to confirm it
+matched the local copy, with the background plate stripped so it sits on any
+surface. It is in the header and the footer. The CSS bracket frame that used to
+box the wordmark is gone: the mark already has viewfinder brackets in it and
+two sets read as a mistake.
+
+### 10.4 "Cosmetic, one time, and never offered again" was removed
+
+Angad's call, as clutter. `LEGAL-GAPS.md` section 1a records it, because the
+constraint has not gone anywhere even though the sentence has: a waitlist
+reward that affects a round is an advantage handed out for an email address,
+which BRIEF section 9 rules out. **The page no longer says the reward is
+cosmetic, so the reward itself has to be.**
+
+### 10.5 The duplicate signup bug was in the dev stub
+
+Angad entered his address twice and was told he was added twice. Worth being
+precise about what was broken, because the headline reading of it is wrong:
+
+**Nothing is deployed.** There is no Supabase table and no Pages project, so
+what he tested was `tools/serve.mjs`, the local preview stub, which was
+stateless and returned `added` for everything except two hardcoded addresses.
+The real endpoint was never wrong about this.
+
+Both halves are now fixed:
+
+- The stub keeps a small file of addresses it has seen, so a second signup
+  answers `known` locally exactly as it will in production. Verified in a
+  browser: same address twice, and again in upper case, all three answering
+  correctly.
+- The real endpoint no longer trusts HTTP 409 alone to mean "duplicate". It
+  also treats a Postgres `23505` in the response body as one, because PostgREST
+  has reported unique violations under different statuses across versions, and
+  a repeat signup surfacing as a server error is a bad first impression on the
+  one interaction this page has. Two new tests cover it: twelve passing.
+
+### 10.6 Still true
+
+Nothing about the deployment has changed. The privacy clause, the Supabase
+table, the Pages project, DNS, `/what-is-this` and the POI form are all still
+outstanding, and the first real signup is still the first real test of the
+database path.
+
+The page is now about **710 KB** built, of which roughly 500 KB is four
+screenshots at 3x. Compressing them properly still needs an encoder this
+machine does not have.

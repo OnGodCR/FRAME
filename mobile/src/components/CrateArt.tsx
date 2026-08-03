@@ -2,7 +2,6 @@ import React from 'react';
 import { View } from 'react-native';
 import Svg, {
   Defs,
-  Ellipse,
   G,
   LinearGradient,
   Path,
@@ -14,150 +13,172 @@ import Svg, {
 import { color } from '../theme';
 
 // ---------------------------------------------------------------------------
-// Crate and FILM artwork, drawn rather than fetched.
+// Crate artwork.
 //
-// The store was a wall of text with a price on the end of it, which is a
-// reasonable description of a product and a terrible advertisement for one.
-// This draws the boxes as what they are in the fiction: sealed film canisters
-// with light escaping from under the lid, framed by the same corner brackets
-// the wordmark uses.
+// **The first version drew film canisters, which is not a crate.** They were
+// cylinders, they read as tins, and the store looked like a shelf of soup. This
+// draws an actual box: an isometric cube with a lid, a strap crossing the
+// front, corner reinforcements, and light escaping the seam under the lid.
 //
-// **Vector, not bitmap, and that is the point.** These render at any size with
-// no asset pipeline, no download, and no placeholder period, so the store stops
-// looking unfinished today rather than after art lands. When the Nano Banana
-// renders arrive (marketing/LOOTBOX-IMAGE-PROMPT.md) they can replace these
-// per box, one at a time, because every crate reads its look from TIERS below
-// rather than from a hardcoded drawing.
+// The geometry is one 100x100 viewBox with three faces:
+//
+//        A---------B          A..B  top back edge
+//       /         /|          B..C  right face
+//      C---------D |          C..D  front top edge
+//      |  front  | E
+//      |         |/
+//      F---------G
+//
+// Every tier reads its look from TIERS below rather than from a hardcoded
+// drawing, so a generated render can replace any one of them without touching
+// the others. See marketing/LOOTBOX-IMAGE-PROMPT.md.
 // ---------------------------------------------------------------------------
 
 interface CrateLook {
-  /** Body of the canister. */
-  body: string;
-  bodyLow: string;
-  /** The light escaping the seam. Brighter means rarer. */
+  /** Front face. */
+  face: string;
+  /** Top face, lit. */
+  top: string;
+  /** Right face, in shadow. */
+  side: string;
+  /** Strap and reinforcement colour. */
+  strap: string;
+  /** Light escaping the lid seam. Brighter means rarer. */
   glow: string;
-  /** How much light bleeds out, 0..1. */
+  /** How far the light bleeds, 0..1. */
   bleed: number;
-  /** A locking ring on the lid, for the top tier. */
-  ring?: boolean;
-  /** Film strip wrapped round the body. */
-  strip?: boolean;
-  /** Lid lifted, light cutting upward. Only the paid case. */
+  /** A lock plate on the front. */
+  lock?: boolean;
+  /** Lid tilted open with light pouring out. */
   open?: boolean;
 }
 
 const TIERS: Record<string, CrateLook> = {
-  'box-tray': { body: '#4A4A52', bodyLow: '#2A2A30', glow: color.accentDim, bleed: 0.25 },
-  'box-contact': { body: '#55555E', bodyLow: '#2E2E35', glow: color.accent, bleed: 0.4, strip: true },
-  'box-silver': { body: '#8A8A94', bodyLow: '#45454E', glow: color.accent, bleed: 0.6 },
-  'box-vault': { body: '#26262C', bodyLow: '#141418', glow: '#EFFFA8', bleed: 0.9, ring: true },
-  'box-first-light': { body: '#3A3A42', bodyLow: '#1E1E24', glow: '#FFFFFF', bleed: 1, open: true },
+  'box-tray': {
+    face: '#3A3A42', top: '#4E4E58', side: '#26262C',
+    strap: '#5A5A66', glow: color.accentDim, bleed: 0.2,
+  },
+  'box-contact': {
+    face: '#2F3A34', top: '#42544A', side: '#1F2823',
+    strap: '#6E8A78', glow: color.accent, bleed: 0.4,
+  },
+  'box-silver': {
+    face: '#6E6E7A', top: '#9A9AA6', side: '#4A4A54',
+    strap: '#C6C6D0', glow: color.accent, bleed: 0.6,
+  },
+  'box-vault': {
+    face: '#1C1C22', top: '#2A2A32', side: '#121216',
+    strap: '#C8FF2E', glow: '#EFFFA8', bleed: 0.95, lock: true,
+  },
+  'box-first-light': {
+    face: '#2A2A32', top: '#3C3C46', side: '#1A1A20',
+    strap: '#FFFFFF', glow: '#FFFFFF', bleed: 1, open: true,
+  },
 };
 
-const FALLBACK: CrateLook = TIERS['box-tray'];
+const FALLBACK = TIERS['box-tray'];
 
 export function CrateArt({ id, size = 96 }: { id: string; size?: number }) {
   const look = TIERS[id] ?? FALLBACK;
-  const w = size;
-  const h = size;
   const uid = id.replace(/[^a-z]/g, '');
 
-  // Canister geometry, in a 100x100 viewBox.
-  const bodyTop = look.open ? 42 : 36;
-  const bodyBottom = 82;
+  // Box corners. Front face is a rectangle; top and right are parallelograms
+  // sheared to give it depth without a real 3D projection.
+  const L = 22, R = 72, T = 46, B = 84;   // front face
+  const dx = 12, dy = 10;                  // depth offset
+
+  const lidH = 9;
 
   return (
-    <View style={{ width: w, height: h }}>
-      <Svg width={w} height={h} viewBox="0 0 100 100">
+    <View style={{ width: size, height: size }}>
+      <Svg width={size} height={size} viewBox="0 0 100 100">
         <Defs>
-          <LinearGradient id={`body${uid}`} x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={look.bodyLow} />
-            <Stop offset="0.35" stopColor={look.body} />
-            <Stop offset="0.62" stopColor={look.body} />
-            <Stop offset="1" stopColor={look.bodyLow} />
+          <LinearGradient id={`f${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={look.face} />
+            <Stop offset="1" stopColor={look.side} />
           </LinearGradient>
-          <RadialGradient id={`halo${uid}`} cx="0.5" cy="0.5" r="0.5">
-            <Stop offset="0" stopColor={look.glow} stopOpacity={0.55 * look.bleed} />
+          <RadialGradient id={`h${uid}`} cx="0.5" cy="0.5" r="0.5">
+            <Stop offset="0" stopColor={look.glow} stopOpacity={0.5 * look.bleed} />
             <Stop offset="1" stopColor={look.glow} stopOpacity="0" />
           </RadialGradient>
         </Defs>
 
-        {/* The light escaping, drawn first so the metal sits on top of it. */}
-        <Ellipse cx="50" cy={bodyTop} rx="46" ry="20" fill={`url(#halo${uid})`} />
+        {/* Halo, behind the box. */}
+        <Path
+          d={`M${L - 14} ${T - 6} L${R + dx + 10} ${T - 18} L${R + dx + 10} ${T + 14} L${L - 14} ${T + 20} Z`}
+          fill={`url(#h${uid})`}
+        />
 
-        {/* A blade of light out of a lifted lid. Only the paid case opens, and
-            it is the only box that should look like it is already giving
-            something up. */}
+        {/* A blade of light out of the tilted lid. Only the paid case opens. */}
         {look.open && (
           <>
-            <Path
-              d="M34 40 L50 6 L66 40 Z"
-              fill={look.glow}
-              opacity={0.22}
-            />
-            <Line x1="50" y1="38" x2="50" y2="10" stroke={look.glow} strokeWidth="2" opacity={0.7} />
+            <Path d={`M${L + 6} ${T - 4} L50 4 L${R - 6} ${T - 4} Z`} fill={look.glow} opacity={0.18} />
+            <Line x1="50" y1={T - 6} x2="50" y2="8" stroke={look.glow} strokeWidth="2" opacity={0.75} />
           </>
         )}
 
-        {/* Lid */}
-        <Ellipse
-          cx="50"
-          cy={look.open ? 30 : bodyTop}
-          rx="30"
-          ry="8"
-          fill={look.bodyLow}
-          stroke={look.body}
-          strokeWidth="1.5"
-        />
-        {look.ring && (
-          <Ellipse
-            cx="50"
-            cy={bodyTop}
-            rx="15"
-            ry="4"
-            fill="none"
-            stroke={look.glow}
+        {/* ---- body ---- */}
+        {/* right face */}
+        <Path d={`M${R} ${T} L${R + dx} ${T - dy} L${R + dx} ${B - dy} L${R} ${B} Z`} fill={look.side} />
+        {/* top face */}
+        <Path d={`M${L} ${T} L${L + dx} ${T - dy} L${R + dx} ${T - dy} L${R} ${T} Z`} fill={look.top} />
+        {/* front face */}
+        <Rect x={L} y={T} width={R - L} height={B - T} fill={`url(#f${uid})`} />
+
+        {/* ---- lid ---- */}
+        <G transform={look.open ? `rotate(-14 ${L} ${T})` : undefined}>
+          <Path
+            d={`M${L} ${T} L${L + dx} ${T - dy} L${R + dx} ${T - dy} L${R} ${T} Z`}
+            fill={look.top}
+            stroke={look.strap}
             strokeWidth="1.5"
-            opacity={0.8}
           />
-        )}
+          <Rect x={L} y={T} width={R - L} height={lidH} fill={look.face} stroke={look.strap} strokeWidth="1.5" />
+          <Path d={`M${R} ${T} L${R + dx} ${T - dy} L${R + dx} ${T - dy + lidH} L${R} ${T + lidH} Z`} fill={look.side} />
+        </G>
 
-        {/* Body */}
-        <Path
-          d={`M20 ${bodyTop} L20 ${bodyBottom - 8} Q20 ${bodyBottom} 30 ${bodyBottom} L70 ${bodyBottom} Q80 ${bodyBottom} 80 ${bodyBottom - 8} L80 ${bodyTop} Z`}
-          fill={`url(#body${uid})`}
-        />
-
-        {/* The seam under the lid: the light the canister is holding in. */}
+        {/* The seam the light escapes from, just under the lid. */}
         <Rect
-          x="20"
-          y={bodyTop - 1}
-          width="60"
-          height="2.5"
+          x={L}
+          y={T + lidH}
+          width={R - L}
+          height={2.5}
           fill={look.glow}
-          opacity={0.35 + 0.65 * look.bleed}
+          opacity={0.3 + 0.7 * look.bleed}
         />
 
-        {/* A wrapped strip of exposed negative, sprocket holes catching light. */}
-        {look.strip && (
-          <G opacity={0.85}>
-            <Rect x="20" y={bodyTop + 14} width="60" height="13" fill="#15151A" />
-            {[24, 32, 40, 48, 56, 64, 72].map((x) => (
-              <Rect key={x} x={x} y={bodyTop + 16} width="3" height="3" fill={look.glow} opacity={0.5} />
-            ))}
-          </G>
+        {/* ---- strap down the front and over the lid ---- */}
+        <Rect x={44} y={T} width={7} height={B - T} fill={look.strap} opacity={0.9} />
+        <Path d={`M${44} ${T} L${44 + dx} ${T - dy} L${51 + dx} ${T - dy} L${51} ${T} Z`} fill={look.strap} opacity={0.7} />
+
+        {/* Corner reinforcements, which is what makes it read as a crate
+            rather than a gift box. */}
+        {[
+          [L, T + lidH], [R - 8, T + lidH], [L, B - 8], [R - 8, B - 8],
+        ].map(([x, y], i) => (
+          <Rect key={i} x={x} y={y} width={8} height={8} fill={look.strap} opacity={0.35} />
+        ))}
+
+        {/* Slat lines, so the front face is not a flat block of colour. */}
+        <G stroke={look.side} strokeWidth="1" opacity={0.5}>
+          <Line x1={L} y1={T + 24} x2={R} y2={T + 24} />
+          <Line x1={L} y1={T + 32} x2={R} y2={T + 32} />
+        </G>
+
+        {/* Lock plate on the top tier. */}
+        {look.lock && (
+          <>
+            <Rect x={42} y={T + 20} width={11} height={11} rx={2} fill={look.glow} opacity={0.9} />
+            <Rect x={46} y={T + 24} width={3} height={4} fill={look.face} />
+          </>
         )}
 
-        {/* Blank label band, no legible text: image models get type wrong and
-            it would have to be localised anyway. */}
-        <Rect x="20" y={bodyTop + 30} width="60" height="10" fill="#0F0F13" opacity={0.55} />
-
-        {/* The viewfinder brackets, the one motif every surface shares. */}
+        {/* The viewfinder brackets, the motif every surface shares. */}
         <G stroke={color.accent} strokeWidth="2.5" fill="none" strokeLinecap="square">
-          <Path d="M6 20 L6 8 L18 8" />
-          <Path d="M94 20 L94 8 L82 8" />
-          <Path d="M6 80 L6 92 L18 92" />
-          <Path d="M94 80 L94 92 L82 92" />
+          <Path d="M6 24 L6 12 L18 12" />
+          <Path d="M94 24 L94 12 L82 12" />
+          <Path d="M6 82 L6 94 L18 94" />
+          <Path d="M94 82 L94 94 L82 94" />
         </G>
       </Svg>
     </View>
@@ -165,12 +186,12 @@ export function CrateArt({ id, size = 96 }: { id: string; size?: number }) {
 }
 
 /**
- * A stack of canisters for the FILM packs, growing with the size of the pack.
+ * A stack of crates for the FILM packs, growing with the size of the pack.
  *
- * The packs were four identical tiny icons with different numbers under them,
- * so the only thing distinguishing the $9.99 from the $0.99 was the digits.
- * Making the pile physically bigger is the oldest trick in this particular book
- * and it works because it is honest: there really is more in it.
+ * The packs were four identical icons with different numbers under them, so the
+ * only thing separating $9.99 from $0.99 was the digits. Making the pile
+ * physically bigger is the oldest trick in this book and it works because it is
+ * honest: there really is more in it.
  */
 export function FilmStack({ count, size = 64 }: { count: number; size?: number }) {
   const n = Math.max(1, Math.min(4, count));
@@ -179,20 +200,21 @@ export function FilmStack({ count, size = 64 }: { count: number; size?: number }
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} viewBox="0 0 100 100">
         <Defs>
-          <LinearGradient id={`can${uid}`} x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor="#2A2A30" />
-            <Stop offset="0.4" stopColor="#5A5A64" />
-            <Stop offset="1" stopColor="#2A2A30" />
+          <LinearGradient id={`c${uid}`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#4E4E58" />
+            <Stop offset="1" stopColor="#26262C" />
           </LinearGradient>
         </Defs>
         {Array.from({ length: n }).map((_, i) => {
-          const y = 74 - i * 15;
+          const y = 76 - i * 16;
+          const L = 30, R = 70, dx = 8, dy = 6, h = 14;
           return (
             <G key={i}>
-              <Rect x={26} y={y - 12} width={48} height={13} fill={`url(#can${uid})`} />
-              <Ellipse cx={50} cy={y - 12} rx={24} ry={5} fill="#6A6A76" />
-              <Ellipse cx={50} cy={y + 1} rx={24} ry={5} fill="#1C1C22" />
-              <Rect x={26} y={y - 7} width={48} height={1.5} fill={color.accent} opacity={0.55} />
+              <Path d={`M${R} ${y - h} L${R + dx} ${y - h - dy} L${R + dx} ${y - dy} L${R} ${y} Z`} fill="#1C1C22" />
+              <Path d={`M${L} ${y - h} L${L + dx} ${y - h - dy} L${R + dx} ${y - h - dy} L${R} ${y - h} Z`} fill="#5A5A66" />
+              <Rect x={L} y={y - h} width={R - L} height={h} fill={`url(#c${uid})`} />
+              <Rect x={L} y={y - h + 3} width={R - L} height={1.5} fill={color.accent} opacity={0.6} />
+              <Rect x={46} y={y - h} width={5} height={h} fill="#6E6E7A" opacity={0.8} />
             </G>
           );
         })}

@@ -62,9 +62,11 @@ export function Splash() {
  *
  * What is kept, so the gate stays as good-faith as a slider can be:
  *
- * - **No starting position.** The thumb does not exist until the player puts
- *   it somewhere. A slider pre-set to 18, or to any adult age, is a leading
- *   question with a default answer.
+ * - **It starts at the minimum, not at an adult age.** The control is visible
+ *   from the first frame, which is what a slider should be, and the value it
+ *   opens on is 1: a failing answer. A slider pre-set to 18 would be a leading
+ *   question with the passing answer already filled in. Starting on a refusal
+ *   is the opposite, and it is the safe direction to be wrong in.
  * - **The range starts below 13.** If the lowest reachable value were 13 the
  *   control would announce the threshold, and a gate that shows you the
  *   passing answer is not a gate.
@@ -88,13 +90,12 @@ const MAX_CORRECTIONS = 3;
 export function DobGate() {
   const { go, setAgeBracket } = useGame();
   const insets = useSafeAreaInsets();
-  const [age, setAge] = useState<number | null>(null);
+  const [age, setAge] = useState<number>(MIN_AGE);
   const [refused, setRefused] = useState(false);
   const [corrections, setCorrections] = useState(0);
   const [track, setTrack] = useState(0);
 
   const submit = () => {
-    if (age == null) return;
     if (age < 13) {
       setRefused(true);
       return;
@@ -108,7 +109,7 @@ export function DobGate() {
   const reenter = () => {
     setCorrections((c) => c + 1);
     setRefused(false);
-    setAge(null);
+    setAge(MIN_AGE);
   };
 
   if (refused) {
@@ -145,7 +146,10 @@ export function DobGate() {
     setAge(Math.round(MIN_AGE + frac * (MAX_AGE - MIN_AGE)));
   };
 
-  const frac = age == null ? 0 : (age - MIN_AGE) / (MAX_AGE - MIN_AGE);
+  const frac = (age - MIN_AGE) / (MAX_AGE - MIN_AGE);
+  /** The bubble is 68 wide and centred on the thumb, so it has to be held
+   *  inside the track or it hangs off the screen at either end. */
+  const bubbleLeft = Math.max(0, Math.min(track - 68, frac * track - 34));
 
   return (
     <View style={styles.screen}>
@@ -162,12 +166,17 @@ export function DobGate() {
             read the answer. */}
         <View style={styles.sliderBlock}>
           <View style={styles.bubbleRow} pointerEvents="none">
-            {age != null && track > 0 && (
-              <View style={[styles.bubbleWrap, { left: frac * track - 34 }]}>
+            {track > 0 && (
+              <View style={[styles.bubbleWrap, { left: bubbleLeft }]}>
                 <View style={styles.bubble}>
                   <Text style={styles.bubbleValue}>{age}</Text>
                 </View>
-                <View style={styles.bubbleTail} />
+                <View
+                  style={[
+                    styles.bubbleTail,
+                    { marginLeft: Math.max(-24, Math.min(24, frac * track - 34 - bubbleLeft)) },
+                  ]}
+                />
               </View>
             )}
           </View>
@@ -181,16 +190,12 @@ export function DobGate() {
             onResponderMove={(e) => setFromX(e.nativeEvent.locationX)}
           >
             <View style={styles.sliderTrack}>
-              {age != null && (
-                <View style={[styles.sliderFill, { width: Math.max(0, frac * track) }]} />
-              )}
+              <View style={[styles.sliderFill, { width: Math.max(0, frac * track) }]} />
             </View>
-            {age != null && (
-              <View style={[styles.sliderThumb, { left: frac * track - 13 }]}>
-                <View style={styles.thumbGrip} />
-                <View style={styles.thumbGrip} />
-              </View>
-            )}
+            <View style={[styles.sliderThumb, { left: frac * track - 13 }]}>
+              <View style={styles.thumbGrip} />
+              <View style={styles.thumbGrip} />
+            </View>
           </View>
 
           <View style={styles.scaleRow}>
@@ -200,11 +205,11 @@ export function DobGate() {
         </View>
 
         <Mono style={styles.sliderHint}>
-          {age == null ? 'DRAG THE SLIDER TO SET YOUR AGE' : 'THIS WILL NOT AFFECT GAMEPLAY'}
+          DRAG THE SLIDER TO SET YOUR AGE
         </Mono>
       </View>
       <View style={{ padding: space(6), paddingBottom: insets.bottom + space(6) }}>
-        <Btn title="Continue" disabled={age == null} onPress={submit} />
+        <Btn title="Continue" onPress={submit} />
       </View>
     </View>
   );

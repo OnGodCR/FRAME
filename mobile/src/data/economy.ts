@@ -53,6 +53,17 @@ export const ECONOMY = {
    */
   applauseDailyCap: 100,
 
+  /**
+   * Paid once, for finishing the onboarding tutorial.
+   *
+   * **This is the starting balance, and it is earned rather than handed over.**
+   * A new account still opens on zero, and the 1,000 arrives the moment the
+   * player has actually performed a check-in, which is the difference between a
+   * gift and a first paycheck. Guests get it too: the tutorial is not gated on
+   * an account, so neither is the reward for finishing it.
+   */
+  tutorialGrant: 1000,
+
   /** Referral bonus, paid to BOTH sides, once per pair. */
   referralFilm: 2500,
 } as const;
