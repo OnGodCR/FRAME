@@ -126,7 +126,13 @@ export function CrateArt({ id, size = 96 }: { id: string; size?: number }) {
         <Rect x={L} y={T} width={R - L} height={B - T} fill={`url(#f${uid})`} />
 
         {/* ---- lid ---- */}
-        <G transform={look.open ? `rotate(-14 ${L} ${T})` : undefined}>
+        {/* Open is a straight lift, no rotation.
+            Two attempts at tilting it both failed the same way: the lid is a
+            top panel plus a front band, and rotating the pair detached the band
+            from the box and left a slab floating beside it. Lifting the whole
+            lid square, with the seam glowing underneath, reads as open without
+            any of that. */}
+        <G transform={look.open ? 'translate(0 -13)' : undefined}>
           <Path
             d={`M${L} ${T} L${L + dx} ${T - dy} L${R + dx} ${T - dy} L${R} ${T} Z`}
             fill={look.top}

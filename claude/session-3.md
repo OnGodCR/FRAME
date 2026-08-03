@@ -398,6 +398,23 @@ callback path and measures the DOM node on web, polling briefly because fonts
 and the FadeIn animations change the content height after first paint. Verified
 at 768x1024: the gate reads I AGREE immediately.
 
+### The preview pane's click coordinates change space mid-session
+
+This cost more time than any bug in the code. `computer{action:"screenshot"}`
+reports a "Screenshot size" that is sometimes CSS pixels (375x812) and sometimes
+the raw image (750x1624), and it switches without warning, often after a resize
+or a server restart. Clicks are interpreted in whichever space the **last**
+screenshot reported.
+
+The symptom is not an error. Clicks land silently in the wrong place and the app
+looks frozen or unresponsive, which is exactly what session 2 gotcha 16
+described from the other direction. Hours went into treating a coordinate
+mismatch as a broken drag handler.
+
+**Take a screenshot immediately before any click, read the reported size, and
+use that space.** Do not carry coordinates across a resize, a reload, or a
+server restart.
+
 ### One thing worth recording about the preview pane
 
 Session 2 could not resolve why the round clock advances at roughly half wall

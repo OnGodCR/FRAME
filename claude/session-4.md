@@ -442,3 +442,85 @@ database path.
 The page is now about **710 KB** built, of which roughly 500 KB is four
 screenshots at 3x. Compressing them properly still needs an encoder this
 machine does not have.
+
+---
+
+## 11. Third pass, 2026-08-02
+
+Six more changes from Angad. The site is now six scroller steps deep and the
+waitlist has a real table behind it.
+
+### 11.1 The scroller has content on both sides now
+
+Each step is a three column grid: copy on one side, a small readout of the
+actual numbers on the other, and the phone down the middle. Which side the copy
+takes alternates, which is what stops six identical screens in a row.
+
+`.panel-body` wraps the copy and the readout and is `display: contents` on
+desktop, so both children sit directly in the panel grid. On a narrow screen it
+becomes a real box again, `position: sticky; bottom`, which parks the pair in
+the band under the pinned phone for as long as the step lasts instead of
+letting the words scroll up across the screenshot. That sticky trick is what
+finally fixed the mobile collision; two rounds of shrinking the phone did not.
+
+### 11.2 Two more real screens, and the facts checked against the app
+
+`SHOTS=tabs` and `SHOTS=poi` were added to the capture script so the fast
+screens do not have to pay for the five minute check-in wait. That got the
+**global leaderboard** and the **nearby tab**, which between them cover local
+games, points of interest, XP and the ladder. Six screens now.
+
+The readouts are checked figures, not remembered ones. They come from
+`DEFAULT_SETTINGS` and `SETTING_DEFS` in `JoinLobby.tsx` and from `PRD.md`, and
+the table in the site's README says which line each one came from.
+
+**One number was wrong on the live page:** it said the zone was "a square
+kilometer of city". The app's default zone is a circle a kilometer across,
+which is about 0.79 km². It now says "a zone about a kilometer across". That is
+exactly the kind of thing that only turns up if someone goes and looks.
+
+### 11.3 Buffs are on the page, described as earned
+
+Angad asked to mention items that give buffs. They are described as coming from
+walking to a cache, and the page says outright that items are earned on foot
+and never bought. **That framing is not optional.** PRD 8 makes it a hard
+constraint that the paid track never contains buffs, and the Terms published on
+this same site say anything purchasable is cosmetic. Copy that implied you
+could buy an advantage would contradict a document one click away.
+
+### 11.4 Nearby games are described, so the supersession is public now
+
+The page now says adults can see games starting nearby and ask to join, off
+until you turn it on. That is the NEARBY tab, and it is the line in
+`marketing/BRIEF.md` section 9 that `CLAUDE.md` section 3 already records as
+knowingly crossed. Until today the site stayed quiet about it; it no longer
+does. `LEGAL-GAPS.md` section 1b has the detail. The short version: the
+sentence carries its own guardrails, and if NEARBY ever widens the sentence
+becomes false.
+
+### 11.5 The waitlist table is live
+
+`supabase/migrations/0012_waitlist.sql`, applied to project
+`cldrgsggfqneisjkwmxw` with `supabase db push`. `waitlist_signups`, three
+columns, a unique index on `lower(email)`, RLS on with no policies so anon and
+authenticated can do nothing at all. Verified after the push: the table and
+both indexes exist, zero rows.
+
+The web repo's `db/waitlist.sql` is gone, replaced by a README pointing here.
+Two copies of the same DDL in two repos was going to drift.
+
+`tools/serve.mjs` now runs the **real** endpoint against the real table when
+`SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are both in the environment, and
+falls back to the stub otherwise. That is the only way to exercise the database
+path before the site is deployed. It takes two explicit variables rather than a
+flag because anything written that way lands in production data.
+
+**Still not done:** the service role key is not in this session and the site is
+still not deployed, so the live path has not been exercised end to end. That
+remains the first real test.
+
+### 11.6 Smaller things
+
+- The hero has two phones again, the lobby in front and a live round behind.
+- "In development" in the header is now "Waitlist open".
+- "Cosmetic, one time, and never offered again" stays deleted; see 10.4.
